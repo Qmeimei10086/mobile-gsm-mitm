@@ -1,0 +1,133 @@
+lapd_core.lo lapd_core.o: ../../../src/gsm/lapd_core.c \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdio.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/_ansi.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/newlib.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/config.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/ieeefp.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/_types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/limits.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/syslimits.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/limits.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/_types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/lock.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stddef.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/features.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stdarg.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/comm/sercomm_cons.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/string.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/errno.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/errno.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/reent.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/arpa/inet.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/byteorder.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/swab.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/defines.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/asm/swab.h \
+  ../../../include/osmocom/core/logging.h \
+  ../../../include/osmocom/core/linuxlist.h \
+  ../../../include/osmocom/core/timer.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/time.h \
+  ../../../include/osmocom/core/linuxrbtree.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdlib.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/_ansi.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/stdlib.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/alloca.h \
+  ../../../include/osmocom/core/msgb.h \
+  ../../../include/osmocom/core/utils.h \
+  ../../../include/osmocom/core/panic.h \
+  ../../../include/osmocom/core/talloc.h \
+  ../../../include/osmocom/gsm/lapd_core.h \
+  ../../../include/osmocom/gsm/prim.h \
+  ../../../include/osmocom/core/prim.h
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdio.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/_ansi.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/newlib.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/config.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/ieeefp.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/_types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/limits.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/syslimits.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/limits.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/_types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/lock.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stddef.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/features.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stdarg.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/comm/sercomm_cons.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/string.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/errno.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/errno.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/reent.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/arpa/inet.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/byteorder.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/swab.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/defines.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/asm/swab.h:
+
+../../../include/osmocom/core/logging.h:
+
+../../../include/osmocom/core/linuxlist.h:
+
+../../../include/osmocom/core/timer.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/time.h:
+
+../../../include/osmocom/core/linuxrbtree.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdlib.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/_ansi.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/stdlib.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/alloca.h:
+
+../../../include/osmocom/core/msgb.h:
+
+../../../include/osmocom/core/utils.h:
+
+../../../include/osmocom/core/panic.h:
+
+../../../include/osmocom/core/talloc.h:
+
+../../../include/osmocom/gsm/lapd_core.h:
+
+../../../include/osmocom/gsm/prim.h:
+
+../../../include/osmocom/core/prim.h:

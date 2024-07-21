@@ -1,0 +1,351 @@
+   1              		.file	"uwire.c"
+   9              	.Ltext0:
+  10              		.section	.text.uwire_init,"ax",%progbits
+  11              		.align	2
+  12              		.global	uwire_init
+  14              	uwire_init:
+  15              	.LFB3:
+  16              		.file 1 "calypso/uwire.c"
+   1:calypso/uwire.c **** /* Driver for uWire Master Controller inside TI Calypso */
+   2:calypso/uwire.c **** 
+   3:calypso/uwire.c **** /* (C) 2010 by Sylvain Munaut <tnt@246tNt.com>
+   4:calypso/uwire.c ****  *
+   5:calypso/uwire.c ****  * All Rights Reserved
+   6:calypso/uwire.c ****  *
+   7:calypso/uwire.c ****  * This program is free software; you can redistribute it and/or modify
+   8:calypso/uwire.c ****  * it under the terms of the GNU General Public License as published by
+   9:calypso/uwire.c ****  * the Free Software Foundation; either version 2 of the License, or
+  10:calypso/uwire.c ****  * (at your option) any later version.
+  11:calypso/uwire.c ****  *
+  12:calypso/uwire.c ****  * This program is distributed in the hope that it will be useful,
+  13:calypso/uwire.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  14:calypso/uwire.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  15:calypso/uwire.c ****  * GNU General Public License for more details.
+  16:calypso/uwire.c ****  *
+  17:calypso/uwire.c ****  * You should have received a copy of the GNU General Public License along
+  18:calypso/uwire.c ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  19:calypso/uwire.c ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  20:calypso/uwire.c ****  *
+  21:calypso/uwire.c ****  */
+  22:calypso/uwire.c **** 
+  23:calypso/uwire.c **** #include <stdint.h>
+  24:calypso/uwire.c **** #include <stdio.h>
+  25:calypso/uwire.c **** 
+  26:calypso/uwire.c **** //#define DEBUG
+  27:calypso/uwire.c **** #include <debug.h>
+  28:calypso/uwire.c **** 
+  29:calypso/uwire.c **** #include <memory.h>
+  30:calypso/uwire.c **** #include <uwire.h>
+  31:calypso/uwire.c **** #include <delay.h>
+  32:calypso/uwire.c **** 
+  33:calypso/uwire.c **** #define BASE_ADDR_UWIRE	0xfffe4000
+  34:calypso/uwire.c **** #define UWIRE_REG(n)	(BASE_ADDR_UWIRE+(n))
+  35:calypso/uwire.c **** 
+  36:calypso/uwire.c **** enum uwire_regs {
+  37:calypso/uwire.c **** 	REG_DATA	= 0x00,
+  38:calypso/uwire.c **** 	REG_CSR		= 0x02,
+  39:calypso/uwire.c **** 	REG_SR1		= 0x04,
+  40:calypso/uwire.c **** 	REG_SR2		= 0x06,
+  41:calypso/uwire.c **** 	REG_SR3		= 0x08,
+  42:calypso/uwire.c **** };
+  43:calypso/uwire.c **** 
+  44:calypso/uwire.c **** #define UWIRE_CSR_BITS_RD(n)	(((n) & 0x1f) << 0)
+  45:calypso/uwire.c **** #define UWIRE_CSR_BITS_WR(n)	(((n) & 0x1f) << 5)
+  46:calypso/uwire.c **** #define UWIRE_CSR_IDX(n)	(((n) & 3) << 10)
+  47:calypso/uwire.c **** #define UWIRE_CSR_CS_CMD	(1 << 12)
+  48:calypso/uwire.c **** #define UWIRE_CSR_START		(1 << 13)
+  49:calypso/uwire.c **** #define UWIRE_CSR_CSRB		(1 << 14)
+  50:calypso/uwire.c **** #define UWIRE_CSR_RDRB		(1 << 15)
+  51:calypso/uwire.c **** 
+  52:calypso/uwire.c **** #define UWIRE_CSn_EDGE_RD	(1 << 0)	/* 1=falling 0=rising */
+  53:calypso/uwire.c **** #define UWIRE_CSn_EDGE_WR	(1 << 1)	/* 1=falling 0=rising */
+  54:calypso/uwire.c **** #define UWIRE_CSn_CS_LVL	(1 << 2)
+  55:calypso/uwire.c **** #define UWIRE_CSn_FRQ_DIV2	(0 << 3)
+  56:calypso/uwire.c **** #define UWIRE_CSn_FRQ_DIV4	(1 << 3)
+  57:calypso/uwire.c **** #define UWIRE_CSn_FRQ_DIV8	(2 << 3)
+  58:calypso/uwire.c **** #define UWIRE_CSn_CKH
+  59:calypso/uwire.c **** 
+  60:calypso/uwire.c **** #define UWIRE_CSn_SHIFT(n)	(((n) & 1) ? 6 : 0)
+  61:calypso/uwire.c **** #define UWIRE_CSn_REG(n)	(((n) & 2) ? REG_SR2 : REG_SR1)
+  62:calypso/uwire.c **** 
+  63:calypso/uwire.c **** #define UWIRE_SR3_CLK_EN	(1 << 0)
+  64:calypso/uwire.c **** #define UWIRE_SR3_CLK_DIV2	(0 << 1)
+  65:calypso/uwire.c **** #define UWIRE_SR3_CLK_DIV4	(1 << 1)
+  66:calypso/uwire.c **** #define UWIRE_SR3_CLK_DIV7	(2 << 1)
+  67:calypso/uwire.c **** #define UWIRE_SR3_CLK_DIV10	(3 << 1)
+  68:calypso/uwire.c **** 
+  69:calypso/uwire.c **** static inline void _uwire_wait(int mask, int val)
+  70:calypso/uwire.c **** {
+  71:calypso/uwire.c **** 	while ((readw(UWIRE_REG(REG_CSR)) & mask) != val);
+  72:calypso/uwire.c **** }
+  73:calypso/uwire.c **** 
+  74:calypso/uwire.c **** void uwire_init(void)
+  75:calypso/uwire.c **** {
+  17              		.loc 1 75 0
+  18              		@ args = 0, pretend = 0, frame = 0
+  19              		@ frame_needed = 0, uses_anonymous_args = 0
+  20              		@ link register save eliminated.
+  21              	.LVL0:
+  76:calypso/uwire.c **** 	writew(UWIRE_SR3_CLK_EN | UWIRE_SR3_CLK_DIV2, UWIRE_REG(REG_SR3));
+  22              		.loc 1 76 0
+  23 0000 30309FE5 		ldr	r3, .L7
+  24 0004 0120A0E3 		mov	r2, #1	@ movhi
+  25 0008 B020C3E1 		strh	r2, [r3, #0]	@ movhi
+  77:calypso/uwire.c **** 	/* FIXME only init CS0 for now */
+  78:calypso/uwire.c **** 	writew(((UWIRE_CSn_CS_LVL | UWIRE_CSn_FRQ_DIV2) << UWIRE_CSn_SHIFT(0)),
+  26              		.loc 1 78 0
+  27 000c 043043E2 		sub	r3, r3, #4
+  28 0010 0420A0E3 		mov	r2, #4	@ movhi
+  29 0014 B020C3E1 		strh	r2, [r3, #0]	@ movhi
+  79:calypso/uwire.c **** 		UWIRE_REG(UWIRE_CSn_REG(0)));
+  80:calypso/uwire.c **** 	writew(UWIRE_CSR_IDX(0) | UWIRE_CSR_CS_CMD, UWIRE_REG(REG_CSR));
+  30              		.loc 1 80 0
+  31 0018 023043E2 		sub	r3, r3, #2
+  32 001c 012AA0E3 		mov	r2, #4096	@ movhi
+  33 0020 B020C3E1 		strh	r2, [r3, #0]	@ movhi
+  34              		.loc 1 75 0
+  35              		@ lr needed for prologue
+  36              	.L2:
+  37              	.LBB2:
+  38              	.LBB3:
+  39              		.loc 1 71 0
+  40 0024 10309FE5 		ldr	r3, .L7+4
+  41 0028 B030D3E1 		ldrh	r3, [r3, #0]
+  42 002c 010913E3 		tst	r3, #16384
+  43 0030 0700001A 		bne	.L2
+  44              	.LBE3:
+  45              	.LBE2:
+  81:calypso/uwire.c **** 	_uwire_wait(UWIRE_CSR_CSRB, 0);
+  82:calypso/uwire.c **** }
+  46              		.loc 1 82 0
+  47 0034 1EFF2FE1 		bx	lr
+  48              	.L8:
+  49              		.align	2
+  50              	.L7:
+  51 0038 0840FEFF 		.word	-114680
+  52 003c 0240FEFF 		.word	-114686
+  53              	.LFE3:
+  55              		.section	.text.uwire_xfer,"ax",%progbits
+  56              		.align	2
+  57              		.global	uwire_xfer
+  59              	uwire_xfer:
+  60              	.LFB4:
+  83:calypso/uwire.c **** 
+  84:calypso/uwire.c **** int uwire_xfer(int cs, int bitlen, const void *dout, void *din)
+  85:calypso/uwire.c **** {
+  61              		.loc 1 85 0
+  62              		@ args = 0, pretend = 0, frame = 0
+  63              		@ frame_needed = 0, uses_anonymous_args = 0
+  64              		@ link register save eliminated.
+  65              	.LVL1:
+  66 0000 01C0A0E1 		mov	ip, r1
+  86:calypso/uwire.c **** 	uint16_t tmp = 0;
+  87:calypso/uwire.c **** 
+  88:calypso/uwire.c **** 	if (bitlen <= 0 || bitlen > 16)
+  67              		.loc 1 88 0
+  68 0004 011041E2 		sub	r1, r1, #1
+  69              	.LVL2:
+  70 0008 0F0051E3 		cmp	r1, #15
+  71              		.loc 1 85 0
+  72              		@ lr needed for prologue
+  73              		.loc 1 85 0
+  74 000c 0310A0E1 		mov	r1, r3
+  75              		.loc 1 88 0
+  76 0010 3F00008A 		bhi	.L10
+  77              	.LVL3:
+  89:calypso/uwire.c **** 		return -1;
+  90:calypso/uwire.c **** 	if (cs < 0 || cs > 4)
+  78              		.loc 1 90 0
+  79 0014 040050E3 		cmp	r0, #4
+  80 0018 3F00008A 		bhi	.L10
+  91:calypso/uwire.c **** 		return -1;
+  92:calypso/uwire.c **** 
+  93:calypso/uwire.c **** 	/* FIXME uwire_init always selects CS0 for now */
+  94:calypso/uwire.c **** 
+  95:calypso/uwire.c **** 	printd("uwire_xfer(dev_idx=%u, bitlen=%u\n", cs, bitlen);
+  96:calypso/uwire.c **** 
+  97:calypso/uwire.c **** 	/* select the chip */
+  98:calypso/uwire.c **** 	writew(UWIRE_CSR_IDX(0) | UWIRE_CSR_CS_CMD, UWIRE_REG(REG_CSR));
+  81              		.loc 1 98 0
+  82 001c E8309FE5 		ldr	r3, .L47
+  83 0020 010AA0E3 		mov	r0, #4096	@ movhi
+  84              	.LVL4:
+  85 0024 B000C3E1 		strh	r0, [r3, #0]	@ movhi
+  86              	.L13:
+  87              	.LBB4:
+  88              	.LBB5:
+  89              		.loc 1 71 0
+  90 0028 DC309FE5 		ldr	r3, .L47
+  91 002c B030D3E1 		ldrh	r3, [r3, #0]
+  92 0030 013913E2 		ands	r3, r3, #16384
+  93 0034 0800001A 		bne	.L13
+  94              	.LBE5:
+  95              	.LBE4:
+  99:calypso/uwire.c **** 	_uwire_wait(UWIRE_CSR_CSRB, 0);
+ 100:calypso/uwire.c **** 
+ 101:calypso/uwire.c **** 	if (dout) {
+  96              		.loc 1 101 0
+  97 0038 000052E3 		cmp	r2, #0
+  98 003c 0230A001 		moveq	r3, r2
+  99 0040 1D00000A 		beq	.L17
+ 102:calypso/uwire.c **** 		if (bitlen <= 8)
+ 100              		.loc 1 102 0
+ 101 0044 08005CE3 		cmp	ip, #8
+ 103:calypso/uwire.c **** 			tmp = *(uint8_t *)dout;
+ 102              		.loc 1 103 0
+ 103 0048 0020D2D5 		ldrleb	r2, [r2, #0]	@ zero_extendqisi2
+ 104              	.LVL5:
+ 105              		.loc 1 102 0
+ 106 004c 150000DA 		ble	.L20
+ 104:calypso/uwire.c **** 		else if (bitlen <= 16)
+ 107              		.loc 1 104 0
+ 108 0050 10005CE3 		cmp	ip, #16
+ 109              	.LVL6:
+ 105:calypso/uwire.c **** 			tmp = *(uint16_t *)dout;
+ 110              		.loc 1 105 0
+ 111 0054 B020D2D1 		ldrleh	r2, [r2, #0]
+ 112              	.LVL7:
+ 113              		.loc 1 104 0
+ 114 0058 0320A0C1 		movgt	r2, r3
+ 115              	.L20:
+ 106:calypso/uwire.c **** 		tmp <<= 16 - bitlen; /* align to MSB */
+ 116              		.loc 1 106 0
+ 117 005c 10306CE2 		rsb	r3, ip, #16
+ 118 0060 1233A0E1 		mov	r3, r2, asl r3
+ 107:calypso/uwire.c **** 		writew(tmp, UWIRE_REG(REG_DATA));
+ 119              		.loc 1 107 0
+ 120 0064 A4209FE5 		ldr	r2, .L47+4
+ 121              	.LVL8:
+ 122              		.loc 1 106 0
+ 123 0068 0338A0E1 		mov	r3, r3, asl #16
+ 124 006c 2338A0E1 		mov	r3, r3, lsr #16
+ 125              	.LVL9:
+ 126              		.loc 1 107 0
+ 127 0070 B030C2E1 		strh	r3, [r2, #0]	@ movhi
+ 108:calypso/uwire.c **** 		printd(", data_out=0x%04hx", tmp);
+ 109:calypso/uwire.c **** 	}
+ 110:calypso/uwire.c **** 
+ 111:calypso/uwire.c **** 	tmp =	(dout ? UWIRE_CSR_BITS_WR(bitlen) : 0) |
+ 128              		.loc 1 111 0
+ 129 0074 1F300CE2 		and	r3, ip, #31
+ 130              	.LVL10:
+ 131 0078 8332A0E1 		mov	r3, r3, asl #5
+ 132              	.LVL11:
+ 133              	.L17:
+ 134 007c 000051E3 		cmp	r1, #0
+ 135 0080 0120A001 		moveq	r2, r1
+ 136              	.LVL12:
+ 137 0084 1F200C12 		andne	r2, ip, #31
+ 138 0088 023083E1 		orr	r3, r3, r2
+ 139 008c 023A83E3 		orr	r3, r3, #8192
+ 140 0090 0338A0E1 		mov	r3, r3, asl #16
+ 112:calypso/uwire.c **** 		(din  ? UWIRE_CSR_BITS_RD(bitlen) : 0) |
+ 113:calypso/uwire.c **** 		UWIRE_CSR_START;
+ 114:calypso/uwire.c **** 	writew(tmp, UWIRE_REG(REG_CSR));
+ 141              		.loc 1 114 0
+ 142 0094 70209FE5 		ldr	r2, .L47
+ 143              		.loc 1 111 0
+ 144 0098 2338A0E1 		mov	r3, r3, lsr #16
+ 145              	.LVL13:
+ 146              		.loc 1 114 0
+ 147 009c B030C2E1 		strh	r3, [r2, #0]	@ movhi
+ 148              	.L26:
+ 149              	.LBB6:
+ 150              	.LBB7:
+ 151              		.loc 1 71 0
+ 152 00a0 64309FE5 		ldr	r3, .L47
+ 153              	.LVL14:
+ 154 00a4 B030D3E1 		ldrh	r3, [r3, #0]
+ 155 00a8 010913E3 		tst	r3, #16384
+ 156 00ac 2600001A 		bne	.L26
+ 157              	.LBE7:
+ 158              	.LBE6:
+ 115:calypso/uwire.c **** 
+ 116:calypso/uwire.c **** 	_uwire_wait(UWIRE_CSR_CSRB, 0);
+ 117:calypso/uwire.c **** 
+ 118:calypso/uwire.c **** 	if (din) {
+ 159              		.loc 1 118 0
+ 160 00b0 000051E3 		cmp	r1, #0
+ 161 00b4 3700000A 		beq	.L28
+ 162              	.L38:
+ 163              	.LBB8:
+ 164              	.LBB9:
+ 165              		.loc 1 71 0
+ 166 00b8 4C309FE5 		ldr	r3, .L47
+ 167 00bc B030D3E1 		ldrh	r3, [r3, #0]
+ 168 00c0 020913E3 		tst	r3, #32768
+ 169 00c4 2C00000A 		beq	.L38
+ 170              	.LBE9:
+ 171              	.LBE8:
+ 119:calypso/uwire.c **** 		_uwire_wait(UWIRE_CSR_RDRB, UWIRE_CSR_RDRB);
+ 120:calypso/uwire.c **** 
+ 121:calypso/uwire.c **** 		tmp = readw(UWIRE_REG(REG_DATA));
+ 172              		.loc 1 121 0
+ 173 00c8 40309FE5 		ldr	r3, .L47+4
+ 174 00cc B030D3E1 		ldrh	r3, [r3, #0]
+ 122:calypso/uwire.c **** 		printd(", data_in=0x%08x", tmp);
+ 123:calypso/uwire.c **** 
+ 124:calypso/uwire.c **** 		if (bitlen <= 8)
+ 175              		.loc 1 124 0
+ 176 00d0 08005CE3 		cmp	ip, #8
+ 177              	.LVL15:
+ 125:calypso/uwire.c **** 			*(uint8_t *)din = tmp & 0xff;
+ 178              		.loc 1 125 0
+ 179 00d4 0030C1D5 		strleb	r3, [r1, #0]
+ 180              		.loc 1 124 0
+ 181 00d8 370000DA 		ble	.L28
+ 126:calypso/uwire.c **** 		else if (bitlen <= 16)
+ 182              		.loc 1 126 0
+ 183 00dc 10005CE3 		cmp	ip, #16
+ 127:calypso/uwire.c **** 			*(uint16_t *)din = tmp & 0xffff;
+ 184              		.loc 1 127 0
+ 185 00e0 B030C1D1 		strleh	r3, [r1, #0]	@ movhi
+ 186              	.L28:
+ 128:calypso/uwire.c **** 	}
+ 129:calypso/uwire.c **** 	/* unselect the chip */
+ 130:calypso/uwire.c **** 	writew(UWIRE_CSR_IDX(0) | 0, UWIRE_REG(REG_CSR));
+ 187              		.loc 1 130 0
+ 188 00e4 20309FE5 		ldr	r3, .L47
+ 189              	.LVL16:
+ 190 00e8 0020A0E3 		mov	r2, #0	@ movhi
+ 191 00ec B020C3E1 		strh	r2, [r3, #0]	@ movhi
+ 192              	.L34:
+ 193              	.LBB10:
+ 194              	.LBB11:
+ 195              		.loc 1 71 0
+ 196 00f0 14309FE5 		ldr	r3, .L47
+ 197 00f4 B030D3E1 		ldrh	r3, [r3, #0]
+ 198 00f8 010913E2 		ands	r0, r3, #16384
+ 199 00fc 3A00001A 		bne	.L34
+ 200 0100 1EFF2FE1 		bx	lr
+ 201              	.LVL17:
+ 202              	.L10:
+ 203 0104 0000E0E3 		mvn	r0, #0
+ 204              	.LVL18:
+ 205              	.LBE11:
+ 206              	.LBE10:
+ 131:calypso/uwire.c **** 	_uwire_wait(UWIRE_CSR_CSRB, 0);
+ 132:calypso/uwire.c **** 
+ 133:calypso/uwire.c **** 	printd(")\n");
+ 134:calypso/uwire.c **** 
+ 135:calypso/uwire.c **** 	return 0;
+ 136:calypso/uwire.c **** }
+ 207              		.loc 1 136 0
+ 208 0108 1EFF2FE1 		bx	lr
+ 209              	.L48:
+ 210              		.align	2
+ 211              	.L47:
+ 212 010c 0240FEFF 		.word	-114686
+ 213 0110 0040FEFF 		.word	-114688
+ 214              	.LFE4:
+ 249              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 uwire.c
+     /tmp/ccypnIBS.s:14     .text.uwire_init:0000000000000000 uwire_init
+     /tmp/ccypnIBS.s:23     .text.uwire_init:0000000000000000 $a
+     /tmp/ccypnIBS.s:51     .text.uwire_init:0000000000000038 $d
+     /tmp/ccypnIBS.s:59     .text.uwire_xfer:0000000000000000 uwire_xfer
+     /tmp/ccypnIBS.s:66     .text.uwire_xfer:0000000000000000 $a
+     /tmp/ccypnIBS.s:212    .text.uwire_xfer:000000000000010c $d
+
+NO UNDEFINED SYMBOLS

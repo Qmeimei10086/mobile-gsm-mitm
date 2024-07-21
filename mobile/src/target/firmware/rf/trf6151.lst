@@ -1,0 +1,1828 @@
+   1              		.file	"trf6151.c"
+   9              	.Ltext0:
+  10              		.global	rf_arfcn
+  11              		.data
+  12              		.align	1
+  15              	rf_arfcn:
+  16 0000 6703     		.short	871
+  17 0002 0000     		.align	2
+  20              	trf6151_gain_high:
+  21 0004 01000000 		.word	1
+  24              	trf6151_vga_dbm:
+  25 0008 28       		.byte	40
+  26 0009 00       		.align	1
+  29              	trf6151_reg_cache:
+  30 000a 009E     		.short	-25088
+  31 000c 0000     		.short	0
+  32 000e 0000     		.short	0
+  33 0010 8029     		.short	10624
+  34 0012 00000000 		.space	8
+  34      00000000 
+  35 001a 0000     		.section	.text.tpu_enq_sleep,"ax",%progbits
+  36              		.align	2
+  38              	tpu_enq_sleep:
+  39              	.LFB6:
+  40              		.file 1 "include/calypso/tpu.h"
+   1:include/calypso/tpu.h **** #ifndef _CALYPSO_TPU_H
+   2:include/calypso/tpu.h **** #define _CALYPSO_TPU_H
+   3:include/calypso/tpu.h **** 
+   4:include/calypso/tpu.h **** #define BITS_PER_TDMA		1250
+   5:include/calypso/tpu.h **** #define QBITS_PER_TDMA		(BITS_PER_TDMA * 4)	/* 5000 */
+   6:include/calypso/tpu.h **** #define TPU_RANGE		QBITS_PER_TDMA
+   7:include/calypso/tpu.h **** #define	SWITCH_TIME		(TPU_RANGE-10)
+   8:include/calypso/tpu.h **** 
+   9:include/calypso/tpu.h **** /* Assert or de-assert TPU reset */
+  10:include/calypso/tpu.h **** void tpu_reset(int active);
+  11:include/calypso/tpu.h **** /* Enable or Disable a new scenario loaded into the TPU */
+  12:include/calypso/tpu.h **** void tpu_enable(int active);
+  13:include/calypso/tpu.h **** /* Enable or Disable the clock of the TPU Module */
+  14:include/calypso/tpu.h **** void tpu_clk_enable(int active);
+  15:include/calypso/tpu.h **** /* Enable Frame Interrupt generation on next frame.  DSP will reset it */
+  16:include/calypso/tpu.h **** void tpu_dsp_frameirq_enable(void);
+  17:include/calypso/tpu.h **** /* Is a Frame interrupt still pending for the DSP ? */
+  18:include/calypso/tpu.h **** int tpu_dsp_fameirq_pending(void);
+  19:include/calypso/tpu.h **** /* Rewind the TPU, i.e. restart enqueueing instructions at the base addr */
+  20:include/calypso/tpu.h **** void tpu_rewind(void);
+  21:include/calypso/tpu.h **** /* Enqueue a raw TPU instruction */
+  22:include/calypso/tpu.h **** void tpu_enqueue(uint16_t instr);
+  23:include/calypso/tpu.h **** /* Initialize TPU and TPU driver */
+  24:include/calypso/tpu.h **** void tpu_init(void);
+  25:include/calypso/tpu.h **** /* (Busy)Wait until TPU is idle */
+  26:include/calypso/tpu.h **** void tpu_wait_idle(void);
+  27:include/calypso/tpu.h **** /* Enable FRAME interrupt generation */
+  28:include/calypso/tpu.h **** void tpu_frame_irq_en(int mcu, int dsp);
+  29:include/calypso/tpu.h **** /* Force the generation of a DSP interrupt */
+  30:include/calypso/tpu.h **** void tpu_force_dsp_frame_irq(void);
+  31:include/calypso/tpu.h **** 
+  32:include/calypso/tpu.h **** /* Get the current TPU SYNCHRO register */
+  33:include/calypso/tpu.h **** uint16_t tpu_get_synchro(void);
+  34:include/calypso/tpu.h **** /* Get the current TPU OFFSET register */
+  35:include/calypso/tpu.h **** uint16_t tpu_get_offset(void);
+  36:include/calypso/tpu.h **** 
+  37:include/calypso/tpu.h **** enum tpu_instr {
+  38:include/calypso/tpu.h **** 	TPU_INSTR_AT		= (1 << 13),
+  39:include/calypso/tpu.h **** 	TPU_INSTR_OFFSET	= (2 << 13),
+  40:include/calypso/tpu.h **** 	TPU_INSTR_SYNCHRO	= (3 << 13),	/* Loading delta synchro value in TPU synchro register */
+  41:include/calypso/tpu.h **** 	TPU_INSTR_WAIT		= (5 << 13),	/* Wait a certain period (in GSM qbits) */
+  42:include/calypso/tpu.h **** 	TPU_INSTR_SLEEP		= (0 << 13),	/* Stop the sequencer by disabling TPU ENABLE bit in ctrl reg */
+  43:include/calypso/tpu.h **** 	/* data processing */
+  44:include/calypso/tpu.h **** 	TPU_INSTR_MOVE		= (4 << 13),
+  45:include/calypso/tpu.h **** };
+  46:include/calypso/tpu.h **** 
+  47:include/calypso/tpu.h **** /* Addresses internal to the TPU, only accessible via MOVE */
+  48:include/calypso/tpu.h **** enum tpu_reg_int {
+  49:include/calypso/tpu.h **** 	TPUI_TSP_CTRL1	= 0x00,
+  50:include/calypso/tpu.h **** 	TPUI_TSP_CTRL2	= 0x01,
+  51:include/calypso/tpu.h **** 	TPUI_TX_1	= 0x04,
+  52:include/calypso/tpu.h **** 	TPUI_TX_2	= 0x03,
+  53:include/calypso/tpu.h **** 	TPUI_TX_3	= 0x02,
+  54:include/calypso/tpu.h **** 	TPUI_TX_4	= 0x05,
+  55:include/calypso/tpu.h **** 	TPUI_TSP_ACT_L	= 0x06,
+  56:include/calypso/tpu.h **** 	TPUI_TSP_ACT_U	= 0x07,
+  57:include/calypso/tpu.h **** 	TPUI_TSP_SET1	= 0x09,
+  58:include/calypso/tpu.h **** 	TPUI_TSP_SET2	= 0x0a,
+  59:include/calypso/tpu.h **** 	TPUI_TSP_SET3	= 0x0b,
+  60:include/calypso/tpu.h **** 	TPUI_DSP_INT_PG	= 0x10,
+  61:include/calypso/tpu.h **** 	TPUI_GAUGING_EN = 0x11,
+  62:include/calypso/tpu.h **** };
+  63:include/calypso/tpu.h **** 
+  64:include/calypso/tpu.h **** enum tpui_ctrl2_bits {
+  65:include/calypso/tpu.h **** 	TPUI_CTRL2_RD		= (1 << 0),
+  66:include/calypso/tpu.h **** 	TPUI_CTRL2_WR		= (1 << 1),
+  67:include/calypso/tpu.h **** };
+  68:include/calypso/tpu.h **** 
+  69:include/calypso/tpu.h **** static inline uint16_t tpu_mod5000(int16_t time)
+  70:include/calypso/tpu.h **** {
+  71:include/calypso/tpu.h **** 	if (time < 0)
+  72:include/calypso/tpu.h **** 		return time + 5000;
+  73:include/calypso/tpu.h **** 	if (time >= 5000)
+  74:include/calypso/tpu.h **** 		return time - 5000;
+  75:include/calypso/tpu.h **** 	return time;
+  76:include/calypso/tpu.h **** }
+  77:include/calypso/tpu.h **** 
+  78:include/calypso/tpu.h **** /* Enqueue a SLEEP operation (stop sequencer by disabling TPU ENABLE bit) */
+  79:include/calypso/tpu.h **** static inline void tpu_enq_sleep(void)
+  80:include/calypso/tpu.h **** {
+  41              		.loc 1 80 0
+  42              		@ args = 0, pretend = 0, frame = 0
+  43              		@ frame_needed = 0, uses_anonymous_args = 0
+  44              		@ link register save eliminated.
+  45              	.LVL0:
+  81:include/calypso/tpu.h **** 	tpu_enqueue(TPU_INSTR_SLEEP);
+  46              		.loc 1 81 0
+  47 0000 0000A0E3 		mov	r0, #0
+  48              		.loc 1 80 0
+  49              		@ lr needed for prologue
+  82:include/calypso/tpu.h **** }
+  50              		.loc 1 82 0
+  51              		.loc 1 81 0
+  52 0004 FEFFFFEA 		b	tpu_enqueue
+  53              	.LFE6:
+  55              		.section	.text.tpu_enq_wait,"ax",%progbits
+  56              		.align	2
+  58              	tpu_enq_wait:
+  59              	.LFB10:
+  83:include/calypso/tpu.h **** 
+  84:include/calypso/tpu.h **** /* Enqueue a MOVE operation */
+  85:include/calypso/tpu.h **** static inline void tpu_enq_move(uint8_t addr, uint8_t data)
+  86:include/calypso/tpu.h **** {
+  87:include/calypso/tpu.h **** 	tpu_enqueue(TPU_INSTR_MOVE | (data << 5) | (addr & 0x1f));
+  88:include/calypso/tpu.h **** }
+  89:include/calypso/tpu.h **** 
+  90:include/calypso/tpu.h **** /* Enqueue an AT operation */
+  91:include/calypso/tpu.h **** static inline void tpu_enq_at(int16_t time)
+  92:include/calypso/tpu.h **** {
+  93:include/calypso/tpu.h **** 	tpu_enqueue(TPU_INSTR_AT | tpu_mod5000(time));
+  94:include/calypso/tpu.h **** }
+  95:include/calypso/tpu.h **** 
+  96:include/calypso/tpu.h **** /* Enqueue a SYNC operation */
+  97:include/calypso/tpu.h **** static inline void tpu_enq_sync(int16_t time)
+  98:include/calypso/tpu.h **** {
+  99:include/calypso/tpu.h **** 	tpu_enqueue(TPU_INSTR_SYNCHRO | time);
+ 100:include/calypso/tpu.h **** }
+ 101:include/calypso/tpu.h **** 
+ 102:include/calypso/tpu.h **** /* Enqueue a WAIT operation */
+ 103:include/calypso/tpu.h **** static inline void tpu_enq_wait(int16_t time)
+ 104:include/calypso/tpu.h **** {
+  60              		.loc 1 104 0
+  61              		@ args = 0, pretend = 0, frame = 0
+  62              		@ frame_needed = 0, uses_anonymous_args = 0
+  63              		@ link register save eliminated.
+  64              	.LVL1:
+  65 0000 0008A0E1 		mov	r0, r0, asl #16
+  66              	.LVL2:
+ 105:include/calypso/tpu.h **** 	tpu_enqueue(TPU_INSTR_WAIT | time);
+  67              		.loc 1 105 0
+  68 0004 0A0280E3 		orr	r0, r0, #-1610612736
+  69 0008 2008A0E1 		mov	r0, r0, lsr #16
+  70              		.loc 1 104 0
+  71              		@ lr needed for prologue
+ 106:include/calypso/tpu.h **** }
+  72              		.loc 1 106 0
+  73              		.loc 1 105 0
+  74 000c FEFFFFEA 		b	tpu_enqueue
+  75              	.LFE10:
+  77              		.section	.text.trf6151_reg_write,"ax",%progbits
+  78              		.align	2
+  80              	trf6151_reg_write:
+  81              	.LFB13:
+  82              		.file 2 "rf/trf6151.c"
+   1:rf/trf6151.c  **** /* Driver for RF Transceiver Circuit (TRF6151) */
+   2:rf/trf6151.c  **** 
+   3:rf/trf6151.c  **** /* (C) 2010 by Harald Welte <laforge@gnumonks.org>
+   4:rf/trf6151.c  ****  *
+   5:rf/trf6151.c  ****  * All Rights Reserved
+   6:rf/trf6151.c  ****  *
+   7:rf/trf6151.c  ****  * This program is free software; you can redistribute it and/or modify
+   8:rf/trf6151.c  ****  * it under the terms of the GNU General Public License as published by
+   9:rf/trf6151.c  ****  * the Free Software Foundation; either version 2 of the License, or
+  10:rf/trf6151.c  ****  * (at your option) any later version.
+  11:rf/trf6151.c  ****  *
+  12:rf/trf6151.c  ****  * This program is distributed in the hope that it will be useful,
+  13:rf/trf6151.c  ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  14:rf/trf6151.c  ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  15:rf/trf6151.c  ****  * GNU General Public License for more details.
+  16:rf/trf6151.c  ****  *
+  17:rf/trf6151.c  ****  * You should have received a copy of the GNU General Public License along
+  18:rf/trf6151.c  ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  19:rf/trf6151.c  ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  20:rf/trf6151.c  ****  *
+  21:rf/trf6151.c  ****  */
+  22:rf/trf6151.c  **** 
+  23:rf/trf6151.c  **** #include <stdint.h>
+  24:rf/trf6151.c  **** #include <stdio.h>
+  25:rf/trf6151.c  **** 
+  26:rf/trf6151.c  **** #include <debug.h>
+  27:rf/trf6151.c  **** #include <memory.h>
+  28:rf/trf6151.c  **** #include <keypad.h>
+  29:rf/trf6151.c  **** #include <osmocom/gsm/gsm_utils.h>
+  30:rf/trf6151.c  **** 
+  31:rf/trf6151.c  **** #include <calypso/tpu.h>
+  32:rf/trf6151.c  **** #include <calypso/tsp.h>
+  33:rf/trf6151.c  **** #include <layer1/agc.h>
+  34:rf/trf6151.c  **** #include <rffe.h>
+  35:rf/trf6151.c  **** 
+  36:rf/trf6151.c  **** #include <rf/trf6151.h>
+  37:rf/trf6151.c  **** 
+  38:rf/trf6151.c  **** /* #define WARN_OUT_OF_SPEC 1 */
+  39:rf/trf6151.c  **** 
+  40:rf/trf6151.c  **** enum trf6151_reg {
+  41:rf/trf6151.c  **** 	REG_RX		= 0,	/* RF general settings */
+  42:rf/trf6151.c  **** 	REG_PLL		= 1,	/* PLL settings */
+  43:rf/trf6151.c  **** 	REG_PWR		= 2,	/* Power on/off functional blocks */
+  44:rf/trf6151.c  **** 	REG_CFG		= 3,	/* Transceiver and PA controller settings */
+  45:rf/trf6151.c  **** 	REG_TEST1	= 4,
+  46:rf/trf6151.c  **** 	REG_TEST2	= 5,
+  47:rf/trf6151.c  **** 	REG_TEST3	= 6,
+  48:rf/trf6151.c  **** 	REG_TEST4	= 7,
+  49:rf/trf6151.c  **** 	_MAX_REG
+  50:rf/trf6151.c  **** };
+  51:rf/trf6151.c  **** 
+  52:rf/trf6151.c  **** /* REG_RX */
+  53:rf/trf6151.c  **** #define RX_READ_EN		(1 << 7)
+  54:rf/trf6151.c  **** #define RX_CAL_MODE		(1 << 8)
+  55:rf/trf6151.c  **** #define RX_RF_GAIN_HIGH		(3 << 9)
+  56:rf/trf6151.c  **** #define RX_VGA_GAIN_SHIFT	11
+  57:rf/trf6151.c  **** 
+  58:rf/trf6151.c  **** /* REG_PWR */
+  59:rf/trf6151.c  **** #define PWR_BANDGAP_SHIFT	3
+  60:rf/trf6151.c  **** #define PWR_BANDGAP_OFF		(0 << PWR_BANDGAP_SHIFT)
+  61:rf/trf6151.c  **** #define PWR_BANDGAP_ON_SPEEDUP	(2 << PWR_BANDGAP_SHIFT)
+  62:rf/trf6151.c  **** #define PWR_BANDGAP_ON		(3 << PWR_BANDGAP_SHIFT)
+  63:rf/trf6151.c  **** #define PWR_REGUL_ON		(1 << 5)
+  64:rf/trf6151.c  **** #define PWR_SYNTHE_OFF		(0)
+  65:rf/trf6151.c  **** #define PWR_SYNTHE_RX_ON	(1 << 9)
+  66:rf/trf6151.c  **** #define PWR_SYNTHE_TX_ON	(1 << 10)
+  67:rf/trf6151.c  **** #define PWR_RX_MODE		(1 << 11)
+  68:rf/trf6151.c  **** #define PWR_TX_MODE		(1 << 13)
+  69:rf/trf6151.c  **** #define PWR_PACTRL_APC		(1 << 14)
+  70:rf/trf6151.c  **** #define PWR_PACTRL_APCEN	(1 << 15)
+  71:rf/trf6151.c  **** 
+  72:rf/trf6151.c  **** /* REG_CFG */
+  73:rf/trf6151.c  **** #define CFG_TX_LOOP_MANU	(1 << 3)
+  74:rf/trf6151.c  **** #define CFG_PACTLR_IDIOD_30uA	(0 << 4)
+  75:rf/trf6151.c  **** #define CFG_PACTLR_IDIOD_300uA	(1 << 4)
+  76:rf/trf6151.c  **** #define CFG_PACTLR_RES_OPEN	(0 << 10)
+  77:rf/trf6151.c  **** #define CFG_PACTLR_RES_150k	(1 << 10)
+  78:rf/trf6151.c  **** #define CFG_PACTLR_RES_300k	(2 << 10)
+  79:rf/trf6151.c  **** #define CFG_PACTLR_CAP_0pF	(0 << 12)
+  80:rf/trf6151.c  **** #define CFG_PACTLR_CAP_12p5F	(1 << 12)
+  81:rf/trf6151.c  **** #define CFG_PACTLR_CAP_25pF	(3 << 12)
+  82:rf/trf6151.c  **** #define CFG_PACTLR_CAP_50pF	(2 << 12)
+  83:rf/trf6151.c  **** #define CFG_TEMP_SENSOR		(1 << 14)
+  84:rf/trf6151.c  **** #define CFG_ILOGIC_INIT_DIS	(1 << 15)
+  85:rf/trf6151.c  **** 
+  86:rf/trf6151.c  **** /* FIXME: This must be defined in the RFFE configuration */
+  87:rf/trf6151.c  **** #define TRF6151_TSP_UID		2
+  88:rf/trf6151.c  **** #define TRF6151_PACTRL_CFG	(CFG_PACTLR_RES_OPEN|CFG_PACTLR_CAP_0pF|CFG_PACTLR_IDIOD_30uA)
+  89:rf/trf6151.c  **** 
+  90:rf/trf6151.c  **** #define PLL_VAL(a, b)	((a << 3) | (((b)-64) << 9))
+  91:rf/trf6151.c  **** 
+  92:rf/trf6151.c  **** /* All values in qbits unless otherwise specified */
+  93:rf/trf6151.c  **** #define TRF6151_LDO_DELAY_TS	6	/* six TDMA frames (at least 25ms) */
+  94:rf/trf6151.c  **** #define TRF6151_RX_PLL_DELAY	184	/* 170 us */
+  95:rf/trf6151.c  **** #define TRF6151_TX_PLL_DELAY	260	/* 240 us */
+  96:rf/trf6151.c  **** 
+  97:rf/trf6151.c  **** 
+  98:rf/trf6151.c  **** enum trf6151_pwr_unit {
+  99:rf/trf6151.c  **** 	TRF1651_PACTLR_APC,
+ 100:rf/trf6151.c  **** 	TRF6151_PACTRL_APCEN,
+ 101:rf/trf6151.c  **** 	TRF6151_TRANSMITTER,
+ 102:rf/trf6151.c  **** 	TRF6151_REGULATORS,
+ 103:rf/trf6151.c  **** };
+ 104:rf/trf6151.c  **** 
+ 105:rf/trf6151.c  **** enum trf6151_gsm_band {
+ 106:rf/trf6151.c  **** 	GSM900		= 1,
+ 107:rf/trf6151.c  **** 	GSM1800		= 2,
+ 108:rf/trf6151.c  **** 	GSM850_LOW	= 4,
+ 109:rf/trf6151.c  **** 	GSM850_HIGH	= 5,
+ 110:rf/trf6151.c  **** 	GSM1900		= 6,
+ 111:rf/trf6151.c  **** };
+ 112:rf/trf6151.c  **** 
+ 113:rf/trf6151.c  **** 
+ 114:rf/trf6151.c  **** uint16_t rf_arfcn = 871;	/* TODO: this needs to be private */
+ 115:rf/trf6151.c  **** static uint16_t rf_band;
+ 116:rf/trf6151.c  **** 
+ 117:rf/trf6151.c  **** static uint8_t trf6151_tsp_uid;
+ 118:rf/trf6151.c  **** static uint8_t trf6151_vga_dbm = 40;
+ 119:rf/trf6151.c  **** static int trf6151_gain_high = 1;
+ 120:rf/trf6151.c  **** 
+ 121:rf/trf6151.c  **** static uint16_t trf6151_reg_cache[_MAX_REG] = {
+ 122:rf/trf6151.c  **** 	[REG_RX] 	= 0x9E00,
+ 123:rf/trf6151.c  **** 	[REG_PLL]	= 0x0000,
+ 124:rf/trf6151.c  **** 	[REG_PWR]	= 0x0000,
+ 125:rf/trf6151.c  **** 	[REG_CFG]	= 0x2980,
+ 126:rf/trf6151.c  **** };
+ 127:rf/trf6151.c  **** 
+ 128:rf/trf6151.c  **** /* Write to a TRF6151 register (4 TPU instructions) */
+ 129:rf/trf6151.c  **** static void trf6151_reg_write(uint16_t reg, uint16_t val)
+ 130:rf/trf6151.c  **** {
+  83              		.loc 2 130 0
+  84              		@ args = 0, pretend = 0, frame = 0
+  85              		@ frame_needed = 0, uses_anonymous_args = 0
+  86              	.LVL3:
+  87 0000 30402DE9 		stmfd	sp!, {r4, r5, lr}
+  88              	.LCFI0:
+ 131:rf/trf6151.c  **** 	printd("trf6151_reg_write(reg=%u, val=0x%04x)\n", reg, val);
+ 132:rf/trf6151.c  **** 	/* each TSP write takes 4 TPU instructions */
+ 133:rf/trf6151.c  **** 	tsp_write(trf6151_tsp_uid, 16, (reg | val));
+  89              		.loc 2 133 0
+  90 0004 2C309FE5 		ldr	r3, .L7
+  91              		.loc 2 130 0
+  92 0008 0048A0E1 		mov	r4, r0, asl #16
+  93 000c 0158A0E1 		mov	r5, r1, asl #16
+  94 0010 2448A0E1 		mov	r4, r4, lsr #16
+  95 0014 2558A0E1 		mov	r5, r5, lsr #16
+  96              		.loc 2 133 0
+  97 0018 0000D3E5 		ldrb	r0, [r3, #0]	@ zero_extendqisi2
+  98              	.LVL4:
+  99 001c 052084E1 		orr	r2, r4, r5
+ 100 0020 1010A0E3 		mov	r1, #16
+ 101              	.LVL5:
+ 102 0024 FEFFFFEB 		bl	tsp_write
+ 134:rf/trf6151.c  **** 	trf6151_reg_cache[reg] = val;
+ 103              		.loc 2 134 0
+ 104 0028 0C309FE5 		ldr	r3, .L7+4
+ 105 002c 8440A0E1 		mov	r4, r4, asl #1
+ 106              	.LVL6:
+ 107 0030 B35084E1 		strh	r5, [r4, r3]	@ movhi
+ 135:rf/trf6151.c  **** }
+ 108              		.loc 2 135 0
+ 109 0034 3080BDE8 		ldmfd	sp!, {r4, r5, pc}
+ 110              	.L8:
+ 111              		.align	2
+ 112              	.L7:
+ 113 0038 00000000 		.word	trf6151_tsp_uid
+ 114 003c 0A000000 		.word	trf6151_reg_cache
+ 115              	.LFE13:
+ 117              		.section	.text.trf6151_set_gain_reg,"ax",%progbits
+ 118              		.align	2
+ 119              		.global	trf6151_set_gain_reg
+ 121              	trf6151_set_gain_reg:
+ 122              	.LFB14:
+ 136:rf/trf6151.c  **** 
+ 137:rf/trf6151.c  **** /* Frontend gain can be switched high or low (dB) */
+ 138:rf/trf6151.c  **** #define TRF6151_FE_GAIN_LOW	7
+ 139:rf/trf6151.c  **** #define TRF6151_FE_GAIN_HIGH	27
+ 140:rf/trf6151.c  **** 
+ 141:rf/trf6151.c  **** /* VGA at baseband can be adjusted in this range (dB) */
+ 142:rf/trf6151.c  **** #define TRF6151_VGA_GAIN_MIN	14
+ 143:rf/trf6151.c  **** #define TRF6151_VGA_GAIN_MAX	40
+ 144:rf/trf6151.c  **** 
+ 145:rf/trf6151.c  **** /* put current set (or computed) gain to register */
+ 146:rf/trf6151.c  **** int trf6151_set_gain_reg(uint8_t dbm, int high)
+ 147:rf/trf6151.c  **** {
+ 123              		.loc 2 147 0
+ 124              		@ args = 0, pretend = 0, frame = 0
+ 125              		@ frame_needed = 0, uses_anonymous_args = 0
+ 126              	.LVL7:
+ 127 0000 04E02DE5 		str	lr, [sp, #-4]!
+ 128              	.LCFI1:
+ 129              		.loc 2 147 0
+ 130 0004 FF0000E2 		and	r0, r0, #255
+ 148:rf/trf6151.c  **** 	uint16_t reg = trf6151_reg_cache[REG_RX] & 0x07ff;
+ 131              		.loc 2 148 0
+ 132 0008 54309FE5 		ldr	r3, .L17
+ 149:rf/trf6151.c  **** 	printd("trf6151_set_gain_reg(%u, %d)\n", dbm, high);
+ 150:rf/trf6151.c  **** 
+ 151:rf/trf6151.c  **** 	if (dbm < TRF6151_VGA_GAIN_MIN || dbm > TRF6151_VGA_GAIN_MAX)
+ 133              		.loc 2 151 0
+ 134 000c 0E0040E2 		sub	r0, r0, #14
+ 135              	.LVL8:
+ 152:rf/trf6151.c  **** 		return -1;
+ 153:rf/trf6151.c  **** 
+ 154:rf/trf6151.c  **** 	/* clear the gain bits first */
+ 155:rf/trf6151.c  **** 	reg &= ~((0x1F) << RX_VGA_GAIN_SHIFT);
+ 156:rf/trf6151.c  **** 	/* OR-in the new gain value */
+ 157:rf/trf6151.c  **** 	reg |= (6 + (dbm-TRF6151_VGA_GAIN_MIN)/2) << RX_VGA_GAIN_SHIFT;
+ 136              		.loc 2 157 0
+ 137 0010 A02F80E0 		add	r2, r0, r0, lsr #31
+ 138              		.loc 2 148 0
+ 139 0014 B030D3E1 		ldrh	r3, [r3, #0]
+ 140              		.loc 2 157 0
+ 141 0018 C220A0E1 		mov	r2, r2, asr #1
+ 142              		.loc 2 151 0
+ 143 001c FF0000E2 		and	r0, r0, #255
+ 144              		.loc 2 157 0
+ 145 0020 062082E2 		add	r2, r2, #6
+ 146 0024 3E3BC3E3 		bic	r3, r3, #63488
+ 147              		.loc 2 151 0
+ 148 0028 1A0050E3 		cmp	r0, #26
+ 149              		.loc 2 157 0
+ 150 002c 823583E1 		orr	r3, r3, r2, asl #11
+ 151              		.loc 2 151 0
+ 152 0030 0000E0E3 		mvn	r0, #0
+ 153              		.loc 2 147 0
+ 154 0034 01C0A0E1 		mov	ip, r1
+ 155              		.loc 2 157 0
+ 156 0038 0338A0E1 		mov	r3, r3, asl #16
+ 157              		.loc 2 151 0
+ 158 003c 04F09D84 		ldrhi	pc, [sp], #4
+ 159              	.LVL9:
+ 158:rf/trf6151.c  **** 
+ 159:rf/trf6151.c  **** 	if (high)
+ 160:rf/trf6151.c  **** 		reg |= RX_RF_GAIN_HIGH;
+ 161:rf/trf6151.c  **** 	else
+ 162:rf/trf6151.c  **** 		reg &= ~RX_RF_GAIN_HIGH;
+ 160              		.loc 2 162 0
+ 161 0040 20109FE5 		ldr	r1, .L17+4
+ 162              	.LVL10:
+ 163              		.loc 2 159 0
+ 164 0044 00005CE3 		cmp	ip, #0
+ 165              		.loc 2 157 0
+ 166 0048 2338A0E1 		mov	r3, r3, lsr #16
+ 167              	.LVL11:
+ 168              		.loc 2 160 0
+ 169 004c 061C8313 		orrne	r1, r3, #1536
+ 170              		.loc 2 162 0
+ 171 0050 01100300 		andeq	r1, r3, r1
+ 163:rf/trf6151.c  **** 
+ 164:rf/trf6151.c  **** 	trf6151_reg_write(REG_RX, reg);
+ 172              		.loc 2 164 0
+ 173 0054 0000A0E3 		mov	r0, #0
+ 174 0058 FEFFFFEB 		bl	trf6151_reg_write
+ 175              	.LVL12:
+ 176 005c 0000A0E3 		mov	r0, #0
+ 165:rf/trf6151.c  **** 
+ 166:rf/trf6151.c  **** 	return 0;
+ 167:rf/trf6151.c  **** }
+ 177              		.loc 2 167 0
+ 178 0060 04F09DE4 		ldr	pc, [sp], #4
+ 179              	.L18:
+ 180              		.align	2
+ 181              	.L17:
+ 182 0064 0A000000 		.word	trf6151_reg_cache
+ 183 0068 FFF90000 		.word	63999
+ 184              	.LFE14:
+ 186              		.section	.text.trf6151_set_gain,"ax",%progbits
+ 187              		.align	2
+ 188              		.global	trf6151_set_gain
+ 190              	trf6151_set_gain:
+ 191              	.LFB15:
+ 168:rf/trf6151.c  **** 
+ 169:rf/trf6151.c  **** int trf6151_set_gain(uint8_t dbm)
+ 170:rf/trf6151.c  **** {
+ 192              		.loc 2 170 0
+ 193              		@ args = 0, pretend = 0, frame = 0
+ 194              		@ frame_needed = 0, uses_anonymous_args = 0
+ 195              		@ link register save eliminated.
+ 196              	.LVL13:
+ 197 0000 FF0000E2 		and	r0, r0, #255
+ 171:rf/trf6151.c  **** 	int high = 0;
+ 172:rf/trf6151.c  **** 
+ 173:rf/trf6151.c  **** 	printd("trf6151_set_gain(%u, %d)\n", dbm);
+ 174:rf/trf6151.c  **** 	/* If this is negative or less than TRF6151_GAIN_MIN, we are pretty
+ 175:rf/trf6151.c  **** 	 * much lost as we cannot reduce the system inherent gain.  If it is
+ 176:rf/trf6151.c  **** 	 * positive, it corresponds to the gain that we need to configure */
+ 177:rf/trf6151.c  **** 	if (dbm < TRF6151_FE_GAIN_LOW + TRF6151_VGA_GAIN_MIN) {
+ 198              		.loc 2 177 0
+ 199 0004 140050E3 		cmp	r0, #20
+ 200              		.loc 2 170 0
+ 201              		@ lr needed for prologue
+ 202              		.loc 2 177 0
+ 203 0008 0800008A 		bhi	.L20
+ 178:rf/trf6151.c  **** 		printd("AGC Input level overflow\n");
+ 179:rf/trf6151.c  **** 		trf6151_vga_dbm = TRF6151_VGA_GAIN_MIN;
+ 204              		.loc 2 179 0
+ 205 000c 50309FE5 		ldr	r3, .L29
+ 206 0010 0E20A0E3 		mov	r2, #14
+ 207 0014 0020C3E5 		strb	r2, [r3, #0]
+ 180:rf/trf6151.c  **** 		trf6151_gain_high = 0;
+ 208              		.loc 2 180 0
+ 209 0018 48309FE5 		ldr	r3, .L29+4
+ 210 001c 0020A0E3 		mov	r2, #0
+ 211 0020 002083E5 		str	r2, [r3, #0]
+ 212 0024 150000EA 		b	.L22
+ 213              	.L20:
+ 181:rf/trf6151.c  **** 		return 0;
+ 182:rf/trf6151.c  **** 	} else if (dbm >= TRF6151_FE_GAIN_HIGH + TRF6151_VGA_GAIN_MIN) {
+ 214              		.loc 2 182 0
+ 215 0028 280050E3 		cmp	r0, #40
+ 183:rf/trf6151.c  **** 		high = 1;
+ 184:rf/trf6151.c  **** 		dbm -= TRF6151_FE_GAIN_HIGH;
+ 216              		.loc 2 184 0
+ 217 002c 1B3040E2 		sub	r3, r0, #27
+ 185:rf/trf6151.c  **** 	} else
+ 186:rf/trf6151.c  **** 		dbm -= TRF6151_FE_GAIN_LOW;
+ 218              		.loc 2 186 0
+ 219 0030 070040E2 		sub	r0, r0, #7
+ 220              	.LVL14:
+ 221              		.loc 2 184 0
+ 222 0034 FF2003E2 		and	r2, r3, #255
+ 223              	.LVL15:
+ 187:rf/trf6151.c  **** 	if (dbm > TRF6151_VGA_GAIN_MAX)
+ 188:rf/trf6151.c  **** 		dbm = TRF6151_VGA_GAIN_MAX;
+ 189:rf/trf6151.c  **** 
+ 190:rf/trf6151.c  **** 	/* update the static global variables which are used when programming
+ 191:rf/trf6151.c  **** 	 * the window */
+ 192:rf/trf6151.c  **** 	trf6151_vga_dbm = dbm;
+ 224              		.loc 2 192 0
+ 225 0038 24309FE5 		ldr	r3, .L29
+ 226              		.loc 2 186 0
+ 227 003c FF200092 		andls	r2, r0, #255
+ 228              		.loc 2 184 0
+ 229 0040 0110A0E3 		mov	r1, #1
+ 230              	.LVL16:
+ 231              		.loc 2 186 0
+ 232 0044 0010A093 		movls	r1, #0
+ 233              		.loc 2 187 0
+ 234 0048 280052E3 		cmp	r2, #40
+ 235 004c 2820A023 		movcs	r2, #40
+ 236              		.loc 2 192 0
+ 237 0050 0020C3E5 		strb	r2, [r3, #0]
+ 193:rf/trf6151.c  **** 	trf6151_gain_high = high;
+ 238              		.loc 2 193 0
+ 239 0054 0C309FE5 		ldr	r3, .L29+4
+ 240 0058 001083E5 		str	r1, [r3, #0]
+ 241              	.LVL17:
+ 242              	.L22:
+ 194:rf/trf6151.c  **** 
+ 195:rf/trf6151.c  **** 	return 0;
+ 196:rf/trf6151.c  **** }
+ 243              		.loc 2 196 0
+ 244 005c 0000A0E3 		mov	r0, #0
+ 245              	.LVL18:
+ 246 0060 1EFF2FE1 		bx	lr
+ 247              	.L30:
+ 248              		.align	2
+ 249              	.L29:
+ 250 0064 08000000 		.word	trf6151_vga_dbm
+ 251 0068 04000000 		.word	trf6151_gain_high
+ 252              	.LFE15:
+ 254              		.section	.text.trf6151_power,"ax",%progbits
+ 255              		.align	2
+ 256              		.global	trf6151_power
+ 258              	trf6151_power:
+ 259              	.LFB20:
+ 197:rf/trf6151.c  **** 
+ 198:rf/trf6151.c  **** #define SCALE_100KHZ	100
+ 199:rf/trf6151.c  **** 
+ 200:rf/trf6151.c  **** /* Compute TRF6151 PLL valuese */
+ 201:rf/trf6151.c  **** static void trf6151_pll_rx(uint32_t freq_khz,
+ 202:rf/trf6151.c  ****                            uint16_t *pll_config, enum trf6151_gsm_band *band)
+ 203:rf/trf6151.c  **** {
+ 204:rf/trf6151.c  **** 	const uint32_t p=64, r=65;
+ 205:rf/trf6151.c  **** 	uint32_t freq_100khz, vco_freq_100khz;
+ 206:rf/trf6151.c  **** 	uint32_t l, n;
+ 207:rf/trf6151.c  **** 	uint32_t a, b;
+ 208:rf/trf6151.c  **** 
+ 209:rf/trf6151.c  **** 	/* Scale into 100kHz unit (avoid overflow in intermediates) */
+ 210:rf/trf6151.c  **** 	freq_100khz = freq_khz / SCALE_100KHZ;
+ 211:rf/trf6151.c  **** 
+ 212:rf/trf6151.c  **** 	/* L selects hi/lo band */
+ 213:rf/trf6151.c  **** 	l = (freq_khz > 1350000) ? 2 : 4; /* cut at mid point :) */
+ 214:rf/trf6151.c  **** 
+ 215:rf/trf6151.c  **** 	/* VCO frequency */
+ 216:rf/trf6151.c  **** 	vco_freq_100khz = freq_100khz * l;
+ 217:rf/trf6151.c  **** 
+ 218:rf/trf6151.c  **** 	/* vco_freq = 26MHz / R * N  with R=65 and N=B*P+A */
+ 219:rf/trf6151.c  **** 	n = (vco_freq_100khz * r) / 260;
+ 220:rf/trf6151.c  **** 	a = n % p;
+ 221:rf/trf6151.c  **** 	b = n / p;
+ 222:rf/trf6151.c  **** 
+ 223:rf/trf6151.c  **** 	*pll_config = PLL_VAL(a, b);
+ 224:rf/trf6151.c  **** 
+ 225:rf/trf6151.c  **** 	/* Out-of-spec tuning warning */
+ 226:rf/trf6151.c  **** #ifdef WARN_OUT_OF_SPEC
+ 227:rf/trf6151.c  **** 	if ((l == 4 && (b < 135 || b > 150)) ||
+ 228:rf/trf6151.c  **** 	    (l == 2 && (b < 141 || b > 155)))
+ 229:rf/trf6151.c  **** 		printf("Frequency %u kHz is out of spec\n", (unsigned int)freq_khz);
+ 230:rf/trf6151.c  **** #endif
+ 231:rf/trf6151.c  **** 
+ 232:rf/trf6151.c  **** 	/* Select band */
+ 233:rf/trf6151.c  **** 	if (l==4) {
+ 234:rf/trf6151.c  **** 		/* If in the low band, same port for both GSM850/GSM900, so we
+ 235:rf/trf6151.c  **** 		 * choose the best VCO (VCOMAIN1=3.37GHz, VCOMAIN2=3.8GHz) */
+ 236:rf/trf6151.c  **** 		if (vco_freq_100khz < 35850) /* midpoint */
+ 237:rf/trf6151.c  **** 			*band = GSM850_LOW;
+ 238:rf/trf6151.c  **** 		else
+ 239:rf/trf6151.c  **** 			*band = GSM900;
+ 240:rf/trf6151.c  **** 
+ 241:rf/trf6151.c  **** 		/* Out-of-spec freq check */
+ 242:rf/trf6151.c  **** #ifdef WARN_OUT_OF_SPEC
+ 243:rf/trf6151.c  **** 		if (!(freq_khz >= 869000 && freq_khz <= 894000) &&
+ 244:rf/trf6151.c  **** 		    !(freq_khz >= 921000 && freq_khz <= 960000)) /* include GSM-R */
+ 245:rf/trf6151.c  **** 			printf("Frequency %u outside normal filter range for selected port\n", (unsigned int)freq_khz);
+ 246:rf/trf6151.c  **** #endif
+ 247:rf/trf6151.c  **** 	} else {
+ 248:rf/trf6151.c  **** 		/* In the high band, different ports for DCS/PCS, so
+ 249:rf/trf6151.c  **** 		 * take what's best and available */
+ 250:rf/trf6151.c  **** 		/* We're stuck to VCOMAIN2=3.8GHz though ... */
+ 251:rf/trf6151.c  **** 		uint32_t rx_ports = rffe_get_rx_ports();
+ 252:rf/trf6151.c  **** 		uint32_t port;
+ 253:rf/trf6151.c  **** 
+ 254:rf/trf6151.c  **** 		/* Select port */
+ 255:rf/trf6151.c  **** 		port = (freq_khz < 1905000) ? (1 << PORT_DCS1800) : (1 << PORT_PCS1900);
+ 256:rf/trf6151.c  **** 		port = (port & rx_ports) ? port : rx_ports;
+ 257:rf/trf6151.c  **** 
+ 258:rf/trf6151.c  **** 		/* Select band */
+ 259:rf/trf6151.c  **** 		*band = (port & (1 << PORT_DCS1800)) ? GSM1800 : GSM1900;
+ 260:rf/trf6151.c  **** 
+ 261:rf/trf6151.c  **** 		/* Out-of-spec freq check */
+ 262:rf/trf6151.c  **** #ifdef WARN_OUT_OF_SPEC
+ 263:rf/trf6151.c  **** 		if ((*band == GSM1800 && (freq_khz < 1805000 || freq_khz > 1880000)) ||
+ 264:rf/trf6151.c  **** 		    (*band == GSM1900 && (freq_khz < 1930000 || freq_khz > 1990000)))
+ 265:rf/trf6151.c  **** 			printf("Frequency %u outside normal filter range for selected port\n", (unsigned int)freq_khz);
+ 266:rf/trf6151.c  **** #endif
+ 267:rf/trf6151.c  **** 	}
+ 268:rf/trf6151.c  **** 
+ 269:rf/trf6151.c  **** 	/* Debug */
+ 270:rf/trf6151.c  **** 	printd("RX Freq %u kHz => A = %u, B = %u, band = %d, vco_freq = %u kHz\n", freq_khz, a, b, *band, 
+ 271:rf/trf6151.c  **** 
+ 272:rf/trf6151.c  **** 	/* All done */
+ 273:rf/trf6151.c  **** 	return;
+ 274:rf/trf6151.c  **** }
+ 275:rf/trf6151.c  **** 
+ 276:rf/trf6151.c  **** /* Compute TRF6151 PLL TX values */
+ 277:rf/trf6151.c  **** static void trf6151_pll_tx(uint32_t freq_khz,
+ 278:rf/trf6151.c  ****                            uint16_t *pll_config, enum trf6151_gsm_band *band)
+ 279:rf/trf6151.c  **** {
+ 280:rf/trf6151.c  **** 	const uint32_t p=64;
+ 281:rf/trf6151.c  **** 	uint32_t r, l, m, m_op_l; /* m_op_l = m +/- l depending on mode */
+ 282:rf/trf6151.c  **** 	uint32_t freq_100khz;
+ 283:rf/trf6151.c  **** 	uint32_t n, a, b, b_min, b_max;
+ 284:rf/trf6151.c  **** 
+ 285:rf/trf6151.c  **** 	/* Scale into 100kHz unit (avoid overflow in intermediates) */
+ 286:rf/trf6151.c  **** 	freq_100khz = freq_khz / SCALE_100KHZ;
+ 287:rf/trf6151.c  **** 
+ 288:rf/trf6151.c  **** 	/* Select band (and PLL mode) */
+ 289:rf/trf6151.c  **** 	if (freq_khz > 1350000) {
+ 290:rf/trf6151.c  **** 		/* High band, so only 1 real PLL mode. band doesn't matter
+ 291:rf/trf6151.c  **** 		 * that much (or at all) but we still do it :p */
+ 292:rf/trf6151.c  **** 		*band = (freq_khz < 1817500) ? GSM1800 : GSM1900;
+ 293:rf/trf6151.c  **** 		r = 70;
+ 294:rf/trf6151.c  **** 		l = 2;
+ 295:rf/trf6151.c  **** 		m = 26;
+ 296:rf/trf6151.c  **** 		m_op_l = m + l;
+ 297:rf/trf6151.c  **** 		b_min = 133;
+ 298:rf/trf6151.c  **** 		b_max = 149;
+ 299:rf/trf6151.c  **** 	} else {
+ 300:rf/trf6151.c  **** 		/* Low band. We have 3 possible PLL modes that output on
+ 301:rf/trf6151.c  **** 		 * the right port: GSM900, GSM850_HIGH, GSM850_LOW.
+ 302:rf/trf6151.c  **** 		 *
+ 303:rf/trf6151.c  **** 		 * The transition points have been chosen looking at the VCO
+ 304:rf/trf6151.c  **** 		 * and IF frequencies for various frequencies for these modes
+ 305:rf/trf6151.c  **** 		 */
+ 306:rf/trf6151.c  **** 		if (freq_khz < 837100) {
+ 307:rf/trf6151.c  **** 			/* GSM850_LOW */
+ 308:rf/trf6151.c  **** 			*band = GSM850_LOW;
+ 309:rf/trf6151.c  **** 			r = 55;
+ 310:rf/trf6151.c  **** 			l = 4;
+ 311:rf/trf6151.c  **** 			m = 26;
+ 312:rf/trf6151.c  **** 			m_op_l = m - l;
+ 313:rf/trf6151.c  **** 			b_min = 128;
+ 314:rf/trf6151.c  **** 			b_max = 130;
+ 315:rf/trf6151.c  **** 		} else if (freq_khz < 850000) {
+ 316:rf/trf6151.c  **** 			/* GSM850_HIGH */
+ 317:rf/trf6151.c  **** 			*band = GSM850_HIGH;
+ 318:rf/trf6151.c  **** 			r = 30;
+ 319:rf/trf6151.c  **** 			l = 4;
+ 320:rf/trf6151.c  **** 			m = 52;
+ 321:rf/trf6151.c  **** 			m_op_l = m - l;
+ 322:rf/trf6151.c  **** 			b_min = 65;
+ 323:rf/trf6151.c  **** 			b_max = 66;
+ 324:rf/trf6151.c  **** 		} else {
+ 325:rf/trf6151.c  **** 			/* GSM900 */
+ 326:rf/trf6151.c  **** 			*band = GSM900;
+ 327:rf/trf6151.c  **** 			r = 35;
+ 328:rf/trf6151.c  **** 			l = 4;
+ 329:rf/trf6151.c  **** 			m = 52;
+ 330:rf/trf6151.c  **** 			m_op_l = m + l;
+ 331:rf/trf6151.c  **** 			b_min = 68;
+ 332:rf/trf6151.c  **** 			b_max = 71;
+ 333:rf/trf6151.c  **** 		}
+ 334:rf/trf6151.c  **** 	}
+ 335:rf/trf6151.c  **** 
+ 336:rf/trf6151.c  **** 	/* vco_freq = f * M * L / (M +- L)                 */
+ 337:rf/trf6151.c  **** 	/*          = 26MHz / R * N  with R=65 and N=B*P+A */
+ 338:rf/trf6151.c  **** 	n = (freq_100khz * m * l * r) / (m_op_l * 260);
+ 339:rf/trf6151.c  **** 	a = n % p;
+ 340:rf/trf6151.c  **** 	b = n / p;
+ 341:rf/trf6151.c  **** 
+ 342:rf/trf6151.c  **** 	*pll_config = PLL_VAL(a, b);
+ 343:rf/trf6151.c  **** 
+ 344:rf/trf6151.c  **** 	/* Debug */
+ 345:rf/trf6151.c  **** 	printd("TX Freq %u kHz => A = %u, B = %u, band = %d\n", freq_khz, a, b, *band);
+ 346:rf/trf6151.c  **** 
+ 347:rf/trf6151.c  **** 	/* Out-of-spec tuning warning */
+ 348:rf/trf6151.c  **** #ifdef WARN_OUT_OF_SPEC
+ 349:rf/trf6151.c  **** 	if (b < b_min || b > b_max)
+ 350:rf/trf6151.c  **** 		printf("Frequency %u kHz is out of spec\n", (unsigned int)freq_khz);
+ 351:rf/trf6151.c  **** #endif
+ 352:rf/trf6151.c  **** 
+ 353:rf/trf6151.c  **** 	/* All done */
+ 354:rf/trf6151.c  **** 	return;
+ 355:rf/trf6151.c  **** }
+ 356:rf/trf6151.c  **** 
+ 357:rf/trf6151.c  **** static inline void trf6151_reset(uint16_t reset_id)
+ 358:rf/trf6151.c  **** {
+ 359:rf/trf6151.c  **** 	/* pull the nRESET line low */
+ 360:rf/trf6151.c  **** 	tsp_act_disable(reset_id);
+ 361:rf/trf6151.c  **** 	tpu_enq_wait(50);
+ 362:rf/trf6151.c  **** 	/* release nRESET */
+ 363:rf/trf6151.c  **** 	tsp_act_enable(reset_id);
+ 364:rf/trf6151.c  **** }
+ 365:rf/trf6151.c  **** 
+ 366:rf/trf6151.c  **** void trf6151_init(uint8_t tsp_uid, uint16_t tsp_reset_id)
+ 367:rf/trf6151.c  **** {
+ 368:rf/trf6151.c  **** 	trf6151_tsp_uid = tsp_uid;
+ 369:rf/trf6151.c  **** 
+ 370:rf/trf6151.c  **** 	/* Configure the TSPEN which is connected to TRF6151 STROBE */
+ 371:rf/trf6151.c  **** 	tsp_setup(trf6151_tsp_uid, 0, 1, 1);
+ 372:rf/trf6151.c  **** 
+ 373:rf/trf6151.c  **** 	trf6151_reset(tsp_reset_id);
+ 374:rf/trf6151.c  **** 
+ 375:rf/trf6151.c  **** 	/* configure TRF6151 for operation */
+ 376:rf/trf6151.c  **** 	trf6151_power(1);
+ 377:rf/trf6151.c  **** 	trf6151_reg_write(REG_CFG, TRF6151_PACTRL_CFG | CFG_ILOGIC_INIT_DIS);
+ 378:rf/trf6151.c  **** 
+ 379:rf/trf6151.c  **** 	/* FIXME: Uplink / Downlink Calibration */
+ 380:rf/trf6151.c  **** }
+ 381:rf/trf6151.c  **** 
+ 382:rf/trf6151.c  **** void trf6151_power(int on)
+ 383:rf/trf6151.c  **** {
+ 260              		.loc 2 383 0
+ 261              		@ args = 0, pretend = 0, frame = 0
+ 262              		@ frame_needed = 0, uses_anonymous_args = 0
+ 263              	.LVL19:
+ 384:rf/trf6151.c  **** 	if (on) {
+ 264              		.loc 2 384 0
+ 265 0000 000050E3 		cmp	r0, #0
+ 266              		.loc 2 383 0
+ 267 0004 04E02DE5 		str	lr, [sp, #-4]!
+ 268              	.LCFI2:
+ 385:rf/trf6151.c  **** 		trf6151_reg_write(REG_PWR, PWR_REGUL_ON | PWR_BANDGAP_ON);
+ 269              		.loc 2 385 0
+ 270 0008 3810A0E3 		mov	r1, #56
+ 271 000c 0200A0E3 		mov	r0, #2
+ 272              	.LVL20:
+ 273              		.loc 2 384 0
+ 274 0010 1100000A 		beq	.L32
+ 275              		.loc 2 385 0
+ 276 0014 FEFFFFEB 		bl	trf6151_reg_write
+ 386:rf/trf6151.c  **** 		/* wait until regulators are stable (25ms == 27100 qbits) */
+ 387:rf/trf6151.c  **** 		tpu_enq_wait(5000);
+ 277              		.loc 2 387 0
+ 278 0018 3C009FE5 		ldr	r0, .L36
+ 279 001c FEFFFFEB 		bl	tpu_enq_wait
+ 388:rf/trf6151.c  **** 		tpu_enq_wait(5000);
+ 280              		.loc 2 388 0
+ 281 0020 34009FE5 		ldr	r0, .L36
+ 282 0024 FEFFFFEB 		bl	tpu_enq_wait
+ 389:rf/trf6151.c  **** 		tpu_enq_wait(5000);
+ 283              		.loc 2 389 0
+ 284 0028 2C009FE5 		ldr	r0, .L36
+ 285 002c FEFFFFEB 		bl	tpu_enq_wait
+ 390:rf/trf6151.c  **** 		tpu_enq_wait(5000);
+ 286              		.loc 2 390 0
+ 287 0030 24009FE5 		ldr	r0, .L36
+ 288 0034 FEFFFFEB 		bl	tpu_enq_wait
+ 391:rf/trf6151.c  **** 		tpu_enq_wait(5000);
+ 289              		.loc 2 391 0
+ 290 0038 1C009FE5 		ldr	r0, .L36
+ 291 003c FEFFFFEB 		bl	tpu_enq_wait
+ 392:rf/trf6151.c  **** 		tpu_enq_wait(2100);
+ 292              		.loc 2 392 0
+ 293 0040 18009FE5 		ldr	r0, .L36+4
+ 393:rf/trf6151.c  **** 	} else
+ 394:rf/trf6151.c  **** 		trf6151_reg_write(REG_PWR, PWR_BANDGAP_ON);
+ 395:rf/trf6151.c  **** }
+ 294              		.loc 2 395 0
+ 295 0044 04E09DE4 		ldr	lr, [sp], #4
+ 296              		.loc 2 392 0
+ 297 0048 FEFFFFEA 		b	tpu_enq_wait
+ 298              	.L32:
+ 299              		.loc 2 394 0
+ 300 004c 0200A0E3 		mov	r0, #2
+ 301 0050 1810A0E3 		mov	r1, #24
+ 302              		.loc 2 395 0
+ 303 0054 04E09DE4 		ldr	lr, [sp], #4
+ 304              		.loc 2 394 0
+ 305 0058 FEFFFFEA 		b	trf6151_reg_write
+ 306              	.L37:
+ 307              		.align	2
+ 308              	.L36:
+ 309 005c 88130000 		.word	5000
+ 310 0060 34080000 		.word	2100
+ 311              	.LFE20:
+ 313              		.section	.text.trf6151_init,"ax",%progbits
+ 314              		.align	2
+ 315              		.global	trf6151_init
+ 317              	trf6151_init:
+ 318              	.LFB19:
+ 319              		.loc 2 367 0
+ 320              		@ args = 0, pretend = 0, frame = 0
+ 321              		@ frame_needed = 0, uses_anonymous_args = 0
+ 322              	.LVL21:
+ 323 0000 10402DE9 		stmfd	sp!, {r4, lr}
+ 324              	.LCFI3:
+ 325              		.loc 2 368 0
+ 326 0004 50E09FE5 		ldr	lr, .L40
+ 327              		.loc 2 367 0
+ 328 0008 FFC000E2 		and	ip, r0, #255
+ 329              		.loc 2 371 0
+ 330 000c 0120A0E3 		mov	r2, #1
+ 331              		.loc 2 367 0
+ 332 0010 0148A0E1 		mov	r4, r1, asl #16
+ 333              		.loc 2 371 0
+ 334 0014 0C00A0E1 		mov	r0, ip
+ 335 0018 0010A0E3 		mov	r1, #0
+ 336              	.LVL22:
+ 337 001c 0230A0E1 		mov	r3, r2
+ 338              		.loc 2 368 0
+ 339 0020 00C0CEE5 		strb	ip, [lr, #0]
+ 340              		.loc 2 367 0
+ 341 0024 2448A0E1 		mov	r4, r4, lsr #16
+ 342              	.LVL23:
+ 343              		.loc 2 371 0
+ 344 0028 FEFFFFEB 		bl	tsp_setup
+ 345              	.LVL24:
+ 346              	.LVL25:
+ 347              	.LBB2:
+ 348              	.LBB3:
+ 349              		.loc 2 360 0
+ 350 002c 0400A0E1 		mov	r0, r4
+ 351 0030 FEFFFFEB 		bl	tsp_act_disable
+ 352              		.loc 2 361 0
+ 353 0034 3200A0E3 		mov	r0, #50
+ 354 0038 FEFFFFEB 		bl	tpu_enq_wait
+ 355              		.loc 2 363 0
+ 356 003c 0400A0E1 		mov	r0, r4
+ 357 0040 FEFFFFEB 		bl	tsp_act_enable
+ 358              	.LBE3:
+ 359              	.LBE2:
+ 360              		.loc 2 376 0
+ 361 0044 0100A0E3 		mov	r0, #1
+ 362 0048 FEFFFFEB 		bl	trf6151_power
+ 363              		.loc 2 377 0
+ 364 004c 0300A0E3 		mov	r0, #3
+ 365 0050 0219A0E3 		mov	r1, #32768
+ 366              		.loc 2 380 0
+ 367 0054 1040BDE8 		ldmfd	sp!, {r4, lr}
+ 368              		.loc 2 377 0
+ 369 0058 FEFFFFEA 		b	trf6151_reg_write
+ 370              	.L41:
+ 371              		.align	2
+ 372              	.L40:
+ 373 005c 00000000 		.word	trf6151_tsp_uid
+ 374              	.LFE19:
+ 376              		.section	.text.trf6151_set_mode,"ax",%progbits
+ 377              		.align	2
+ 378              		.global	trf6151_set_mode
+ 380              	trf6151_set_mode:
+ 381              	.LFB21:
+ 396:rf/trf6151.c  **** 
+ 397:rf/trf6151.c  **** /* Set the operational mode of the TRF6151 chip */
+ 398:rf/trf6151.c  **** void trf6151_set_mode(enum trf6151_mode mode)
+ 399:rf/trf6151.c  **** {
+ 382              		.loc 2 399 0
+ 383              		@ args = 0, pretend = 0, frame = 0
+ 384              		@ frame_needed = 0, uses_anonymous_args = 0
+ 385              		@ link register save eliminated.
+ 386              	.LVL26:
+ 400:rf/trf6151.c  **** 	uint16_t pwr = (PWR_REGUL_ON | PWR_BANDGAP_ON | (rf_band<<6));
+ 387              		.loc 2 400 0
+ 388 0000 28309FE5 		ldr	r3, .L47
+ 389 0004 B030D3E1 		ldrh	r3, [r3, #0]
+ 390 0008 033BA0E1 		mov	r3, r3, asl #22
+ 391 000c 0E3783E3 		orr	r3, r3, #3670016
+ 401:rf/trf6151.c  **** 
+ 402:rf/trf6151.c  **** 	switch (mode) {
+ 392              		.loc 2 402 0
+ 393 0010 010050E3 		cmp	r0, #1
+ 394              		.loc 2 400 0
+ 395 0014 2318A0E1 		mov	r1, r3, lsr #16
+ 396              	.LVL27:
+ 397              		.loc 2 399 0
+ 398              		@ lr needed for prologue
+ 403:rf/trf6151.c  **** 	case TRF6151_IDLE:
+ 404:rf/trf6151.c  **** 		/* should we switch of the RF gain for power saving? */
+ 405:rf/trf6151.c  **** 		break;
+ 406:rf/trf6151.c  **** 	case TRF6151_RX:
+ 407:rf/trf6151.c  **** 		pwr |= (PWR_SYNTHE_RX_ON | PWR_RX_MODE);
+ 399              		.loc 2 407 0
+ 400 0018 0A1C8103 		orreq	r1, r1, #2560
+ 401              		.loc 2 402 0
+ 402 001c 0800000A 		beq	.L43
+ 403 0020 020050E3 		cmp	r0, #2
+ 408:rf/trf6151.c  **** 		break;
+ 409:rf/trf6151.c  **** 	case TRF6151_TX:
+ 410:rf/trf6151.c  **** #if 0
+ 411:rf/trf6151.c  **** 		pwr |= (PWR_SYNTHE_TX_ON | PWR_TX_MODE);
+ 412:rf/trf6151.c  **** #else // Dieter: we should turn power control on (for TPU: check timing and order !)
+ 413:rf/trf6151.c  **** 		pwr |= (PWR_SYNTHE_TX_ON | PWR_TX_MODE | PWR_PACTRL_APC | PWR_PACTRL_APCEN); // Dieter: TODO
+ 404              		.loc 2 413 0
+ 405 0024 391B8103 		orreq	r1, r1, #58368
+ 406              	.L43:
+ 414:rf/trf6151.c  **** #endif
+ 415:rf/trf6151.c  **** 		break;
+ 416:rf/trf6151.c  **** 	}
+ 417:rf/trf6151.c  **** 	trf6151_reg_write(REG_PWR, pwr);
+ 407              		.loc 2 417 0
+ 408 0028 0200A0E3 		mov	r0, #2
+ 409              	.LVL28:
+ 418:rf/trf6151.c  **** }
+ 410              		.loc 2 418 0
+ 411              		.loc 2 417 0
+ 412 002c FEFFFFEA 		b	trf6151_reg_write
+ 413              	.LVL29:
+ 414              	.L48:
+ 415              		.align	2
+ 416              	.L47:
+ 417 0030 02000000 		.word	rf_band
+ 418              	.LFE21:
+ 420              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 421              		.align	2
+ 422              	.LC0:
+ 423 0000 556E7375 		.ascii	"Unsupported band ! YMMV.\000"
+ 423      70706F72 
+ 423      74656420 
+ 423      62616E64 
+ 423      20212059 
+ 424              		.global	__udivsi3
+ 425 0019 000000   		.section	.text.trf6151_set_arfcn,"ax",%progbits
+ 426              		.align	2
+ 427              		.global	trf6151_set_arfcn
+ 429              	trf6151_set_arfcn:
+ 430              	.LFB23:
+ 419:rf/trf6151.c  **** 
+ 420:rf/trf6151.c  **** static void trf6151_band_select(enum trf6151_gsm_band band)
+ 421:rf/trf6151.c  **** {
+ 422:rf/trf6151.c  **** 	uint16_t pwr = trf6151_reg_cache[REG_PWR];
+ 423:rf/trf6151.c  **** 
+ 424:rf/trf6151.c  **** 	pwr &= ~(3 << 6);
+ 425:rf/trf6151.c  **** 	pwr |= (band << 6);
+ 426:rf/trf6151.c  **** 
+ 427:rf/trf6151.c  **** 	trf6151_reg_write(REG_PWR, pwr);
+ 428:rf/trf6151.c  **** }
+ 429:rf/trf6151.c  **** 
+ 430:rf/trf6151.c  **** /* Set ARFCN.  Takes 2 reg_write, i.e. 8 TPU instructions */
+ 431:rf/trf6151.c  **** void trf6151_set_arfcn(uint16_t arfcn, int tx)
+ 432:rf/trf6151.c  **** {
+ 431              		.loc 2 432 0
+ 432              		@ args = 0, pretend = 0, frame = 0
+ 433              		@ frame_needed = 0, uses_anonymous_args = 0
+ 434              	.LVL30:
+ 435 0000 F0412DE9 		stmfd	sp!, {r4, r5, r6, r7, r8, lr}
+ 436              	.LCFI4:
+ 437              		.loc 2 432 0
+ 438 0004 0028A0E1 		mov	r2, r0, asl #16
+ 433:rf/trf6151.c  **** 	uint32_t freq_khz;
+ 434:rf/trf6151.c  **** 	uint16_t pll_config;
+ 435:rf/trf6151.c  **** 	int uplink;
+ 436:rf/trf6151.c  **** 	enum trf6151_gsm_band pll_band;
+ 437:rf/trf6151.c  **** 
+ 438:rf/trf6151.c  **** 	uplink = !!(arfcn & ARFCN_UPLINK);
+ 439:rf/trf6151.c  **** 	arfcn &= ~ARFCN_UPLINK;
+ 439              		.loc 2 439 0
+ 440 0008 F0819FE5 		ldr	r8, .L82
+ 441              	.LVL31:
+ 442              		.loc 2 432 0
+ 443 000c 2238A0E1 		mov	r3, r2, lsr #16
+ 444              		.loc 2 439 0
+ 445 0010 088003E0 		and	r8, r3, r8
+ 446              		.loc 2 438 0
+ 447 0014 222FA0E1 		mov	r2, r2, lsr #30
+ 440:rf/trf6151.c  **** 
+ 441:rf/trf6151.c  **** 	switch (gsm_arfcn2band(arfcn)) {
+ 448              		.loc 2 441 0
+ 449 0018 0800A0E1 		mov	r0, r8
+ 450              	.LVL32:
+ 451              		.loc 2 432 0
+ 452 001c 0150A0E1 		mov	r5, r1
+ 453              		.loc 2 438 0
+ 454 0020 014002E2 		and	r4, r2, #1
+ 455              	.LVL33:
+ 456              		.loc 2 441 0
+ 457 0024 FEFFFFEB 		bl	gsm_arfcn2band
+ 458              	.LVL34:
+ 459 0028 200050E3 		cmp	r0, #32
+ 460 002c 1100000A 		beq	.L51
+ 461 0030 0D00008A 		bhi	.L52
+ 462 0034 100050E3 		cmp	r0, #16
+ 463 0038 100000EA 		b	.L81
+ 464              	.L52:
+ 465 003c 400050E3 		cmp	r0, #64
+ 466 0040 1100000A 		beq	.L51
+ 467 0044 800050E3 		cmp	r0, #128
+ 468              	.L81:
+ 469 0048 1300001A 		bne	.L50
+ 470              	.L51:
+ 442:rf/trf6151.c  **** 	case GSM_BAND_850:
+ 443:rf/trf6151.c  **** 	case GSM_BAND_900:
+ 444:rf/trf6151.c  **** 	case GSM_BAND_1800:
+ 445:rf/trf6151.c  **** 	case GSM_BAND_1900:
+ 446:rf/trf6151.c  **** 		/* Supported */
+ 447:rf/trf6151.c  **** 		break;
+ 448:rf/trf6151.c  **** 	case GSM_BAND_450:
+ 449:rf/trf6151.c  **** 	case GSM_BAND_480:
+ 450:rf/trf6151.c  **** 	case GSM_BAND_750:
+ 451:rf/trf6151.c  **** 	case GSM_BAND_810:
+ 452:rf/trf6151.c  **** 		printf("Unsupported band ! YMMV.\n");
+ 471              		.loc 2 452 0
+ 472 004c B0019FE5 		ldr	r0, .L82+4
+ 473 0050 FEFFFFEB 		bl	puts
+ 474              	.L50:
+ 453:rf/trf6151.c  **** 		break;
+ 454:rf/trf6151.c  **** 	}
+ 455:rf/trf6151.c  **** 
+ 456:rf/trf6151.c  **** 	freq_khz = gsm_arfcn2freq10(arfcn, uplink) * 100;
+ 475              		.loc 2 456 0
+ 476 0054 0410A0E1 		mov	r1, r4
+ 477 0058 0800A0E1 		mov	r0, r8
+ 478 005c FEFFFFEB 		bl	gsm_arfcn2freq10
+ 457:rf/trf6151.c  **** 	printd("ARFCN %u -> %u kHz\n", arfcn, freq_khz);
+ 458:rf/trf6151.c  **** 
+ 459:rf/trf6151.c  **** 	if (!tx)
+ 479              		.loc 2 459 0
+ 480 0060 000055E3 		cmp	r5, #0
+ 481              		.loc 2 456 0
+ 482 0064 6410A0E3 		mov	r1, #100
+ 483 0068 900105E0 		mul	r5, r0, r1
+ 484              	.LVL35:
+ 485              		.loc 2 459 0
+ 486 006c 3E00001A 		bne	.L53
+ 487              	.LBB4:
+ 488              	.LBB5:
+ 489              		.loc 2 210 0
+ 490 0070 0500A0E1 		mov	r0, r5
+ 491 0074 FEFFFFEB 		bl	__udivsi3
+ 492              		.loc 2 213 0
+ 493 0078 88419FE5 		ldr	r4, .L82+8
+ 494              	.LVL36:
+ 495 007c 040055E1 		cmp	r5, r4
+ 496 0080 0440A093 		movls	r4, #4
+ 497              	.LVL37:
+ 498 0084 0240A083 		movhi	r4, #2
+ 499              		.loc 2 216 0
+ 500 0088 940006E0 		mul	r6, r4, r0
+ 501              	.LVL38:
+ 502              		.loc 2 219 0
+ 503 008c 4130A0E3 		mov	r3, #65
+ 504 0090 960300E0 		mul	r0, r6, r3
+ 505 0094 411FA0E3 		mov	r1, #260
+ 506 0098 FEFFFFEB 		bl	__udivsi3
+ 507              		.loc 2 223 0
+ 508 009c 2033A0E1 		mov	r3, r0, lsr #6
+ 509 00a0 403043E2 		sub	r3, r3, #64
+ 510 00a4 8334A0E1 		mov	r3, r3, asl #9
+ 511 00a8 3F0000E2 		and	r0, r0, #63
+ 512 00ac 803183E1 		orr	r3, r3, r0, asl #3
+ 513 00b0 0338A0E1 		mov	r3, r3, asl #16
+ 514              		.loc 2 233 0
+ 515 00b4 040054E3 		cmp	r4, #4
+ 516              		.loc 2 223 0
+ 517 00b8 2378A0E1 		mov	r7, r3, lsr #16
+ 518              	.LVL39:
+ 519              		.loc 2 233 0
+ 520 00bc 3300001A 		bne	.L58
+ 521              		.loc 2 236 0
+ 522 00c0 44319FE5 		ldr	r3, .L82+12
+ 523 00c4 030056E1 		cmp	r6, r3
+ 524 00c8 0140A083 		movhi	r4, #1
+ 525              	.LVL40:
+ 526 00cc 0440A093 		movls	r4, #4
+ 527 00d0 6F0000EA 		b	.L62
+ 528              	.LVL41:
+ 529              	.L58:
+ 530              	.LBB6:
+ 531              		.loc 2 251 0
+ 532 00d4 FEFFFFEB 		bl	rffe_get_rx_ports
+ 533              		.loc 2 255 0
+ 534 00d8 30319FE5 		ldr	r3, .L82+16
+ 535 00dc 030055E1 		cmp	r5, r3
+ 536 00e0 2030A083 		movhi	r3, #32
+ 537              	.LVL42:
+ 538 00e4 1030A093 		movls	r3, #16
+ 539              	.LVL43:
+ 540              		.loc 2 256 0
+ 541 00e8 000013E1 		tst	r3, r0
+ 542 00ec 0300A011 		movne	r0, r3
+ 543              		.loc 2 259 0
+ 544 00f0 100010E3 		tst	r0, #16
+ 545 00f4 0640A003 		moveq	r4, #6
+ 546 00f8 0240A013 		movne	r4, #2
+ 547              	.LVL44:
+ 548 00fc 6F0000EA 		b	.L62
+ 549              	.LVL45:
+ 550              	.L53:
+ 551              	.LBE6:
+ 552              	.LBE5:
+ 553              	.LBE4:
+ 554              	.LBB7:
+ 555              	.LBB8:
+ 556              		.loc 2 286 0
+ 557 0100 0500A0E1 		mov	r0, r5
+ 558 0104 FEFFFFEB 		bl	__udivsi3
+ 559              		.loc 2 289 0
+ 560 0108 F8309FE5 		ldr	r3, .L82+8
+ 561 010c 030055E1 		cmp	r5, r3
+ 562              		.loc 2 286 0
+ 563 0110 00C0A0E1 		mov	ip, r0
+ 564              	.LVL46:
+ 565              		.loc 2 289 0
+ 566 0114 4D00009A 		bls	.L70
+ 567              		.loc 2 292 0
+ 568 0118 F4309FE5 		ldr	r3, .L82+20
+ 569 011c 030055E1 		cmp	r5, r3
+ 570 0120 0640A083 		movhi	r4, #6
+ 571              	.LVL47:
+ 572 0124 0240A093 		movls	r4, #2
+ 573 0128 4600A0E3 		mov	r0, #70
+ 574              	.LVL48:
+ 575 012c 0220A0E3 		mov	r2, #2
+ 576              	.LVL49:
+ 577 0130 1A30A0E3 		mov	r3, #26
+ 578              	.LVL50:
+ 579 0134 1C10A0E3 		mov	r1, #28
+ 580              	.LVL51:
+ 581 0138 620000EA 		b	.L75
+ 582              	.LVL52:
+ 583              	.L70:
+ 584              		.loc 2 306 0
+ 585 013c D4309FE5 		ldr	r3, .L82+24
+ 586 0140 030055E1 		cmp	r5, r3
+ 587 0144 5600008A 		bhi	.L76
+ 588 0148 0420A0E3 		mov	r2, #4
+ 589              	.LVL53:
+ 590 014c 3700A0E3 		mov	r0, #55
+ 591              	.LVL54:
+ 592 0150 1A30A0E3 		mov	r3, #26
+ 593              	.LVL55:
+ 594 0154 1610A0E3 		mov	r1, #22
+ 595              	.LVL56:
+ 596 0158 0240A0E1 		mov	r4, r2
+ 597              	.LVL57:
+ 598 015c 620000EA 		b	.L75
+ 599              	.LVL58:
+ 600              	.L76:
+ 601              		.loc 2 315 0
+ 602 0160 B4309FE5 		ldr	r3, .L82+28
+ 603 0164 030055E1 		cmp	r5, r3
+ 604 0168 1E00A093 		movls	r0, #30
+ 605              	.LVL59:
+ 606 016c 0420A093 		movls	r2, #4
+ 607              	.LVL60:
+ 608 0170 3430A093 		movls	r3, #52
+ 609              	.LVL61:
+ 610 0174 3010A093 		movls	r1, #48
+ 611              	.LVL62:
+ 612 0178 0540A093 		movls	r4, #5
+ 613              	.LVL63:
+ 614 017c 2300A083 		movhi	r0, #35
+ 615 0180 0420A083 		movhi	r2, #4
+ 616 0184 3430A083 		movhi	r3, #52
+ 617 0188 3810A083 		movhi	r1, #56
+ 618 018c 0140A083 		movhi	r4, #1
+ 619              	.L75:
+ 620              		.loc 2 338 0
+ 621 0190 9C0303E0 		mul	r3, ip, r3
+ 622              	.LVL64:
+ 623 0194 920303E0 		mul	r3, r2, r3
+ 624 0198 930000E0 		mul	r0, r3, r0
+ 625              	.LVL65:
+ 626 019c 413FA0E3 		mov	r3, #260
+ 627 01a0 930101E0 		mul	r1, r3, r1
+ 628              	.LVL66:
+ 629 01a4 FEFFFFEB 		bl	__udivsi3
+ 630              	.LVL67:
+ 631              		.loc 2 342 0
+ 632 01a8 2033A0E1 		mov	r3, r0, lsr #6
+ 633 01ac 403043E2 		sub	r3, r3, #64
+ 634 01b0 8334A0E1 		mov	r3, r3, asl #9
+ 635 01b4 3F0000E2 		and	r0, r0, #63
+ 636 01b8 803183E1 		orr	r3, r3, r0, asl #3
+ 637 01bc 0338A0E1 		mov	r3, r3, asl #16
+ 638 01c0 2378A0E1 		mov	r7, r3, lsr #16
+ 639              	.LVL68:
+ 640              	.L62:
+ 641              	.LBE8:
+ 642              	.LBE7:
+ 643              	.LBB9:
+ 644              	.LBB10:
+ 645              		.loc 2 422 0
+ 646 01c4 54309FE5 		ldr	r3, .L82+32
+ 647              	.LVL69:
+ 648              		.loc 2 424 0
+ 649 01c8 54109FE5 		ldr	r1, .L82+36
+ 650              	.LVL70:
+ 651              		.loc 2 422 0
+ 652 01cc B430D3E1 		ldrh	r3, [r3, #4]
+ 653              	.LVL71:
+ 654              		.loc 2 424 0
+ 655 01d0 011003E0 		and	r1, r3, r1
+ 656              	.LVL72:
+ 657              		.loc 2 427 0
+ 658 01d4 041381E1 		orr	r1, r1, r4, asl #6
+ 659              	.LVL73:
+ 660 01d8 0200A0E3 		mov	r0, #2
+ 661              	.LVL74:
+ 662 01dc FEFFFFEB 		bl	trf6151_reg_write
+ 663              	.LVL75:
+ 664              	.LBE10:
+ 665              	.LBE9:
+ 460:rf/trf6151.c  **** 		trf6151_pll_rx(freq_khz, &pll_config, &pll_band);
+ 461:rf/trf6151.c  **** 	else
+ 462:rf/trf6151.c  **** 		trf6151_pll_tx(freq_khz, &pll_config, &pll_band);
+ 463:rf/trf6151.c  **** 
+ 464:rf/trf6151.c  **** 	trf6151_band_select(pll_band);
+ 465:rf/trf6151.c  **** 	trf6151_reg_write(REG_PLL, pll_config);
+ 666              		.loc 2 465 0
+ 667 01e0 0710A0E1 		mov	r1, r7
+ 668 01e4 0100A0E3 		mov	r0, #1
+ 669 01e8 FEFFFFEB 		bl	trf6151_reg_write
+ 466:rf/trf6151.c  **** 
+ 467:rf/trf6151.c  **** 	rf_band = pll_band;
+ 670              		.loc 2 467 0
+ 671 01ec 34309FE5 		ldr	r3, .L82+40
+ 672 01f0 B040C3E1 		strh	r4, [r3, #0]	@ movhi
+ 468:rf/trf6151.c  **** 	rf_arfcn = arfcn; // TODO: arfcn is referenced at other places
+ 673              		.loc 2 468 0
+ 674 01f4 30309FE5 		ldr	r3, .L82+44
+ 675 01f8 B080C3E1 		strh	r8, [r3, #0]	@ movhi
+ 469:rf/trf6151.c  **** }
+ 676              		.loc 2 469 0
+ 677 01fc F081BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, pc}
+ 678              	.L83:
+ 679              		.align	2
+ 680              	.L82:
+ 681 0200 FFBF0000 		.word	49151
+ 682 0204 00000000 		.word	.LC0
+ 683 0208 70991400 		.word	1350000
+ 684 020c 098C0000 		.word	35849
+ 685 0210 67111D00 		.word	1904999
+ 686 0214 9BBB1B00 		.word	1817499
+ 687 0218 EBC50C00 		.word	837099
+ 688 021c 4FF80C00 		.word	849999
+ 689 0220 0A000000 		.word	trf6151_reg_cache
+ 690 0224 3FFF0000 		.word	65343
+ 691 0228 02000000 		.word	rf_band
+ 692 022c 00000000 		.word	rf_arfcn
+ 693              	.LFE23:
+ 695              		.section	.text.trf6151_calib_dc_offs,"ax",%progbits
+ 696              		.align	2
+ 697              		.global	trf6151_calib_dc_offs
+ 699              	trf6151_calib_dc_offs:
+ 700              	.LFB24:
+ 470:rf/trf6151.c  **** 
+ 471:rf/trf6151.c  **** void trf6151_calib_dc_offs(void)
+ 472:rf/trf6151.c  **** {
+ 701              		.loc 2 472 0
+ 702              		@ args = 0, pretend = 0, frame = 0
+ 703              		@ frame_needed = 0, uses_anonymous_args = 0
+ 704              	.LVL76:
+ 705 0000 04E02DE5 		str	lr, [sp, #-4]!
+ 706              	.LCFI5:
+ 473:rf/trf6151.c  **** 	uint16_t rx = trf6151_reg_cache[REG_RX];
+ 474:rf/trf6151.c  **** 
+ 475:rf/trf6151.c  **** 	/* Set RX CAL Mode bit, it will re-set automatically */
+ 476:rf/trf6151.c  **** 	trf6151_reg_write(REG_RX, rx | RX_CAL_MODE);
+ 707              		.loc 2 476 0
+ 708 0004 18309FE5 		ldr	r3, .L86
+ 709 0008 B010D3E1 		ldrh	r1, [r3, #0]
+ 710 000c 0000A0E3 		mov	r0, #0
+ 711 0010 011C81E3 		orr	r1, r1, #256
+ 712 0014 FEFFFFEB 		bl	trf6151_reg_write
+ 477:rf/trf6151.c  **** 	/* DC offset calibration can take up to 50us, i.e. 54.16 * 923ns*/
+ 478:rf/trf6151.c  **** 	tpu_enq_wait(55);
+ 713              		.loc 2 478 0
+ 714 0018 3700A0E3 		mov	r0, #55
+ 479:rf/trf6151.c  **** }
+ 715              		.loc 2 479 0
+ 716 001c 04E09DE4 		ldr	lr, [sp], #4
+ 717              		.loc 2 478 0
+ 718 0020 FEFFFFEA 		b	tpu_enq_wait
+ 719              	.L87:
+ 720              		.align	2
+ 721              	.L86:
+ 722 0024 0A000000 		.word	trf6151_reg_cache
+ 723              	.LFE24:
+ 725              		.section	.text.trf6151_get_gain_reg,"ax",%progbits
+ 726              		.align	2
+ 727              		.global	trf6151_get_gain_reg
+ 729              	trf6151_get_gain_reg:
+ 730              	.LFB25:
+ 480:rf/trf6151.c  **** 
+ 481:rf/trf6151.c  **** uint8_t trf6151_get_gain_reg(void)
+ 482:rf/trf6151.c  **** {
+ 731              		.loc 2 482 0
+ 732              		@ args = 0, pretend = 0, frame = 0
+ 733              		@ frame_needed = 0, uses_anonymous_args = 0
+ 734              		@ link register save eliminated.
+ 735              	.LVL77:
+ 483:rf/trf6151.c  **** 	uint16_t vga, reg_rx = trf6151_reg_cache[REG_RX];
+ 736              		.loc 2 483 0
+ 737 0000 3C309FE5 		ldr	r3, .L96
+ 738 0004 B020D3E1 		ldrh	r2, [r3, #0]
+ 739 0008 0228A0E1 		mov	r2, r2, asl #16
+ 484:rf/trf6151.c  **** 	uint8_t gain = 0;
+ 485:rf/trf6151.c  **** 
+ 486:rf/trf6151.c  **** 	switch ((reg_rx >> 9) & 3) {
+ 740              		.loc 2 486 0
+ 741 000c A23CA0E1 		mov	r3, r2, lsr #25
+ 742 0010 033013E2 		ands	r3, r3, #3
+ 743              		.loc 2 483 0
+ 744 0014 2208A0E1 		mov	r0, r2, lsr #16
+ 745              	.LVL78:
+ 746              		.loc 2 482 0
+ 747              		@ lr needed for prologue
+ 748              		.loc 2 486 0
+ 749 0018 0720A003 		moveq	r2, #7
+ 750              	.LVL79:
+ 751 001c 0900000A 		beq	.L92
+ 752 0020 030053E3 		cmp	r3, #3
+ 753 0024 1B20A003 		moveq	r2, #27
+ 754 0028 0020A013 		movne	r2, #0
+ 755              	.L92:
+ 487:rf/trf6151.c  **** 	case 0:
+ 488:rf/trf6151.c  **** 		gain += TRF6151_FE_GAIN_LOW;
+ 489:rf/trf6151.c  **** 		break;
+ 490:rf/trf6151.c  **** 	case 3:
+ 491:rf/trf6151.c  **** 		gain += TRF6151_FE_GAIN_HIGH;
+ 492:rf/trf6151.c  **** 		break;
+ 493:rf/trf6151.c  **** 	}
+ 494:rf/trf6151.c  **** 
+ 495:rf/trf6151.c  **** 	vga = (reg_rx >> RX_VGA_GAIN_SHIFT) & 0x1f;
+ 756              		.loc 2 495 0
+ 757 002c A005A0E1 		mov	r0, r0, lsr #11
+ 758              	.LVL80:
+ 496:rf/trf6151.c  **** 	if (vga < 6)
+ 759              		.loc 2 496 0
+ 760 0030 050050E3 		cmp	r0, #5
+ 761 0034 0600A093 		movls	r0, #6
+ 762 0038 800082E0 		add	r0, r2, r0, asl #1
+ 763              	.LVL81:
+ 497:rf/trf6151.c  **** 		vga = 6;
+ 498:rf/trf6151.c  **** 
+ 499:rf/trf6151.c  **** 	gain += TRF6151_VGA_GAIN_MIN + (vga - 6) * 2;
+ 500:rf/trf6151.c  **** 
+ 501:rf/trf6151.c  **** 	return gain;
+ 502:rf/trf6151.c  **** }
+ 764              		.loc 2 502 0
+ 765 003c 020080E2 		add	r0, r0, #2
+ 766 0040 1EFF2FE1 		bx	lr
+ 767              	.L97:
+ 768              		.align	2
+ 769              	.L96:
+ 770 0044 0A000000 		.word	trf6151_reg_cache
+ 771              	.LFE25:
+ 773              		.section	.text.trf6151_get_gain,"ax",%progbits
+ 774              		.align	2
+ 775              		.global	trf6151_get_gain
+ 777              	trf6151_get_gain:
+ 778              	.LFB26:
+ 503:rf/trf6151.c  **** 
+ 504:rf/trf6151.c  **** uint8_t trf6151_get_gain(void)
+ 505:rf/trf6151.c  **** {
+ 779              		.loc 2 505 0
+ 780              		@ args = 0, pretend = 0, frame = 0
+ 781              		@ frame_needed = 0, uses_anonymous_args = 0
+ 782              		@ link register save eliminated.
+ 783              	.LVL82:
+ 506:rf/trf6151.c  **** 	uint8_t gain;
+ 507:rf/trf6151.c  **** 	
+ 508:rf/trf6151.c  **** 	gain = trf6151_vga_dbm;
+ 509:rf/trf6151.c  **** 	if (trf6151_gain_high)
+ 784              		.loc 2 509 0
+ 785 0000 20309FE5 		ldr	r3, .L103
+ 786 0004 003093E5 		ldr	r3, [r3, #0]
+ 787 0008 000053E3 		cmp	r3, #0
+ 788              		.loc 2 508 0
+ 789 000c 18309FE5 		ldr	r3, .L103+4
+ 790 0010 0020D3E5 		ldrb	r2, [r3, #0]	@ zero_extendqisi2
+ 791              	.LVL83:
+ 510:rf/trf6151.c  **** 		gain += TRF6151_FE_GAIN_HIGH;
+ 792              		.loc 2 510 0
+ 793 0014 1B3082E2 		add	r3, r2, #27
+ 511:rf/trf6151.c  **** 	else
+ 512:rf/trf6151.c  **** 		gain += TRF6151_FE_GAIN_LOW;
+ 794              		.loc 2 512 0
+ 795 0018 072082E2 		add	r2, r2, #7
+ 796              	.LVL84:
+ 797              		.loc 2 510 0
+ 798 001c FF0003E2 		and	r0, r3, #255
+ 799              	.LVL85:
+ 800              		.loc 2 512 0
+ 801 0020 FF000202 		andeq	r0, r2, #255
+ 802              		.loc 2 505 0
+ 803              		@ lr needed for prologue
+ 804              	.LVL86:
+ 513:rf/trf6151.c  **** 
+ 514:rf/trf6151.c  **** 	return gain;
+ 515:rf/trf6151.c  **** }
+ 805              		.loc 2 515 0
+ 806 0024 1EFF2FE1 		bx	lr
+ 807              	.L104:
+ 808              		.align	2
+ 809              	.L103:
+ 810 0028 04000000 		.word	trf6151_gain_high
+ 811 002c 08000000 		.word	trf6151_vga_dbm
+ 812              	.LFE26:
+ 814              		.section	.text.trf6151_test,"ax",%progbits
+ 815              		.align	2
+ 816              		.global	trf6151_test
+ 818              	trf6151_test:
+ 819              	.LFB27:
+ 516:rf/trf6151.c  **** 
+ 517:rf/trf6151.c  **** void trf6151_test(uint16_t arfcn)
+ 518:rf/trf6151.c  **** {
+ 820              		.loc 2 518 0
+ 821              		@ args = 0, pretend = 0, frame = 0
+ 822              		@ frame_needed = 0, uses_anonymous_args = 0
+ 823              	.LVL87:
+ 824 0000 0008A0E1 		mov	r0, r0, asl #16
+ 825              	.LVL88:
+ 826 0004 04E02DE5 		str	lr, [sp, #-4]!
+ 827              	.LCFI6:
+ 519:rf/trf6151.c  **** 	/* Select ARFCN downlink */
+ 520:rf/trf6151.c  **** 	trf6151_set_arfcn(arfcn, 0);
+ 828              		.loc 2 520 0
+ 829 0008 0010A0E3 		mov	r1, #0
+ 830 000c 2008A0E1 		mov	r0, r0, lsr #16
+ 831              	.LVL89:
+ 832 0010 FEFFFFEB 		bl	trf6151_set_arfcn
+ 833              	.LVL90:
+ 521:rf/trf6151.c  **** 
+ 522:rf/trf6151.c  **** 	trf6151_set_mode(TRF6151_RX);
+ 834              		.loc 2 522 0
+ 835 0014 0100A0E3 		mov	r0, #1
+ 836 0018 FEFFFFEB 		bl	trf6151_set_mode
+ 523:rf/trf6151.c  **** 	//trf6151_reg_write(REG_PWR, (PWR_SYNTHE_RX_ON | PWR_RX_MODE | PWR_REGUL_ON | (rf_band<<6) | PWR_B
+ 524:rf/trf6151.c  **** 	/* Wait for PLL stabilization (170us max) */
+ 525:rf/trf6151.c  **** 	tpu_enq_wait(TRF6151_RX_PLL_DELAY);
+ 837              		.loc 2 525 0
+ 838 001c B800A0E3 		mov	r0, #184
+ 839 0020 FEFFFFEB 		bl	tpu_enq_wait
+ 526:rf/trf6151.c  **** 
+ 527:rf/trf6151.c  **** 	/* Use DC offset calibration after RX mode has been switched on
+ 528:rf/trf6151.c  **** 	 * (might not be needed) */
+ 529:rf/trf6151.c  **** 	trf6151_calib_dc_offs();
+ 840              		.loc 2 529 0
+ 841 0024 FEFFFFEB 		bl	trf6151_calib_dc_offs
+ 530:rf/trf6151.c  **** 
+ 531:rf/trf6151.c  **** 	tpu_enq_sleep();
+ 842              		.loc 2 531 0
+ 843 0028 FEFFFFEB 		bl	tpu_enq_sleep
+ 532:rf/trf6151.c  **** 	tpu_enable(1);
+ 844              		.loc 2 532 0
+ 845 002c 0100A0E3 		mov	r0, #1
+ 846 0030 FEFFFFEB 		bl	tpu_enable
+ 533:rf/trf6151.c  **** 	tpu_wait_idle();
+ 534:rf/trf6151.c  **** }
+ 847              		.loc 2 534 0
+ 848 0034 04E09DE4 		ldr	lr, [sp], #4
+ 849              		.loc 2 533 0
+ 850 0038 FEFFFFEA 		b	tpu_wait_idle
+ 851              	.LFE27:
+ 853              		.section	.text.trf6151_tx_test,"ax",%progbits
+ 854              		.align	2
+ 855              		.global	trf6151_tx_test
+ 857              	trf6151_tx_test:
+ 858              	.LFB28:
+ 535:rf/trf6151.c  **** 
+ 536:rf/trf6151.c  **** void trf6151_tx_test(uint16_t arfcn)
+ 537:rf/trf6151.c  **** {
+ 859              		.loc 2 537 0
+ 860              		@ args = 0, pretend = 0, frame = 0
+ 861              		@ frame_needed = 0, uses_anonymous_args = 0
+ 862              	.LVL91:
+ 863 0000 0008A0E1 		mov	r0, r0, asl #16
+ 864              	.LVL92:
+ 538:rf/trf6151.c  **** 	/* Select ARFCN uplink */
+ 539:rf/trf6151.c  **** 	trf6151_set_arfcn(arfcn | ARFCN_UPLINK, 1);
+ 865              		.loc 2 539 0
+ 866 0004 010180E3 		orr	r0, r0, #1073741824
+ 867              		.loc 2 537 0
+ 868 0008 04E02DE5 		str	lr, [sp, #-4]!
+ 869              	.LCFI7:
+ 870              		.loc 2 539 0
+ 871 000c 0110A0E3 		mov	r1, #1
+ 872 0010 2008A0E1 		mov	r0, r0, lsr #16
+ 873 0014 FEFFFFEB 		bl	trf6151_set_arfcn
+ 540:rf/trf6151.c  **** 
+ 541:rf/trf6151.c  **** 	trf6151_set_mode(TRF6151_TX);
+ 874              		.loc 2 541 0
+ 875 0018 0200A0E3 		mov	r0, #2
+ 876 001c FEFFFFEB 		bl	trf6151_set_mode
+ 542:rf/trf6151.c  **** 	tpu_enq_wait(TRF6151_RX_PLL_DELAY);
+ 877              		.loc 2 542 0
+ 878 0020 B800A0E3 		mov	r0, #184
+ 879 0024 FEFFFFEB 		bl	tpu_enq_wait
+ 543:rf/trf6151.c  **** 
+ 544:rf/trf6151.c  **** 	tpu_enq_sleep();
+ 880              		.loc 2 544 0
+ 881 0028 FEFFFFEB 		bl	tpu_enq_sleep
+ 545:rf/trf6151.c  **** 	tpu_enable(1);
+ 882              		.loc 2 545 0
+ 883 002c 0100A0E3 		mov	r0, #1
+ 884 0030 FEFFFFEB 		bl	tpu_enable
+ 546:rf/trf6151.c  **** 	tpu_wait_idle();
+ 547:rf/trf6151.c  **** }
+ 885              		.loc 2 547 0
+ 886 0034 04E09DE4 		ldr	lr, [sp], #4
+ 887              		.loc 2 546 0
+ 888 0038 FEFFFFEA 		b	tpu_wait_idle
+ 889              	.LFE28:
+ 891              		.section	.text.trf6151_rx_window,"ax",%progbits
+ 892              		.align	2
+ 893              		.global	trf6151_rx_window
+ 895              	trf6151_rx_window:
+ 896              	.LFB29:
+ 548:rf/trf6151.c  **** 
+ 549:rf/trf6151.c  **** #define TRF6151_REGWR_QBITS	8	/* 4 GSM qbits + 4 TPU instructions */
+ 550:rf/trf6151.c  **** #define TRF6151_RX_TPU_INSTR	4	/* set_gain_reg(1), set_arfcn(2), set_mode(1) */
+ 551:rf/trf6151.c  **** 
+ 552:rf/trf6151.c  **** /* delay caused by this driver programming the TPU for RX mode */
+ 553:rf/trf6151.c  **** #define TRF6151_RX_TPU_DELAY	(TRF6151_RX_TPU_INSTR * TRF6151_REGWR_QBITS)
+ 554:rf/trf6151.c  **** 
+ 555:rf/trf6151.c  **** /* prepare a Rx window with the TRF6151 finished at time 'start' (in qbits) */
+ 556:rf/trf6151.c  **** void trf6151_rx_window(int16_t start_qbits, uint16_t arfcn)
+ 557:rf/trf6151.c  **** {
+ 897              		.loc 2 557 0
+ 898              		@ args = 0, pretend = 0, frame = 0
+ 899              		@ frame_needed = 0, uses_anonymous_args = 0
+ 900              	.LVL93:
+ 558:rf/trf6151.c  **** 	int16_t start_pll_qbits;
+ 559:rf/trf6151.c  **** 
+ 560:rf/trf6151.c  **** 	/* power up at the right time _before_ the 'start_qbits' point in time */
+ 561:rf/trf6151.c  **** 	start_pll_qbits = add_mod5000(start_qbits,  -(TRF6151_RX_PLL_DELAY + TRF6151_RX_TPU_DELAY));
+ 901              		.loc 2 561 0
+ 902 0000 0008A0E1 		mov	r0, r0, asl #16
+ 903              	.LVL94:
+ 904              		.loc 2 557 0
+ 905 0004 0138A0E1 		mov	r3, r1, asl #16
+ 906 0008 10402DE9 		stmfd	sp!, {r4, lr}
+ 907              	.LCFI8:
+ 908              		.loc 2 561 0
+ 909 000c D710E0E3 		mvn	r1, #215
+ 910              	.LVL95:
+ 911 0010 4008A0E1 		mov	r0, r0, asr #16
+ 912              		.loc 2 557 0
+ 913 0014 2348A0E1 		mov	r4, r3, lsr #16
+ 914              	.LVL96:
+ 915              		.loc 2 561 0
+ 916 0018 FEFFFFEB 		bl	add_mod5000
+ 917 001c 0008A0E1 		mov	r0, r0, asl #16
+ 918 0020 2028A0E1 		mov	r2, r0, lsr #16
+ 919              	.LVL97:
+ 920              	.LBB11:
+ 921              	.LBB12:
+ 922              	.LBB13:
+ 923              	.LBB14:
+ 924              		.loc 1 72 0
+ 925 0024 4E3D82E2 		add	r3, r2, #4992
+ 926 0028 083083E2 		add	r3, r3, #8
+ 927              		.loc 1 71 0
+ 928 002c 0218A0E1 		mov	r1, r2, asl #16
+ 929              		.loc 1 72 0
+ 930 0030 0338A0E1 		mov	r3, r3, asl #16
+ 931              		.loc 1 71 0
+ 932 0034 41C8B0E1 		movs	ip, r1, asr #16
+ 933              		.loc 1 72 0
+ 934 0038 2308A0E1 		mov	r0, r3, lsr #16
+ 935              		.loc 1 71 0
+ 936 003c 1500004A 		bmi	.L112
+ 937              		.loc 1 74 0
+ 938 0040 4E3D42E2 		sub	r3, r2, #4992
+ 939              		.loc 1 73 0
+ 940 0044 44209FE5 		ldr	r2, .L116
+ 941              	.LVL98:
+ 942              		.loc 1 74 0
+ 943 0048 083043E2 		sub	r3, r3, #8
+ 944 004c 0338A0E1 		mov	r3, r3, asl #16
+ 945              		.loc 1 73 0
+ 946 0050 02005CE1 		cmp	ip, r2
+ 947              		.loc 1 74 0
+ 948 0054 2308A0E1 		mov	r0, r3, lsr #16
+ 949              		.loc 1 75 0
+ 950 0058 2108A0D1 		movle	r0, r1, lsr #16
+ 951              	.LVL99:
+ 952              	.L112:
+ 953              	.LBE14:
+ 954              	.LBE13:
+ 955              		.loc 1 93 0
+ 956 005c 020A80E3 		orr	r0, r0, #8192
+ 957 0060 FEFFFFEB 		bl	tpu_enqueue
+ 958              	.LVL100:
+ 959              	.LBE12:
+ 960              	.LBE11:
+ 562:rf/trf6151.c  **** 	tpu_enq_at(start_pll_qbits);
+ 563:rf/trf6151.c  **** 
+ 564:rf/trf6151.c  **** 	/* Set the AGC and PLL registers */
+ 565:rf/trf6151.c  **** 	trf6151_set_arfcn(arfcn, 0);
+ 961              		.loc 2 565 0
+ 962 0064 0400A0E1 		mov	r0, r4
+ 963 0068 0010A0E3 		mov	r1, #0
+ 964 006c FEFFFFEB 		bl	trf6151_set_arfcn
+ 566:rf/trf6151.c  **** 	trf6151_set_gain_reg(trf6151_vga_dbm, trf6151_gain_high);
+ 965              		.loc 2 566 0
+ 966 0070 1C309FE5 		ldr	r3, .L116+4
+ 967 0074 0000D3E5 		ldrb	r0, [r3, #0]	@ zero_extendqisi2
+ 968 0078 18309FE5 		ldr	r3, .L116+8
+ 969 007c 001093E5 		ldr	r1, [r3, #0]
+ 970 0080 FEFFFFEB 		bl	trf6151_set_gain_reg
+ 567:rf/trf6151.c  **** 	trf6151_set_mode(TRF6151_RX);
+ 971              		.loc 2 567 0
+ 972 0084 0100A0E3 		mov	r0, #1
+ 568:rf/trf6151.c  **** 
+ 569:rf/trf6151.c  **** 	/* FIXME: power down at the right time again */
+ 570:rf/trf6151.c  **** }
+ 973              		.loc 2 570 0
+ 974 0088 1040BDE8 		ldmfd	sp!, {r4, lr}
+ 975              		.loc 2 567 0
+ 976 008c FEFFFFEA 		b	trf6151_set_mode
+ 977              	.L117:
+ 978              		.align	2
+ 979              	.L116:
+ 980 0090 87130000 		.word	4999
+ 981 0094 08000000 		.word	trf6151_vga_dbm
+ 982 0098 04000000 		.word	trf6151_gain_high
+ 983              	.LFE29:
+ 985              		.section	.text.trf6151_tx_window,"ax",%progbits
+ 986              		.align	2
+ 987              		.global	trf6151_tx_window
+ 989              	trf6151_tx_window:
+ 990              	.LFB30:
+ 571:rf/trf6151.c  **** 
+ 572:rf/trf6151.c  **** /* prepare a Tx window with the TRF6151 finished at time 'start' (in qbits) */
+ 573:rf/trf6151.c  **** void trf6151_tx_window(int16_t start_qbits, uint16_t arfcn)
+ 574:rf/trf6151.c  **** {
+ 991              		.loc 2 574 0
+ 992              		@ args = 0, pretend = 0, frame = 0
+ 993              		@ frame_needed = 0, uses_anonymous_args = 0
+ 994              		@ link register save eliminated.
+ 995              	.LVL101:
+ 996              		@ lr needed for prologue
+ 575:rf/trf6151.c  **** #ifdef CONFIG_TX_ENABLE
+ 576:rf/trf6151.c  **** 	int16_t start_pll_qbits;
+ 577:rf/trf6151.c  **** 
+ 578:rf/trf6151.c  **** 	/* power up at the right time _before_ the 'start_qbits' point in time */
+ 579:rf/trf6151.c  **** 	start_pll_qbits = add_mod5000(start_qbits,  -(TRF6151_TX_PLL_DELAY + TRF6151_RX_TPU_DELAY));
+ 580:rf/trf6151.c  **** 	tpu_enq_at(start_pll_qbits);
+ 581:rf/trf6151.c  **** 
+ 582:rf/trf6151.c  **** 	trf6151_set_arfcn(arfcn, 1);
+ 583:rf/trf6151.c  **** 	trf6151_set_mode(TRF6151_TX);
+ 584:rf/trf6151.c  **** 
+ 585:rf/trf6151.c  **** 	/* FIXME: power down at the right time again */
+ 586:rf/trf6151.c  **** #endif
+ 587:rf/trf6151.c  **** }
+ 997              		.loc 2 587 0
+ 998 0000 1EFF2FE1 		bx	lr
+ 999              	.LFE30:
+ 1001              		.section	.text.trf6151_compute_gain,"ax",%progbits
+ 1002              		.align	2
+ 1003              		.global	trf6151_compute_gain
+ 1005              	trf6151_compute_gain:
+ 1006              	.LFB31:
+ 588:rf/trf6151.c  **** 
+ 589:rf/trf6151.c  **** /* Given the expected input level of exp_inp dBm and the target of target_bb
+ 590:rf/trf6151.c  ****  * dBm, configure the RF Frontend with the respective gain */
+ 591:rf/trf6151.c  **** void trf6151_compute_gain(int16_t exp_inp, int16_t target_bb)
+ 592:rf/trf6151.c  **** {
+ 1007              		.loc 2 592 0
+ 1008              		@ args = 0, pretend = 0, frame = 0
+ 1009              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1010              		@ link register save eliminated.
+ 1011              	.LVL102:
+ 593:rf/trf6151.c  **** 	/* TRF6151 VGA gain between 14 to 40 dB, plus 20db high/low */
+ 594:rf/trf6151.c  **** 	int16_t exp_bb, delta;
+ 595:rf/trf6151.c  **** 
+ 596:rf/trf6151.c  **** 	/* calculate the dBm8 that we expect at the baseband */
+ 597:rf/trf6151.c  **** 	exp_bb = exp_inp + system_inherent_gain;
+ 598:rf/trf6151.c  **** 
+ 599:rf/trf6151.c  **** 	/* calculate the error that we expect. */
+ 600:rf/trf6151.c  **** 	delta = target_bb - exp_bb;
+ 601:rf/trf6151.c  **** 
+ 602:rf/trf6151.c  **** 	printd("computed gain %d\n", delta);
+ 603:rf/trf6151.c  **** 	trf6151_set_gain(delta);
+ 1012              		.loc 2 603 0
+ 1013 0000 14309FE5 		ldr	r3, .L122
+ 1014 0004 0030D3E5 		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 1015              		.loc 2 592 0
+ 1016 0008 0008A0E1 		mov	r0, r0, asl #16
+ 1017              	.LVL103:
+ 1018              		.loc 2 603 0
+ 1019 000c 203883E0 		add	r3, r3, r0, lsr #16
+ 1020 0010 011063E0 		rsb	r1, r3, r1
+ 1021              	.LVL104:
+ 1022 0014 FF0001E2 		and	r0, r1, #255
+ 1023              		.loc 2 592 0
+ 1024              		@ lr needed for prologue
+ 604:rf/trf6151.c  **** }
+ 1025              		.loc 2 604 0
+ 1026              		.loc 2 603 0
+ 1027 0018 FEFFFFEA 		b	trf6151_set_gain
+ 1028              	.L123:
+ 1029              		.align	2
+ 1030              	.L122:
+ 1031 001c 00000000 		.word	system_inherent_gain
+ 1032              	.LFE31:
+ 1034              		.section	.text.trf6151_iq_swapped,"ax",%progbits
+ 1035              		.align	2
+ 1036              		.global	trf6151_iq_swapped
+ 1038              	trf6151_iq_swapped:
+ 1039              	.LFB32:
+ 605:rf/trf6151.c  **** 
+ 606:rf/trf6151.c  **** int trf6151_iq_swapped(uint16_t band_arfcn, int tx)
+ 607:rf/trf6151.c  **** {
+ 1040              		.loc 2 607 0
+ 1041              		@ args = 0, pretend = 0, frame = 0
+ 1042              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1043              	.LVL105:
+ 1044 0000 0008A0E1 		mov	r0, r0, asl #16
+ 1045              	.LVL106:
+ 608:rf/trf6151.c  **** 	if (!tx)
+ 1046              		.loc 2 608 0
+ 1047 0004 000051E3 		cmp	r1, #0
+ 1048              		.loc 2 607 0
+ 1049 0008 04E02DE5 		str	lr, [sp, #-4]!
+ 1050              	.LCFI9:
+ 1051              		.loc 2 607 0
+ 1052 000c 2008A0E1 		mov	r0, r0, lsr #16
+ 1053              	.LVL107:
+ 1054              		.loc 2 608 0
+ 1055 0010 0600000A 		beq	.L125
+ 609:rf/trf6151.c  **** 		return 0;
+ 610:rf/trf6151.c  **** 
+ 611:rf/trf6151.c  **** 	switch (gsm_arfcn2band(band_arfcn)) {
+ 1056              		.loc 2 611 0
+ 1057 0014 FEFFFFEB 		bl	gsm_arfcn2band
+ 1058              	.LVL108:
+ 1059 0018 010050E3 		cmp	r0, #1
+ 1060 001c 04F09D04 		ldreq	pc, [sp], #4
+ 1061              	.LVL109:
+ 1062              	.L125:
+ 1063 0020 0000A0E3 		mov	r0, #0
+ 1064              	.LVL110:
+ 612:rf/trf6151.c  **** 		case GSM_BAND_850:
+ 613:rf/trf6151.c  **** 			return 1;
+ 614:rf/trf6151.c  **** 		default:
+ 615:rf/trf6151.c  **** 			break;
+ 616:rf/trf6151.c  **** 	}
+ 617:rf/trf6151.c  **** 
+ 618:rf/trf6151.c  **** 	return 0;
+ 619:rf/trf6151.c  **** }
+ 1065              		.loc 2 619 0
+ 1066 0024 04F09DE4 		ldr	pc, [sp], #4
+ 1067              	.LFE32:
+ 1069              		.bss
+ 1070              	trf6151_tsp_uid:
+ 1071 0000 00       		.space	1
+ 1072 0001 00       		.align	1
+ 1073              	rf_band:
+ 1074 0002 0000     		.space	2
+ 1316              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 trf6151.c
+     /tmp/cctQWv6b.s:15     .data:0000000000000000 rf_arfcn
+     /tmp/cctQWv6b.s:20     .data:0000000000000004 trf6151_gain_high
+     /tmp/cctQWv6b.s:21     .data:0000000000000004 $d
+     /tmp/cctQWv6b.s:24     .data:0000000000000008 trf6151_vga_dbm
+     /tmp/cctQWv6b.s:29     .data:000000000000000a trf6151_reg_cache
+     /tmp/cctQWv6b.s:38     .text.tpu_enq_sleep:0000000000000000 tpu_enq_sleep
+     /tmp/cctQWv6b.s:47     .text.tpu_enq_sleep:0000000000000000 $a
+     /tmp/cctQWv6b.s:58     .text.tpu_enq_wait:0000000000000000 tpu_enq_wait
+     /tmp/cctQWv6b.s:65     .text.tpu_enq_wait:0000000000000000 $a
+     /tmp/cctQWv6b.s:80     .text.trf6151_reg_write:0000000000000000 trf6151_reg_write
+     /tmp/cctQWv6b.s:87     .text.trf6151_reg_write:0000000000000000 $a
+     /tmp/cctQWv6b.s:113    .text.trf6151_reg_write:0000000000000038 $d
+     /tmp/cctQWv6b.s:1070   .bss:0000000000000000 trf6151_tsp_uid
+     /tmp/cctQWv6b.s:121    .text.trf6151_set_gain_reg:0000000000000000 trf6151_set_gain_reg
+     /tmp/cctQWv6b.s:127    .text.trf6151_set_gain_reg:0000000000000000 $a
+     /tmp/cctQWv6b.s:182    .text.trf6151_set_gain_reg:0000000000000064 $d
+     /tmp/cctQWv6b.s:190    .text.trf6151_set_gain:0000000000000000 trf6151_set_gain
+     /tmp/cctQWv6b.s:197    .text.trf6151_set_gain:0000000000000000 $a
+     /tmp/cctQWv6b.s:250    .text.trf6151_set_gain:0000000000000064 $d
+     /tmp/cctQWv6b.s:258    .text.trf6151_power:0000000000000000 trf6151_power
+     /tmp/cctQWv6b.s:265    .text.trf6151_power:0000000000000000 $a
+     /tmp/cctQWv6b.s:309    .text.trf6151_power:000000000000005c $d
+     /tmp/cctQWv6b.s:317    .text.trf6151_init:0000000000000000 trf6151_init
+     /tmp/cctQWv6b.s:323    .text.trf6151_init:0000000000000000 $a
+     /tmp/cctQWv6b.s:373    .text.trf6151_init:000000000000005c $d
+     /tmp/cctQWv6b.s:380    .text.trf6151_set_mode:0000000000000000 trf6151_set_mode
+     /tmp/cctQWv6b.s:388    .text.trf6151_set_mode:0000000000000000 $a
+     /tmp/cctQWv6b.s:417    .text.trf6151_set_mode:0000000000000030 $d
+     /tmp/cctQWv6b.s:1073   .bss:0000000000000002 rf_band
+     /tmp/cctQWv6b.s:429    .text.trf6151_set_arfcn:0000000000000000 trf6151_set_arfcn
+     /tmp/cctQWv6b.s:435    .text.trf6151_set_arfcn:0000000000000000 $a
+     /tmp/cctQWv6b.s:681    .text.trf6151_set_arfcn:0000000000000200 $d
+     /tmp/cctQWv6b.s:699    .text.trf6151_calib_dc_offs:0000000000000000 trf6151_calib_dc_offs
+     /tmp/cctQWv6b.s:705    .text.trf6151_calib_dc_offs:0000000000000000 $a
+     /tmp/cctQWv6b.s:722    .text.trf6151_calib_dc_offs:0000000000000024 $d
+     /tmp/cctQWv6b.s:729    .text.trf6151_get_gain_reg:0000000000000000 trf6151_get_gain_reg
+     /tmp/cctQWv6b.s:737    .text.trf6151_get_gain_reg:0000000000000000 $a
+     /tmp/cctQWv6b.s:770    .text.trf6151_get_gain_reg:0000000000000044 $d
+     /tmp/cctQWv6b.s:777    .text.trf6151_get_gain:0000000000000000 trf6151_get_gain
+     /tmp/cctQWv6b.s:785    .text.trf6151_get_gain:0000000000000000 $a
+     /tmp/cctQWv6b.s:810    .text.trf6151_get_gain:0000000000000028 $d
+     /tmp/cctQWv6b.s:818    .text.trf6151_test:0000000000000000 trf6151_test
+     /tmp/cctQWv6b.s:824    .text.trf6151_test:0000000000000000 $a
+     /tmp/cctQWv6b.s:857    .text.trf6151_tx_test:0000000000000000 trf6151_tx_test
+     /tmp/cctQWv6b.s:863    .text.trf6151_tx_test:0000000000000000 $a
+     /tmp/cctQWv6b.s:895    .text.trf6151_rx_window:0000000000000000 trf6151_rx_window
+     /tmp/cctQWv6b.s:902    .text.trf6151_rx_window:0000000000000000 $a
+     /tmp/cctQWv6b.s:980    .text.trf6151_rx_window:0000000000000090 $d
+     /tmp/cctQWv6b.s:989    .text.trf6151_tx_window:0000000000000000 trf6151_tx_window
+     /tmp/cctQWv6b.s:998    .text.trf6151_tx_window:0000000000000000 $a
+     /tmp/cctQWv6b.s:1005   .text.trf6151_compute_gain:0000000000000000 trf6151_compute_gain
+     /tmp/cctQWv6b.s:1013   .text.trf6151_compute_gain:0000000000000000 $a
+     /tmp/cctQWv6b.s:1031   .text.trf6151_compute_gain:000000000000001c $d
+     /tmp/cctQWv6b.s:1038   .text.trf6151_iq_swapped:0000000000000000 trf6151_iq_swapped
+     /tmp/cctQWv6b.s:1044   .text.trf6151_iq_swapped:0000000000000000 $a
+                             .bss:0000000000000000 $d
+
+UNDEFINED SYMBOLS
+tpu_enqueue
+tsp_write
+tsp_setup
+tsp_act_disable
+tsp_act_enable
+__udivsi3
+gsm_arfcn2band
+puts
+gsm_arfcn2freq10
+rffe_get_rx_ports
+tpu_enable
+tpu_wait_idle
+add_mod5000
+system_inherent_gain

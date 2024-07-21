@@ -1,0 +1,28 @@
+   1              	# 1 "board/compal/header.S"
+   2              	# 1 "<built-in>"
+   1              	/*
+   0              	
+   0              	
+   2              	 * This is a textual header that is prepended to images where appropriate.
+   3              	 *
+   4              	 * It is meant to ease identification of our firmwares in dumps as well
+   5              	 * as filling some space that is used for the same purpose by the vendor.
+   6              	 *
+   7              	 */
+   8              	.section .compal.header
+   9 0000 4F534D4F 	.ascii "OSMOCOM"
+   9      434F4D
+  10 0007 00000000 	. = 0x20
+  10      00000000 
+  10      00000000 
+  10      00000000 
+  10      00000000 
+  11 0020 6F736D6F 	.ascii GIT_REVISION
+  11      636F6E5F 
+  11      76302E30 
+  11      2E302D32 
+  11      3631332D 
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 board/compal/header.S
+
+NO UNDEFINED SYMBOLS

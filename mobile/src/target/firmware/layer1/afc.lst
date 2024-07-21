@@ -1,0 +1,355 @@
+   1              		.file	"afc.c"
+   9              	.Ltext0:
+  10              		.data
+  11              		.align	2
+  14              	afc_state:
+  15 0000 2800     		.short	40
+  16 0002 0800     		.short	8
+  17 0004 00000000 		.space	8
+  17      00000000 
+  18 000c 00000000 		.word	afc_ravg_output
+  19 0010 00000000 		.space	4
+  20 0014 00000000 		.space	4
+  21              		.global	__divsi3
+  22              		.section	.text.afc_correct,"ax",%progbits
+  23              		.align	2
+  24              		.global	afc_correct
+  26              	afc_correct:
+  27              	.LFB6:
+  28              		.file 1 "layer1/afc.c"
+   1:layer1/afc.c  **** /* AFC (Automatic Frequency Correction) Implementation */
+   2:layer1/afc.c  **** 
+   3:layer1/afc.c  **** /* (C) 2010 by Harald Welte <laforge@gnumonks.org>
+   4:layer1/afc.c  ****  *
+   5:layer1/afc.c  ****  * All Rights Reserved
+   6:layer1/afc.c  ****  *
+   7:layer1/afc.c  ****  * This program is free software; you can redistribute it and/or modify
+   8:layer1/afc.c  ****  * it under the terms of the GNU General Public License as published by
+   9:layer1/afc.c  ****  * the Free Software Foundation; either version 2 of the License, or
+  10:layer1/afc.c  ****  * (at your option) any later version.
+  11:layer1/afc.c  ****  *
+  12:layer1/afc.c  ****  * This program is distributed in the hope that it will be useful,
+  13:layer1/afc.c  ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  14:layer1/afc.c  ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  15:layer1/afc.c  ****  * GNU General Public License for more details.
+  16:layer1/afc.c  ****  *
+  17:layer1/afc.c  ****  * You should have received a copy of the GNU General Public License along
+  18:layer1/afc.c  ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  19:layer1/afc.c  ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  20:layer1/afc.c  ****  *
+  21:layer1/afc.c  ****  */
+  22:layer1/afc.c  **** 
+  23:layer1/afc.c  **** #include <stdint.h>
+  24:layer1/afc.c  **** #include <stdio.h>
+  25:layer1/afc.c  **** 
+  26:layer1/afc.c  **** #include <debug.h>
+  27:layer1/afc.c  **** #include <osmocom/gsm/gsm_utils.h>
+  28:layer1/afc.c  **** 
+  29:layer1/afc.c  **** #include <layer1/afc.h>
+  30:layer1/afc.c  **** #include <layer1/avg.h>
+  31:layer1/afc.c  **** #include <calypso/dsp.h>
+  32:layer1/afc.c  **** 
+  33:layer1/afc.c  **** #include <rf/vcxocal.h>
+  34:layer1/afc.c  **** 
+  35:layer1/afc.c  **** /* Over how many TDMA frames do we want to average? (this may change in dedicated mode) */
+  36:layer1/afc.c  **** #define AFC_PERIOD		40
+  37:layer1/afc.c  **** /* How many of our measurements have to be valid? */
+  38:layer1/afc.c  **** #define AFC_MIN_MUN_VALID	8
+  39:layer1/afc.c  **** 
+  40:layer1/afc.c  **** /* The actual AFC code */
+  41:layer1/afc.c  **** 
+  42:layer1/afc.c  **** struct afc_state {
+  43:layer1/afc.c  **** 	struct running_avg ravg;		/* running average */
+  44:layer1/afc.c  **** 	int16_t		dac_value;		/* current DAC output value */
+  45:layer1/afc.c  **** 	uint16_t	arfcn;
+  46:layer1/afc.c  **** };
+  47:layer1/afc.c  **** 
+  48:layer1/afc.c  **** static void afc_ravg_output(struct running_avg *ravg, int32_t avg);
+  49:layer1/afc.c  **** 
+  50:layer1/afc.c  **** static struct afc_state afc_state = {
+  51:layer1/afc.c  **** 	.ravg = {
+  52:layer1/afc.c  **** 		.outfn = &afc_ravg_output,
+  53:layer1/afc.c  **** 		.period = AFC_PERIOD,
+  54:layer1/afc.c  **** 		.min_valid = AFC_MIN_MUN_VALID,
+  55:layer1/afc.c  **** 	},
+  56:layer1/afc.c  **** };
+  57:layer1/afc.c  **** 
+  58:layer1/afc.c  **** /* The AFC DAC in the ABB has to be configured as follows:
+  59:layer1/afc.c  ****  * DAC = 1MHz / 947MHz * FreqErr(Hz) / AFCslop(ppm/LSB)
+  60:layer1/afc.c  ****  * where:
+  61:layer1/afc.c  ****  *	947 MHz is the center of EGSM
+  62:layer1/afc.c  ****  *	AFCslope is coded F1.15, thus a normalization factor of 2^15 applies
+  63:layer1/afc.c  ****  */
+  64:layer1/afc.c  **** 
+  65:layer1/afc.c  **** #define AFC_NORM_FACTOR_GSM	((1<<15) / 947)
+  66:layer1/afc.c  **** #define AFC_NORM_FACTOR_DCS	((1<<15) / 1894)
+  67:layer1/afc.c  **** 
+  68:layer1/afc.c  **** /* The DSP can measure the frequency error in the following ranges:
+  69:layer1/afc.c  ****  * 	FB_MODE0:	+/- 20 kHz
+  70:layer1/afc.c  ****  *	FB_MODE1:	+/-  4 kHz
+  71:layer1/afc.c  ****  *	Sync Burst:	+/-  1 kHz
+  72:layer1/afc.c  ****  *	Normal Burst:	+/- 400 Hz
+  73:layer1/afc.c  ****  */
+  74:layer1/afc.c  **** 
+  75:layer1/afc.c  **** /* Update the AFC with a frequency error, bypassing averaging */
+  76:layer1/afc.c  **** void afc_correct(int16_t freq_error, uint16_t arfcn)
+  77:layer1/afc.c  **** {
+  29              		.loc 1 77 0
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              	.LVL0:
+  33 0000 0118A0E1 		mov	r1, r1, asl #16
+  34              	.LVL1:
+  35 0004 10402DE9 		stmfd	sp!, {r4, lr}
+  36              	.LCFI0:
+  37              		.loc 1 77 0
+  38 0008 0048A0E1 		mov	r4, r0, asl #16
+  78:layer1/afc.c  **** 	int32_t afc_norm_factor;
+  79:layer1/afc.c  **** 	int16_t delta;
+  80:layer1/afc.c  **** 
+  81:layer1/afc.c  **** 	switch (gsm_arfcn2band(arfcn)) {
+  39              		.loc 1 81 0
+  40 000c 2108A0E1 		mov	r0, r1, lsr #16
+  41              	.LVL2:
+  42 0010 FEFFFFEB 		bl	gsm_arfcn2band
+  43              	.LVL3:
+  44              		.loc 1 77 0
+  45 0014 2448A0E1 		mov	r4, r4, lsr #16
+  46              	.LVL4:
+  47              		.loc 1 81 0
+  48 0018 010040E2 		sub	r0, r0, #1
+  49 001c 010050E3 		cmp	r0, #1
+  82:layer1/afc.c  **** 	case GSM_BAND_900:
+  83:layer1/afc.c  **** 	case GSM_BAND_850:
+  84:layer1/afc.c  **** 		afc_norm_factor = AFC_NORM_FACTOR_GSM;
+  85:layer1/afc.c  **** 		break;
+  86:layer1/afc.c  **** 	default:
+  87:layer1/afc.c  **** 		afc_norm_factor = AFC_NORM_FACTOR_DCS;
+  88:layer1/afc.c  **** 	}
+  89:layer1/afc.c  **** 
+  90:layer1/afc.c  **** 	delta = (int16_t) ((afc_norm_factor * (int32_t)freq_error) / afc_slope);
+  91:layer1/afc.c  **** 	printd("afc_correct(error=%dHz, arfcn=%u): delta=%d, afc_dac(old=%d,new=%d)\n",
+  92:layer1/afc.c  **** 		freq_error, arfcn, delta, afc_state.dac_value, afc_state.dac_value+delta);
+  93:layer1/afc.c  **** 	afc_state.dac_value += delta;
+  50              		.loc 1 93 0
+  51 0020 58309FE5 		ldr	r3, .L11
+  52 0024 0448A0E1 		mov	r4, r4, asl #16
+  53              	.LVL5:
+  54              		.loc 1 81 0
+  55 0028 1100A083 		movhi	r0, #17
+  56              	.LVL6:
+  57 002c 2200A093 		movls	r0, #34
+  58              		.loc 1 93 0
+  59 0030 4448A0E1 		mov	r4, r4, asr #16
+  60 0034 F010D3E1 		ldrsh	r1, [r3, #0]
+  61 0038 940000E0 		mul	r0, r4, r0
+  62              	.LVL7:
+  63 003c FEFFFFEB 		bl	__divsi3
+  64 0040 3C109FE5 		ldr	r1, .L11+4
+  65 0044 B431D1E1 		ldrh	r3, [r1, #20]
+  66 0048 003083E0 		add	r3, r3, r0
+  67 004c 0338A0E1 		mov	r3, r3, asl #16
+  68 0050 2338A0E1 		mov	r3, r3, lsr #16
+  94:layer1/afc.c  **** 
+  95:layer1/afc.c  **** 	/* The AFC DAC has only 13 bits */
+  96:layer1/afc.c  **** 	if (afc_state.dac_value > 4095)
+  69              		.loc 1 96 0
+  70 0054 0328A0E1 		mov	r2, r3, asl #16
+  71 0058 4228A0E1 		mov	r2, r2, asr #16
+  72 005c 010A52E3 		cmp	r2, #4096
+  73              		.loc 1 93 0
+  74 0060 B431C1E1 		strh	r3, [r1, #20]	@ movhi
+  97:layer1/afc.c  **** 		afc_state.dac_value = 4095;
+  75              		.loc 1 97 0
+  76 0064 0F3AE0A3 		mvnge	r3, #61440
+  77              		.loc 1 96 0
+  78 0068 1C0000AA 		bge	.L10
+  98:layer1/afc.c  **** 	else if (afc_state.dac_value < -4096)
+  79              		.loc 1 98 0
+  80 006c 010A72E3 		cmn	r2, #4096
+  81 0070 1080BDA8 		ldmgefd	sp!, {r4, pc}
+  99:layer1/afc.c  **** 		afc_state.dac_value = -4096;
+  82              		.loc 1 99 0
+  83 0074 0F3AA0E3 		mov	r3, #61440
+  84              	.L10:
+  85 0078 B431C1E1 		strh	r3, [r1, #20]	@ movhi
+  86 007c 1080BDE8 		ldmfd	sp!, {r4, pc}
+  87              	.L12:
+  88              		.align	2
+  89              	.L11:
+  90 0080 00000000 		.word	afc_slope
+  91 0084 00000000 		.word	afc_state
+  92              	.LFE6:
+  94              		.section	.text.afc_reset,"ax",%progbits
+  95              		.align	2
+  96              		.global	afc_reset
+  98              	afc_reset:
+  99              	.LFB7:
+ 100:layer1/afc.c  **** }
+ 101:layer1/afc.c  **** 
+ 102:layer1/afc.c  **** void afc_reset(void)
+ 103:layer1/afc.c  **** {
+ 100              		.loc 1 103 0
+ 101              		@ args = 0, pretend = 0, frame = 0
+ 102              		@ frame_needed = 0, uses_anonymous_args = 0
+ 103              		@ link register save eliminated.
+ 104              	.LVL8:
+ 104:layer1/afc.c  **** 	afc_state.dac_value = afc_initial_dac_value;
+ 105              		.loc 1 104 0
+ 106 0000 0C209FE5 		ldr	r2, .L15
+ 107 0004 0C309FE5 		ldr	r3, .L15+4
+ 108 0008 B020D2E1 		ldrh	r2, [r2, #0]
+ 109              		.loc 1 103 0
+ 110              		@ lr needed for prologue
+ 111              		.loc 1 104 0
+ 112 000c B421C3E1 		strh	r2, [r3, #20]	@ movhi
+ 105:layer1/afc.c  **** }
+ 113              		.loc 1 105 0
+ 114 0010 1EFF2FE1 		bx	lr
+ 115              	.L16:
+ 116              		.align	2
+ 117              	.L15:
+ 118 0014 00000000 		.word	afc_initial_dac_value
+ 119 0018 00000000 		.word	afc_state
+ 120              	.LFE7:
+ 122              		.section	.text.afc_input,"ax",%progbits
+ 123              		.align	2
+ 124              		.global	afc_input
+ 126              	afc_input:
+ 127              	.LFB8:
+ 106:layer1/afc.c  **** 
+ 107:layer1/afc.c  **** void afc_input(int32_t freq_error, uint16_t arfcn, int valid)
+ 108:layer1/afc.c  **** {
+ 128              		.loc 1 108 0
+ 129              		@ args = 0, pretend = 0, frame = 0
+ 130              		@ frame_needed = 0, uses_anonymous_args = 0
+ 131              	.LVL9:
+ 132 0000 10402DE9 		stmfd	sp!, {r4, lr}
+ 133              	.LCFI1:
+ 109:layer1/afc.c  **** 	afc_state.arfcn = arfcn;
+ 134              		.loc 1 109 0
+ 135 0004 18409FE5 		ldr	r4, .L19
+ 136 0008 B611C4E1 		strh	r1, [r4, #22]	@ movhi
+ 110:layer1/afc.c  **** 	runavg_input(&afc_state.ravg, freq_error, valid);
+ 137              		.loc 1 110 0
+ 138 000c 0010A0E1 		mov	r1, r0
+ 139              	.LVL10:
+ 140 0010 0400A0E1 		mov	r0, r4
+ 141              	.LVL11:
+ 142 0014 FEFFFFEB 		bl	runavg_input
+ 143              	.LVL12:
+ 111:layer1/afc.c  **** 	runavg_check_output(&afc_state.ravg);
+ 144              		.loc 1 111 0
+ 145 0018 0400A0E1 		mov	r0, r4
+ 112:layer1/afc.c  **** }
+ 146              		.loc 1 112 0
+ 147 001c 1040BDE8 		ldmfd	sp!, {r4, lr}
+ 148              		.loc 1 111 0
+ 149 0020 FEFFFFEA 		b	runavg_check_output
+ 150              	.L20:
+ 151              		.align	2
+ 152              	.L19:
+ 153 0024 00000000 		.word	afc_state
+ 154              	.LFE8:
+ 156              		.section	.text.afc_ravg_output,"ax",%progbits
+ 157              		.align	2
+ 159              	afc_ravg_output:
+ 160              	.LFB9:
+ 113:layer1/afc.c  **** 
+ 114:layer1/afc.c  **** /* callback function for runavg */
+ 115:layer1/afc.c  **** static void afc_ravg_output(struct running_avg *ravg, int32_t avg)
+ 116:layer1/afc.c  **** {
+ 161              		.loc 1 116 0
+ 162              		@ args = 0, pretend = 0, frame = 0
+ 163              		@ frame_needed = 0, uses_anonymous_args = 0
+ 164              		@ link register save eliminated.
+ 165              	.LVL13:
+ 117:layer1/afc.c  **** 	afc_correct(avg, afc_state.arfcn);
+ 166              		.loc 1 117 0
+ 167 0000 0C309FE5 		ldr	r3, .L23
+ 168 0004 0118A0E1 		mov	r1, r1, asl #16
+ 169              	.LVL14:
+ 170 0008 4108A0E1 		mov	r0, r1, asr #16
+ 171              	.LVL15:
+ 172 000c B611D3E1 		ldrh	r1, [r3, #22]
+ 173              		.loc 1 116 0
+ 174              		@ lr needed for prologue
+ 118:layer1/afc.c  **** }
+ 175              		.loc 1 118 0
+ 176              		.loc 1 117 0
+ 177 0010 FEFFFFEA 		b	afc_correct
+ 178              	.L24:
+ 179              		.align	2
+ 180              	.L23:
+ 181 0014 00000000 		.word	afc_state
+ 182              	.LFE9:
+ 184              		.section	.text.afc_load_dsp,"ax",%progbits
+ 185              		.align	2
+ 186              		.global	afc_load_dsp
+ 188              	afc_load_dsp:
+ 189              	.LFB10:
+ 119:layer1/afc.c  **** 
+ 120:layer1/afc.c  **** /* Update DSP with new AFC DAC value to be used for next TDMA frame */
+ 121:layer1/afc.c  **** void afc_load_dsp(void)
+ 122:layer1/afc.c  **** {
+ 190              		.loc 1 122 0
+ 191              		@ args = 0, pretend = 0, frame = 0
+ 192              		@ frame_needed = 0, uses_anonymous_args = 0
+ 193              		@ link register save eliminated.
+ 194              	.LVL16:
+ 123:layer1/afc.c  **** 	dsp_api.db_w->d_afc = afc_state.dac_value;
+ 195              		.loc 1 123 0
+ 196 0000 1C309FE5 		ldr	r3, .L27
+ 197 0004 081093E5 		ldr	r1, [r3, #8]
+ 198 0008 18209FE5 		ldr	r2, .L27+4
+ 124:layer1/afc.c  **** 	dsp_api.db_w->d_ctrl_abb |= (1 << B_AFC);
+ 199              		.loc 1 124 0
+ 200 000c B631D1E1 		ldrh	r3, [r1, #22]
+ 201              		.loc 1 123 0
+ 202 0010 B421D2E1 		ldrh	r2, [r2, #20]
+ 203              		.loc 1 124 0
+ 204 0014 103083E3 		orr	r3, r3, #16
+ 205              		.loc 1 122 0
+ 206              		@ lr needed for prologue
+ 207              		.loc 1 123 0
+ 208 0018 BE21C1E1 		strh	r2, [r1, #30]	@ movhi
+ 209              		.loc 1 124 0
+ 210 001c B631C1E1 		strh	r3, [r1, #22]	@ movhi
+ 125:layer1/afc.c  **** }
+ 211              		.loc 1 125 0
+ 212 0020 1EFF2FE1 		bx	lr
+ 213              	.L28:
+ 214              		.align	2
+ 215              	.L27:
+ 216 0024 00000000 		.word	dsp_api
+ 217 0028 00000000 		.word	afc_state
+ 218              	.LFE10:
+ 298              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 afc.c
+     /tmp/ccGAAhkX.s:14     .data:0000000000000000 afc_state
+     /tmp/ccGAAhkX.s:18     .data:000000000000000c $d
+     /tmp/ccGAAhkX.s:159    .text.afc_ravg_output:0000000000000000 afc_ravg_output
+     /tmp/ccGAAhkX.s:26     .text.afc_correct:0000000000000000 afc_correct
+     /tmp/ccGAAhkX.s:33     .text.afc_correct:0000000000000000 $a
+     /tmp/ccGAAhkX.s:90     .text.afc_correct:0000000000000080 $d
+     /tmp/ccGAAhkX.s:98     .text.afc_reset:0000000000000000 afc_reset
+     /tmp/ccGAAhkX.s:106    .text.afc_reset:0000000000000000 $a
+     /tmp/ccGAAhkX.s:118    .text.afc_reset:0000000000000014 $d
+     /tmp/ccGAAhkX.s:126    .text.afc_input:0000000000000000 afc_input
+     /tmp/ccGAAhkX.s:132    .text.afc_input:0000000000000000 $a
+     /tmp/ccGAAhkX.s:153    .text.afc_input:0000000000000024 $d
+     /tmp/ccGAAhkX.s:167    .text.afc_ravg_output:0000000000000000 $a
+     /tmp/ccGAAhkX.s:181    .text.afc_ravg_output:0000000000000014 $d
+     /tmp/ccGAAhkX.s:188    .text.afc_load_dsp:0000000000000000 afc_load_dsp
+     /tmp/ccGAAhkX.s:196    .text.afc_load_dsp:0000000000000000 $a
+     /tmp/ccGAAhkX.s:216    .text.afc_load_dsp:0000000000000024 $d
+
+UNDEFINED SYMBOLS
+__divsi3
+gsm_arfcn2band
+afc_slope
+afc_initial_dac_value
+runavg_input
+runavg_check_output
+dsp_api

@@ -1,0 +1,484 @@
+   1              	# 1 "lib/memcpy.S"
+   2              	# 1 "<built-in>"
+   1              	/*
+   0              	
+   0              	
+   2              	 *  linux/arch/arm/lib/memcpy.S
+   3              	 *
+   4              	 *  Author:	Nicolas Pitre
+   5              	 *  Created:	Sep 28, 2005
+   6              	 *  Copyright:	MontaVista Software, Inc.
+   7              	 *
+   8              	 *  This program is free software; you can redistribute it and/or modify
+   9              	 *  it under the terms of the GNU General Public License version 2 as
+  10              	 *  published by the Free Software Foundation.
+  11              	 */
+  12              	
+  13              	#include <asm/linkage.h>
+   1              	#ifndef __ASM_LINKAGE_H
+   2              	#define __ASM_LINKAGE_H
+   3              	
+   4              	/* asm-arm/linkage.h */
+   5              	
+   6              	#define __ALIGN .align 0
+   7              	#define __ALIGN_STR ".align 0"
+   8              	
+   9              	/* linux/linkage.h */
+  10              	
+  11              	#define ALIGN __ALIGN
+  12              	
+  13              	#define ENTRY(name) \
+  14              	  .globl name; \
+  14              	#include <asm/assembler.h>
+   1              	/*
+   2              	 *  linux/include/asm-arm/assembler.h
+   3              	 *
+   4              	 *  Copyright (C) 1996-2000 Russell King
+   5              	 *
+   6              	 * This program is free software; you can redistribute it and/or modify
+   7              	 * it under the terms of the GNU General Public License version 2 as
+   8              	 * published by the Free Software Foundation.
+   9              	 *
+  10              	 *  This file contains arm architecture specific defines
+  11              	 *  for the different processors.
+  12              	 *
+  13              	 *  Do not include any C declarations in this file - it is included by
+  14              	 *  assembler source.
+  15              	 */
+  16              	#ifndef __ASSEMBLY__
+  17              	#error "Only include this from assembly code"
+  18              	#endif
+  19              	
+  20              	#include <asm/ptrace.h>
+   1              	/*
+   2              	 *  linux/include/asm-arm/ptrace.h
+   3              	 *
+   4              	 *  Copyright (C) 1996-2003 Russell King
+   5              	 *
+   6              	 * This program is free software; you can redistribute it and/or modify
+   7              	 * it under the terms of the GNU General Public License version 2 as
+   8              	 * published by the Free Software Foundation.
+   9              	 */
+  10              	#ifndef __ASM_ARM_PTRACE_H
+  11              	#define __ASM_ARM_PTRACE_H
+  12              	
+  13              	/*
+  14              	 * PSR bits
+  15              	 */
+  16              	#define USR26_MODE	0x00000000
+  17              	#define FIQ26_MODE	0x00000001
+  18              	#define IRQ26_MODE	0x00000002
+  19              	#define SVC26_MODE	0x00000003
+  20              	#define USR_MODE	0x00000010
+  21              	#define FIQ_MODE	0x00000011
+  21              	
+  22              	/*
+  23              	 * Endian independent macros for shifting bytes within registers.
+  24              	 */
+  25              	#ifndef __ARMEB__
+  26              	#define pull            lsr
+  27              	#define push            lsl
+  28              	#define get_byte_0      lsl #0
+  29              	#define get_byte_1	lsr #8
+  30              	#define get_byte_2	lsr #16
+  31              	#define get_byte_3	lsr #24
+  32              	#define put_byte_0      lsl #0
+  33              	#define put_byte_1	lsl #8
+  34              	#define put_byte_2	lsl #16
+  35              	#define put_byte_3	lsl #24
+  36              	#else
+  37              	#define pull            lsl
+  38              	#define push            lsr
+  39              	#define get_byte_0	lsr #24
+  40              	#define get_byte_1	lsr #16
+  41              	#define get_byte_2	lsr #8
+  42              	#define get_byte_3      lsl #0
+  43              	#define put_byte_0	lsl #24
+  44              	#define put_byte_1	lsl #16
+  45              	#define put_byte_2	lsl #8
+  46              	#define put_byte_3      lsl #0
+  47              	#endif
+  48              	
+  49              	#define PLD(code...)
+  50              	
+  51              	#define MODE_USR	USR_MODE
+  52              	#define MODE_FIQ	FIQ_MODE
+  53              	#define MODE_IRQ	IRQ_MODE
+  54              	#define MODE_SVC	SVC_MODE
+  55              	
+  56              	#define DEFAULT_FIQ	MODE_FIQ
+  57              	
+  58              	/*
+  59              	 * LOADREGS - ldm with PC in register list (eg, ldmfd sp!, {pc})
+  60              	 */
+  61              	#ifdef __STDC__
+  62              	#define LOADREGS(cond, base, reglist...)\
+  63              		ldm##cond	base,reglist
+  64              	#else
+  65              	#define LOADREGS(cond, base, reglist...)\
+  66              		ldm/**/cond	base,reglist
+  67              	#endif
+  68              	
+  69              	/*
+  70              	 * Build a return instruction for this processor type.
+  71              	 */
+  72              	#define RETINSTR(instr, regs...)\
+  73              		instr	regs
+  74              	
+  75              	/*
+  76              	 * Enable and disable interrupts
+  77              	 */
+  78              		.macro	disable_irq
+  79              		msr	cpsr_c, #PSR_I_BIT | SVC_MODE
+  80              		.endm
+  81              	
+  82              		.macro	enable_irq
+  83              		msr	cpsr_c, #SVC_MODE
+  84              		.endm
+  85              	
+  86              	/*
+  87              	 * Save the current IRQ state and disable IRQs.  Note that this macro
+  88              	 * assumes FIQs are enabled, and that the processor is in SVC mode.
+  89              	 */
+  90              		.macro	save_and_disable_irqs, oldcpsr
+  91              		mrs	\oldcpsr, cpsr
+  92              		disable_irq
+  93              		.endm
+  94              	
+  95              	/*
+  96              	 * Restore interrupt state previously stored in a register.  We don't
+  97              	 * guarantee that this will preserve the flags.
+  98              	 */
+  99              		.macro	restore_irqs, oldcpsr
+ 100              		msr	cpsr_c, \oldcpsr
+ 101              		.endm
+ 102              	
+ 103              	/*
+ 104              	 * These two are used to save LR/restore PC over a user-based access.
+ 105              	 * The old 26-bit architecture requires that we do.  On 32-bit
+ 106              	 * architecture, we can safely ignore this requirement.
+ 107              	 */
+ 108              		.macro	save_lr
+ 109              		.endm
+ 110              	
+ 111              		.macro	restore_pc
+ 112              		mov	pc, lr
+ 113              		.endm
+ 114              	...
+  15              	
+  16              		.macro ldr1w ptr reg abort
+  17              		ldr \reg, [\ptr], #4
+  18              		.endm
+  19              	
+  20              		.macro ldr4w ptr reg1 reg2 reg3 reg4 abort
+  21              		ldmia \ptr!, {\reg1, \reg2, \reg3, \reg4}
+  22              		.endm
+  23              	
+  24              		.macro ldr8w ptr reg1 reg2 reg3 reg4 reg5 reg6 reg7 reg8 abort
+  25              		ldmia \ptr!, {\reg1, \reg2, \reg3, \reg4, \reg5, \reg6, \reg7, \reg8}
+  26              		.endm
+  27              	
+  28              		.macro ldr1b ptr reg cond=al abort
+  29              		ldr\cond\()b \reg, [\ptr], #1
+  30              		.endm
+  31              	
+  32              		.macro str1w ptr reg abort
+  33              		str \reg, [\ptr], #4
+  34              		.endm
+  35              	
+  36              		.macro str8w ptr reg1 reg2 reg3 reg4 reg5 reg6 reg7 reg8 abort
+  37              		stmia \ptr!, {\reg1, \reg2, \reg3, \reg4, \reg5, \reg6, \reg7, \reg8}
+  38              		.endm
+  39              	
+  40              		.macro str1b ptr reg cond=al abort
+  41              		str\cond\()b \reg, [\ptr], #1
+  42              		.endm
+  43              	
+  44              		.macro enter reg1 reg2
+  45              		stmdb sp!, {r0, \reg1, \reg2}
+  46              		.endm
+  47              	
+  48              		.macro exit reg1 reg2
+  49              		ldmfd sp!, {r0, \reg1, \reg2}
+  50              		.endm
+  51              	
+  52              		.text
+  53              	
+  54              	/* Prototype: void *memcpy(void *dest, const void *src, size_t n); */
+  55              	
+  56              	ENTRY(memcpy)
+  57              	
+  58              	#include "copy_template.S"
+   1              	/*
+   2              	 *  linux/arch/arm/lib/copy_template.s
+   3              	 *
+   4              	 *  Code template for optimized memory copy functions
+   5              	 *
+   6              	 *  Author:	Nicolas Pitre
+   7              	 *  Created:	Sep 28, 2005
+   8              	 *  Copyright:	MontaVista Software, Inc.
+   9              	 *
+  10              	 *  This program is free software; you can redistribute it and/or modify
+  11              	 *  it under the terms of the GNU General Public License version 2 as
+  12              	 *  published by the Free Software Foundation.
+  13              	 */
+  14              	
+  15              	/*
+  16              	 * This can be used to enable code to cacheline align the source pointer.
+  17              	 * Experiments on tested architectures (StrongARM and XScale) didn't show
+  18              	 * this a worthwhile thing to do.  That might be different in the future.
+  19              	 */
+  20              	//#define CALGN(code...)	code
+  21              	#define CALGN(code...)
+  22              	
+  23              	/*
+  24              	 * Theory of operation
+  25              	 * -------------------
+  26              	 *
+  27              	 * This file provides the core code for a forward memory copy used in
+  28              	 * the implementation of memcopy(), copy_to_user() and copy_from_user().
+  29              	 *
+  30              	 * The including file must define the following accessor macros
+  31              	 * according to the need of the given function:
+  32              	 *
+  33              	 * ldr1w ptr reg abort
+  34              	 *
+  35              	 *	This loads one word from 'ptr', stores it in 'reg' and increments
+  36              	 *	'ptr' to the next word. The 'abort' argument is used for fixup tables.
+  37              	 *
+  38              	 * ldr4w ptr reg1 reg2 reg3 reg4 abort
+  39              	 * ldr8w ptr, reg1 reg2 reg3 reg4 reg5 reg6 reg7 reg8 abort
+  40              	 *
+  41              	 *	This loads four or eight words starting from 'ptr', stores them
+  42              	 *	in provided registers and increments 'ptr' past those words.
+  43              	 *	The'abort' argument is used for fixup tables.
+  44              	 *
+  45              	 * ldr1b ptr reg cond abort
+  46              	 *
+  47              	 *	Similar to ldr1w, but it loads a byte and increments 'ptr' one byte.
+  48              	 *	It also must apply the condition code if provided, otherwise the
+  49              	 *	"al" condition is assumed by default.
+  50              	 *
+  51              	 * str1w ptr reg abort
+  52              	 * str8w ptr reg1 reg2 reg3 reg4 reg5 reg6 reg7 reg8 abort
+  53              	 * str1b ptr reg cond abort
+  54              	 *
+  55              	 *	Same as their ldr* counterparts, but data is stored to 'ptr' location
+  56              	 *	rather than being loaded.
+  57              	 *
+  58              	 * enter reg1 reg2
+  59              	 *
+  60              	 *	Preserve the provided registers on the stack plus any additional
+  61              	 *	data as needed by the implementation including this code. Called
+  62              	 *	upon code entry.
+  63              	 *
+  64              	 * exit reg1 reg2
+  65              	 *
+  66              	 *	Restore registers with the values previously saved with the
+  67              	 *	'preserv' macro. Called upon code termination.
+  68              	 */
+  69              	
+  70              	
+  71 0000 11402DE9 			enter	r4, lr
+  72              	
+  73 0004 042052E2 			subs	r2, r2, #4
+  74 0008 230000BA 			blt	8f
+  75 000c 03C010E2 			ands	ip, r0, #3
+  76              		PLD(	pld	[r1, #0]		)
+  77 0010 2B00001A 			bne	9f
+  78 0014 03C011E2 			ands	ip, r1, #3
+  79 0018 3700001A 			bne	10f
+  80              	
+  81 001c 1C2052E2 	1:		subs	r2, r2, #(28)
+  82 0020 E0012DE9 			stmfd	sp!, {r5 - r8}
+  83 0024 0C0000BA 			blt	5f
+  84              	
+  85              		CALGN(	ands	ip, r1, #31		)
+  86              		CALGN(	rsb	r3, ip, #32		)
+  87              		CALGN(	sbcnes	r4, r3, r2		)  @ C is always set here
+  88              		CALGN(	bcs	2f			)
+  89              		CALGN(	adr	r4, 6f			)
+  90              		CALGN(	subs	r2, r2, r3		)  @ C gets set
+  91              		CALGN(	add	pc, r4, ip		)
+  92              	
+  93              		PLD(	pld	[r1, #0]		)
+  94              	2:	PLD(	subs	r2, r2, #96		)
+  95              		PLD(	pld	[r1, #28]		)
+  96              		PLD(	blt	4f			)
+  97              		PLD(	pld	[r1, #60]		)
+  98              		PLD(	pld	[r1, #92]		)
+  99              	
+ 100              	3:	PLD(	pld	[r1, #124]		)
+ 101 0028 F851B1E8 	4:		ldr8w	r1, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
+ 102 002c 202052E2 			subs	r2, r2, #32
+ 103 0030 F851A0E8 			str8w	r0, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f
+ 104 0034 080000AA 			bge	3b
+ 105              		PLD(	cmn	r2, #96			)
+ 106              		PLD(	bge	4b			)
+ 107              	
+ 108 0038 1CC012E2 	5:		ands	ip, r2, #28
+ 109 003c 20C06CE2 			rsb	ip, ip, #32
+ 110 0040 0CF08F10 			addne	pc, pc, ip		@ C is always clear here
+ 111 0044 220000EA 			b	7f
+ 112 0048 0000A0E1 	6:		nop
+ 113 004c 043091E4 			ldr1w	r1, r3, abort=20f
+ 114 0050 044091E4 			ldr1w	r1, r4, abort=20f
+ 115 0054 045091E4 			ldr1w	r1, r5, abort=20f
+ 116 0058 046091E4 			ldr1w	r1, r6, abort=20f
+ 117 005c 047091E4 			ldr1w	r1, r7, abort=20f
+ 118 0060 048091E4 			ldr1w	r1, r8, abort=20f
+ 119 0064 04E091E4 			ldr1w	r1, lr, abort=20f
+ 120              	
+ 121 0068 0CF08FE0 			add	pc, pc, ip
+ 122 006c 0000A0E1 			nop
+ 123 0070 0000A0E1 			nop
+ 124 0074 043080E4 			str1w	r0, r3, abort=20f
+ 125 0078 044080E4 			str1w	r0, r4, abort=20f
+ 126 007c 045080E4 			str1w	r0, r5, abort=20f
+ 127 0080 046080E4 			str1w	r0, r6, abort=20f
+ 128 0084 047080E4 			str1w	r0, r7, abort=20f
+ 129 0088 048080E4 			str1w	r0, r8, abort=20f
+ 130 008c 04E080E4 			str1w	r0, lr, abort=20f
+ 131              	
+ 132              		CALGN(	bcs	2b			)
+ 133              	
+ 134 0090 E001BDE8 	7:		ldmfd	sp!, {r5 - r8}
+ 135              	
+ 136 0094 822FB0E1 	8:		movs	r2, r2, lsl #31
+ 137 0098 0130D114 			ldr1b	r1, r3, ne, abort=21f
+ 138 009c 0140D124 			ldr1b	r1, r4, cs, abort=21f
+ 139 00a0 01C0D124 			ldr1b	r1, ip, cs, abort=21f
+ 140 00a4 0130C014 			str1b	r0, r3, ne, abort=21f
+ 141 00a8 0140C024 			str1b	r0, r4, cs, abort=21f
+ 142 00ac 01C0C024 			str1b	r0, ip, cs, abort=21f
+ 143              	
+ 144 00b0 1180BDE8 			exit	r4, pc
+ 145              	
+ 146 00b4 04C06CE2 	9:		rsb	ip, ip, #4
+ 147 00b8 02005CE3 			cmp	ip, #2
+ 148 00bc 0130D1C4 			ldr1b	r1, r3, gt, abort=21f
+ 149 00c0 0140D1A4 			ldr1b	r1, r4, ge, abort=21f
+ 150 00c4 01E0D1E4 			ldr1b	r1, lr, abort=21f
+ 151 00c8 0130C0C4 			str1b	r0, r3, gt, abort=21f
+ 152 00cc 0140C0A4 			str1b	r0, r4, ge, abort=21f
+ 153 00d0 0C2052E0 			subs	r2, r2, ip
+ 154 00d4 01E0C0E4 			str1b	r0, lr, abort=21f
+ 155 00d8 230000BA 			blt	8b
+ 156 00dc 03C011E2 			ands	ip, r1, #3
+ 157 00e0 0500000A 			beq	1b
+ 158              	
+ 159 00e4 0310C1E3 	10:		bic	r1, r1, #3
+ 160 00e8 02005CE3 			cmp	ip, #2
+ 161 00ec 04E091E4 			ldr1w	r1, lr, abort=21f
+ 162 00f0 5F00000A 			beq	17f
+ 163 00f4 820000CA 			bgt	18f
+ 164              	
+ 165              	
+ 166              			.macro	forward_copy_shift pull push
+ 167              	
+ 168              			subs	r2, r2, #28
+ 169              			blt	14f
+ 170              	
+ 171              		CALGN(	ands	ip, r1, #31		)
+ 172              		CALGN(	rsb	ip, ip, #32		)
+ 173              		CALGN(	sbcnes	r4, ip, r2		)  @ C is always set here
+ 174              		CALGN(	subcc	r2, r2, ip		)
+ 175              		CALGN(	bcc	15f			)
+ 176              	
+ 177              	11:		stmfd	sp!, {r5 - r9}
+ 178              	
+ 179              		PLD(	pld	[r1, #0]		)
+ 180              		PLD(	subs	r2, r2, #96		)
+ 181              		PLD(	pld	[r1, #28]		)
+ 182              		PLD(	blt	13f			)
+ 183              		PLD(	pld	[r1, #60]		)
+ 184              		PLD(	pld	[r1, #92]		)
+ 185              	
+ 186              	12:	PLD(	pld	[r1, #124]		)
+ 187              	13:		ldr4w	r1, r4, r5, r6, r7, abort=19f
+ 188              			mov	r3, lr, pull #\pull
+ 189              			subs	r2, r2, #32
+ 190              			ldr4w	r1, r8, r9, ip, lr, abort=19f
+ 191              			orr	r3, r3, r4, push #\push
+ 192              			mov	r4, r4, pull #\pull
+ 193              			orr	r4, r4, r5, push #\push
+ 194              			mov	r5, r5, pull #\pull
+ 195              			orr	r5, r5, r6, push #\push
+ 196              			mov	r6, r6, pull #\pull
+ 197              			orr	r6, r6, r7, push #\push
+ 198              			mov	r7, r7, pull #\pull
+ 199              			orr	r7, r7, r8, push #\push
+ 200              			mov	r8, r8, pull #\pull
+ 201              			orr	r8, r8, r9, push #\push
+ 202              			mov	r9, r9, pull #\pull
+ 203              			orr	r9, r9, ip, push #\push
+ 204              			mov	ip, ip, pull #\pull
+ 205              			orr	ip, ip, lr, push #\push
+ 206              			str8w	r0, r3, r4, r5, r6, r7, r8, r9, ip, , abort=19f
+ 207              			bge	12b
+ 208              		PLD(	cmn	r2, #96			)
+ 209              		PLD(	bge	13b			)
+ 210              	
+ 211              			ldmfd	sp!, {r5 - r9}
+ 212              	
+ 213              	14:		ands	ip, r2, #28
+ 214              			beq	16f
+ 215              	
+ 216              	15:		mov	r3, lr, pull #\pull
+ 217              			ldr1w	r1, lr, abort=21f
+ 218              			subs	ip, ip, #4
+ 219              			orr	r3, r3, lr, push #\push
+ 220              			str1w	r0, r3, abort=21f
+ 221              			bgt	15b
+ 222              		CALGN(	cmp	r2, #0			)
+ 223              		CALGN(	bge	11b			)
+ 224              	
+ 225              	16:		sub	r1, r1, #(\push / 8)
+ 226              			b	8b
+ 227              	
+ 228              			.endm
+ 229              	
+ 230              	
+ 231 00f8 1C2052E2 			forward_copy_shift	pull=8	push=24
+ 231      550000BA 
+ 231      E0032DE9 
+ 231      F000B1E8 
+ 231      2E34A0E1 
+ 232              	
+ 233 0184 1C2052E2 	17:		forward_copy_shift	pull=16	push=16
+ 233      780000BA 
+ 233      E0032DE9 
+ 233      F000B1E8 
+ 233      2E38A0E1 
+ 234              	
+ 235 0210 1C2052E2 	18:		forward_copy_shift	pull=24	push=8
+ 235      9B0000BA 
+ 235      E0032DE9 
+ 235      F000B1E8 
+ 235      2E3CA0E1 
+ 236              	
+ 237              	
+ 238              	/*
+ 239              	 * Abort preamble and completion macros.
+ 240              	 * If a fixup handler is required then those macros must surround it.
+ 241              	 * It is assumed that the fixup code will handle the private part of
+ 242              	 * the exit macro.
+ 243              	 */
+ 244              	
+ 245              		.macro	copy_abort_preamble
+ 246              	19:	ldmfd	sp!, {r5 - r9}
+ 247              		b	21f
+ 248              	20:	ldmfd	sp!, {r5 - r8}
+ 249              	21:
+ 250              		.endm
+ 251              	
+ 252              		.macro	copy_abort_end
+ 253              		ldmfd	sp!, {r4, pc}
+ 254              		.endm
+ 255              	
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 lib/memcpy.S
+        lib/memcpy.S:56     .text:0000000000000000 memcpy
+ lib/copy_template.S:71     .text:0000000000000000 $a
+
+NO UNDEFINED SYMBOLS

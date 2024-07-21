@@ -1,0 +1,21 @@
+   1              		.file	"globals.c"
+   9              	.Ltext0:
+  10              		.comm	tiffs_init_done,4,4
+  11              		.comm	tiffs_root_ino,4,4
+  12              		.comm	tiffs_active_index,4,4
+  13              		.comm	tiffs_nsectors,4,4
+  14              		.comm	tiffs_sector_size,4,4
+  15              		.comm	tiffs_base_addr,4,4
+  16              		.file 1 "tiffs/globals.c"
+  17              		.file 2 "/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h"
+  18              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 globals.c
+                            *COM*:0000000000000004 tiffs_init_done
+                            *COM*:0000000000000004 tiffs_root_ino
+                            *COM*:0000000000000004 tiffs_active_index
+                            *COM*:0000000000000004 tiffs_nsectors
+                            *COM*:0000000000000004 tiffs_sector_size
+                            *COM*:0000000000000004 tiffs_base_addr
+
+NO UNDEFINED SYMBOLS

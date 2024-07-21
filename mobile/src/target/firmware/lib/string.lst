@@ -1,0 +1,121 @@
+   1              		.file	"string.c"
+   9              	.Ltext0:
+  10              		.section	.text.strnlen,"ax",%progbits
+  11              		.align	2
+  12              		.global	strnlen
+  14              	strnlen:
+  15              	.LFB4:
+  16              		.file 1 "lib/string.c"
+   1:lib/string.c  **** /*
+   2:lib/string.c  ****  *  linux/lib/string.c
+   3:lib/string.c  ****  *
+   4:lib/string.c  ****  *  Copyright (C) 1991, 1992  Linus Torvalds
+   5:lib/string.c  ****  */
+   6:lib/string.c  **** 
+   7:lib/string.c  **** /*
+   8:lib/string.c  ****  * stupid library routines.. The optimized versions should generally be found
+   9:lib/string.c  ****  * as inline code in <asm-xx/string.h>
+  10:lib/string.c  ****  *
+  11:lib/string.c  ****  * These are buggy as well..
+  12:lib/string.c  ****  *
+  13:lib/string.c  ****  * * Fri Jun 25 1999, Ingo Oeser <ioe@informatik.tu-chemnitz.de>
+  14:lib/string.c  ****  * -  Added strsep() which will replace strtok() soon (because strsep() is
+  15:lib/string.c  ****  *    reentrant and should be faster). Use only strsep() in new code, please.
+  16:lib/string.c  ****  *
+  17:lib/string.c  ****  * * Sat Feb 09 2002, Jason Thomas <jason@topic.com.au>,
+  18:lib/string.c  ****  *                    Matthew Hawkins <matt@mh.dropbear.id.au>
+  19:lib/string.c  ****  * -  Kissed strtok() goodbye
+  20:lib/string.c  ****  */
+  21:lib/string.c  **** 
+  22:lib/string.c  **** #include <sys/types.h>
+  23:lib/string.c  **** #include <string.h>
+  24:lib/string.c  **** #include <ctype.h>
+  25:lib/string.c  **** 
+  26:lib/string.c  **** 
+  27:lib/string.c  **** #ifndef __HAVE_ARCH_STRNLEN
+  28:lib/string.c  **** /**
+  29:lib/string.c  ****  * strnlen - Find the length of a length-limited string
+  30:lib/string.c  ****  * @s: The string to be sized
+  31:lib/string.c  ****  * @count: The maximum number of bytes to search
+  32:lib/string.c  ****  */
+  33:lib/string.c  **** size_t strnlen(const char *s, size_t count)
+  34:lib/string.c  **** {
+  17              		.loc 1 34 0
+  18              		@ args = 0, pretend = 0, frame = 0
+  19              		@ frame_needed = 0, uses_anonymous_args = 0
+  20              		@ link register save eliminated.
+  21              	.LVL0:
+  22              		@ lr needed for prologue
+  23              		.loc 1 34 0
+  24 0000 00C0A0E1 		mov	ip, r0
+  25 0004 0020A0E3 		mov	r2, #0
+  26              	.LVL1:
+  27              	.L2:
+  35:lib/string.c  **** 	const char *sc;
+  36:lib/string.c  **** 
+  37:lib/string.c  **** 	for (sc = s; count-- && *sc != '\0'; ++sc)
+  28              		.loc 1 37 0
+  29 0008 010052E1 		cmp	r2, r1
+  30              		.loc 1 34 0
+  31 000c 0C0082E0 		add	r0, r2, ip
+  32              		.loc 1 37 0
+  33 0010 012082E2 		add	r2, r2, #1
+  34 0014 0700000A 		beq	.L3
+  35 0018 0030D0E5 		ldrb	r3, [r0, #0]	@ zero_extendqisi2
+  36 001c 000053E3 		cmp	r3, #0
+  37 0020 0000001A 		bne	.L2
+  38              	.L3:
+  38:lib/string.c  **** 		/* nothing */;
+  39:lib/string.c  **** 	return sc - s;
+  40:lib/string.c  **** }
+  39              		.loc 1 40 0
+  40 0024 00006CE0 		rsb	r0, ip, r0
+  41              	.LVL2:
+  42 0028 1EFF2FE1 		bx	lr
+  43              	.LFE4:
+  45              		.section	.text.strlen,"ax",%progbits
+  46              		.align	2
+  47              		.global	strlen
+  49              	strlen:
+  50              	.LFB5:
+  41:lib/string.c  **** #endif
+  42:lib/string.c  **** 
+  43:lib/string.c  **** size_t strlen(const char *s)
+  44:lib/string.c  **** {
+  51              		.loc 1 44 0
+  52              		@ args = 0, pretend = 0, frame = 0
+  53              		@ frame_needed = 0, uses_anonymous_args = 0
+  54              		@ link register save eliminated.
+  55              	.LVL3:
+  56 0000 0020A0E1 		mov	r2, r0
+  57              		@ lr needed for prologue
+  58 0004 010000EA 		b	.L8
+  59              	.LVL4:
+  60              	.L9:
+  45:lib/string.c  **** 	const char *sc;
+  46:lib/string.c  **** 
+  47:lib/string.c  **** 	for (sc = s; *sc != '\0'; ++sc)
+  61              		.loc 1 47 0
+  62 0008 010080E2 		add	r0, r0, #1
+  63              	.LVL5:
+  64              	.L8:
+  65 000c 0030D0E5 		ldrb	r3, [r0, #0]	@ zero_extendqisi2
+  66 0010 000053E3 		cmp	r3, #0
+  67 0014 0000001A 		bne	.L9
+  48:lib/string.c  **** 		/* nothing */;
+  49:lib/string.c  **** 	return sc - s;
+  50:lib/string.c  **** }
+  68              		.loc 1 50 0
+  69 0018 000062E0 		rsb	r0, r2, r0
+  70              	.LVL6:
+  71 001c 1EFF2FE1 		bx	lr
+  72              	.LFE5:
+ 108              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 string.c
+     /tmp/ccUfQOKj.s:14     .text.strnlen:0000000000000000 strnlen
+     /tmp/ccUfQOKj.s:24     .text.strnlen:0000000000000000 $a
+     /tmp/ccUfQOKj.s:49     .text.strlen:0000000000000000 strlen
+     /tmp/ccUfQOKj.s:56     .text.strlen:0000000000000000 $a
+
+NO UNDEFINED SYMBOLS

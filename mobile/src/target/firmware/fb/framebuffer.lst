@@ -1,0 +1,10 @@
+   1              		.file	"framebuffer.c"
+   9              	.Ltext0:
+  10              		.file 1 "include/fb/framebuffer.h"
+  11              		.file 2 "/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h"
+  12              		.file 3 "include/fb/font.h"
+  13              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 framebuffer.c
+
+NO UNDEFINED SYMBOLS

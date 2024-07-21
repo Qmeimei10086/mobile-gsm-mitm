@@ -1,0 +1,243 @@
+   1              	# 1 "lib/memset.S"
+   2              	# 1 "<built-in>"
+   1              	/*
+   0              	
+   0              	
+   2              	 *  linux/arch/arm/lib/memset.S
+   3              	 *
+   4              	 *  Copyright (C) 1995-2000 Russell King
+   5              	 *
+   6              	 * This program is free software; you can redistribute it and/or modify
+   7              	 * it under the terms of the GNU General Public License version 2 as
+   8              	 * published by the Free Software Foundation.
+   9              	 *
+  10              	 *  ASM optimised string functions
+  11              	 */
+  12              	#include <asm/linkage.h>
+   1              	#ifndef __ASM_LINKAGE_H
+   2              	#define __ASM_LINKAGE_H
+   3              	
+   4              	/* asm-arm/linkage.h */
+   5              	
+   6              	#define __ALIGN .align 0
+   7              	#define __ALIGN_STR ".align 0"
+   8              	
+   9              	/* linux/linkage.h */
+  10              	
+  11              	#define ALIGN __ALIGN
+  12              	
+  13              	#define ENTRY(name) \
+  13              	#include <asm/assembler.h>
+   1              	/*
+   2              	 *  linux/include/asm-arm/assembler.h
+   3              	 *
+   4              	 *  Copyright (C) 1996-2000 Russell King
+   5              	 *
+   6              	 * This program is free software; you can redistribute it and/or modify
+   7              	 * it under the terms of the GNU General Public License version 2 as
+   8              	 * published by the Free Software Foundation.
+   9              	 *
+  10              	 *  This file contains arm architecture specific defines
+  11              	 *  for the different processors.
+  12              	 *
+  13              	 *  Do not include any C declarations in this file - it is included by
+  14              	 *  assembler source.
+  15              	 */
+  16              	#ifndef __ASSEMBLY__
+  17              	#error "Only include this from assembly code"
+  18              	#endif
+  19              	
+  20              	#include <asm/ptrace.h>
+   1              	/*
+   2              	 *  linux/include/asm-arm/ptrace.h
+   3              	 *
+   4              	 *  Copyright (C) 1996-2003 Russell King
+   5              	 *
+   6              	 * This program is free software; you can redistribute it and/or modify
+   7              	 * it under the terms of the GNU General Public License version 2 as
+   8              	 * published by the Free Software Foundation.
+   9              	 */
+  10              	#ifndef __ASM_ARM_PTRACE_H
+  11              	#define __ASM_ARM_PTRACE_H
+  12              	
+  13              	/*
+  14              	 * PSR bits
+  15              	 */
+  16              	#define USR26_MODE	0x00000000
+  17              	#define FIQ26_MODE	0x00000001
+  18              	#define IRQ26_MODE	0x00000002
+  19              	#define SVC26_MODE	0x00000003
+  20              	#define USR_MODE	0x00000010
+  21              	#define FIQ_MODE	0x00000011
+  21              	
+  22              	/*
+  23              	 * Endian independent macros for shifting bytes within registers.
+  24              	 */
+  25              	#ifndef __ARMEB__
+  26              	#define pull            lsr
+  27              	#define push            lsl
+  28              	#define get_byte_0      lsl #0
+  29              	#define get_byte_1	lsr #8
+  30              	#define get_byte_2	lsr #16
+  31              	#define get_byte_3	lsr #24
+  32              	#define put_byte_0      lsl #0
+  33              	#define put_byte_1	lsl #8
+  34              	#define put_byte_2	lsl #16
+  35              	#define put_byte_3	lsl #24
+  36              	#else
+  37              	#define pull            lsl
+  38              	#define push            lsr
+  39              	#define get_byte_0	lsr #24
+  40              	#define get_byte_1	lsr #16
+  41              	#define get_byte_2	lsr #8
+  42              	#define get_byte_3      lsl #0
+  43              	#define put_byte_0	lsl #24
+  44              	#define put_byte_1	lsl #16
+  45              	#define put_byte_2	lsl #8
+  46              	#define put_byte_3      lsl #0
+  47              	#endif
+  48              	
+  49              	#define PLD(code...)
+  50              	
+  51              	#define MODE_USR	USR_MODE
+  52              	#define MODE_FIQ	FIQ_MODE
+  53              	#define MODE_IRQ	IRQ_MODE
+  54              	#define MODE_SVC	SVC_MODE
+  55              	
+  56              	#define DEFAULT_FIQ	MODE_FIQ
+  57              	
+  58              	/*
+  59              	 * LOADREGS - ldm with PC in register list (eg, ldmfd sp!, {pc})
+  60              	 */
+  61              	#ifdef __STDC__
+  62              	#define LOADREGS(cond, base, reglist...)\
+  63              		ldm##cond	base,reglist
+  64              	#else
+  65              	#define LOADREGS(cond, base, reglist...)\
+  66              		ldm/**/cond	base,reglist
+  67              	#endif
+  68              	
+  69              	/*
+  70              	 * Build a return instruction for this processor type.
+  71              	 */
+  72              	#define RETINSTR(instr, regs...)\
+  73              		instr	regs
+  74              	
+  75              	/*
+  76              	 * Enable and disable interrupts
+  77              	 */
+  78              		.macro	disable_irq
+  79              		msr	cpsr_c, #PSR_I_BIT | SVC_MODE
+  80              		.endm
+  81              	
+  82              		.macro	enable_irq
+  83              		msr	cpsr_c, #SVC_MODE
+  84              		.endm
+  85              	
+  86              	/*
+  87              	 * Save the current IRQ state and disable IRQs.  Note that this macro
+  88              	 * assumes FIQs are enabled, and that the processor is in SVC mode.
+  89              	 */
+  90              		.macro	save_and_disable_irqs, oldcpsr
+  91              		mrs	\oldcpsr, cpsr
+  92              		disable_irq
+  93              		.endm
+  94              	
+  95              	/*
+  96              	 * Restore interrupt state previously stored in a register.  We don't
+  97              	 * guarantee that this will preserve the flags.
+  98              	 */
+  99              		.macro	restore_irqs, oldcpsr
+ 100              		msr	cpsr_c, \oldcpsr
+ 101              		.endm
+ 102              	
+ 103              	/*
+ 104              	 * These two are used to save LR/restore PC over a user-based access.
+ 105              	 * The old 26-bit architecture requires that we do.  On 32-bit
+ 106              	 * architecture, we can safely ignore this requirement.
+ 107              	 */
+ 108              		.macro	save_lr
+ 109              		.endm
+ 110              	
+ 111              		.macro	restore_pc
+ 112              		mov	pc, lr
+ 113              		.endm
+ 114              	...
+  14              	
+  15              		.text
+  16              		.align	5
+  17 0000 00000000 		.word	0
+  18              	
+  19 0004 042052E2 	1:	subs	r2, r2, #4		@ 1 do we have enough
+  20 0008 210000BA 		blt	5f			@ 1 bytes to align with?
+  21 000c 020053E3 		cmp	r3, #2			@ 1
+  22 0010 0110C0B4 		strltb	r1, [r0], #1		@ 1
+  23 0014 0110C0D4 		strleb	r1, [r0], #1		@ 1
+  24 0018 0110C0E4 		strb	r1, [r0], #1		@ 1
+  25 001c 032082E0 		add	r2, r2, r3		@ 1 (r2 = r2 - (4 - r3))
+  26              	/*
+  27              	 * The pointer is now aligned and the length is adjusted.  Try doing the
+  28              	 * memzero again.
+  29              	 */
+  30              	
+  31              	ENTRY(memset)
+  32 0020 033010E2 		ands	r3, r0, #3		@ 1 unaligned?
+  33 0024 FFFFFF1A 		bne	1b			@ 1
+  34              	/*
+  35              	 * we know that the pointer in r0 is aligned to a word boundary.
+  36              	 */
+  37 0028 011481E1 		orr	r1, r1, r1, lsl #8
+  38 002c 011881E1 		orr	r1, r1, r1, lsl #16
+  39 0030 0130A0E1 		mov	r3, r1
+  40 0034 100052E3 		cmp	r2, #16
+  41 0038 1D0000BA 		blt	4f
+  42              	/*
+  43              	 * We need an extra register for this loop - save the return address and
+  44              	 * use the LR
+  45              	 */
+  46 003c 04E02DE5 		str	lr, [sp, #-4]!
+  47 0040 01C0A0E1 		mov	ip, r1
+  48 0044 01E0A0E1 		mov	lr, r1
+  49              	
+  50 0048 402052E2 	2:	subs	r2, r2, #64
+  51 004c 0A50A0A8 		stmgeia	r0!, {r1, r3, ip, lr}	@ 64 bytes at a time.
+  52 0050 0A50A0A8 		stmgeia	r0!, {r1, r3, ip, lr}
+  53 0054 0A50A0A8 		stmgeia	r0!, {r1, r3, ip, lr}
+  54 0058 0A50A0A8 		stmgeia	r0!, {r1, r3, ip, lr}
+  55 005c 100000CA 		bgt	2b
+  56 0060 0080BD08 		LOADREGS(eqfd, sp!, {pc})	@ Now <64 bytes to go.
+  57              	/*
+  58              	 * No need to correct the count; we're only testing bits from now on
+  59              	 */
+  60 0064 200012E3 		tst	r2, #32
+  61 0068 0A50A018 		stmneia	r0!, {r1, r3, ip, lr}
+  62 006c 0A50A018 		stmneia	r0!, {r1, r3, ip, lr}
+  63 0070 100012E3 		tst	r2, #16
+  64 0074 0A50A018 		stmneia	r0!, {r1, r3, ip, lr}
+  65 0078 04E09DE4 		ldr	lr, [sp], #4
+  66              	
+  67 007c 080012E3 	4:	tst	r2, #8
+  68 0080 0A00A018 		stmneia	r0!, {r1, r3}
+  69 0084 040012E3 		tst	r2, #4
+  70 0088 04108014 		strne	r1, [r0], #4
+  71              	/*
+  72              	 * When we get here, we've got less than 4 bytes to zero.  We
+  73              	 * may have an unaligned pointer as well.
+  74              	 */
+  75 008c 020012E3 	5:	tst	r2, #2
+  76 0090 0110C014 		strneb	r1, [r0], #1
+  77 0094 0110C014 		strneb	r1, [r0], #1
+  78 0098 010012E3 		tst	r2, #1
+  79 009c 0110C014 		strneb	r1, [r0], #1
+  80 00a0 0EF0A0E1 		RETINSTR(mov,pc,lr)
+  80      0000A0E1 
+  80      0000A0E1 
+  80      0000A0E1 
+  80      0000A0E1 
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 lib/memset.S
+        lib/memset.S:17     .text:0000000000000000 $d
+        lib/memset.S:19     .text:0000000000000004 $a
+        lib/memset.S:31     .text:0000000000000020 memset
+
+NO UNDEFINED SYMBOLS

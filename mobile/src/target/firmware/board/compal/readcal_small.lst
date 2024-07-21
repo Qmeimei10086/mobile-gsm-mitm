@@ -1,0 +1,59 @@
+   1              		.file	"readcal_small.c"
+   9              	.Ltext0:
+  10              		.section	.text.read_factory_rf_calibration,"ax",%progbits
+  11              		.align	2
+  12              		.global	read_factory_rf_calibration
+  14              	read_factory_rf_calibration:
+  15              	.LFB2:
+  16              		.file 1 "board/compal/readcal_small.c"
+   1:board/compal/readcal_small.c **** /*
+   2:board/compal/readcal_small.c ****  * This code was written by Mychaela Falconia <falcon@freecalypso.org>
+   3:board/compal/readcal_small.c ****  * who refuses to claim copyright on it and has released it as public domain
+   4:board/compal/readcal_small.c ****  * instead. NO rights reserved, all rights relinquished.
+   5:board/compal/readcal_small.c ****  *
+   6:board/compal/readcal_small.c ****  * This program is free software; you can redistribute it and/or modify
+   7:board/compal/readcal_small.c ****  * it under the terms of the GNU General Public License as published by
+   8:board/compal/readcal_small.c ****  * the Free Software Foundation; either version 2 of the License, or
+   9:board/compal/readcal_small.c ****  * (at your option) any later version.
+  10:board/compal/readcal_small.c ****  *
+  11:board/compal/readcal_small.c ****  * This program is distributed in the hope that it will be useful,
+  12:board/compal/readcal_small.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13:board/compal/readcal_small.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14:board/compal/readcal_small.c ****  * GNU General Public License for more details.
+  15:board/compal/readcal_small.c ****  *
+  16:board/compal/readcal_small.c ****  * You should have received a copy of the GNU General Public License along
+  17:board/compal/readcal_small.c ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  18:board/compal/readcal_small.c ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  19:board/compal/readcal_small.c ****  *
+  20:board/compal/readcal_small.c ****  */
+  21:board/compal/readcal_small.c **** 
+  22:board/compal/readcal_small.c **** #include <stdint.h>
+  23:board/compal/readcal_small.c **** #include <rf/readcal.h>
+  24:board/compal/readcal_small.c **** 
+  25:board/compal/readcal_small.c **** extern void read_compal_factory_records(uint32_t flash_addr);
+  26:board/compal/readcal_small.c **** 
+  27:board/compal/readcal_small.c **** void read_factory_rf_calibration(void)
+  28:board/compal/readcal_small.c **** {
+  17              		.loc 1 28 0
+  18              		@ args = 0, pretend = 0, frame = 0
+  19              		@ frame_needed = 0, uses_anonymous_args = 0
+  20              		@ link register save eliminated.
+  21              	.LVL0:
+  29:board/compal/readcal_small.c **** 	read_compal_factory_records(0x3FC000);
+  22              		.loc 1 29 0
+  23 0000 FF09A0E3 		mov	r0, #4177920
+  24              		.loc 1 28 0
+  25              		@ lr needed for prologue
+  30:board/compal/readcal_small.c **** }
+  26              		.loc 1 30 0
+  27              		.loc 1 29 0
+  28 0004 FEFFFFEA 		b	read_compal_factory_records
+  29              	.LFE2:
+  55              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 readcal_small.c
+     /tmp/ccxCVngv.s:14     .text.read_factory_rf_calibration:0000000000000000 read_factory_rf_calibration
+     /tmp/ccxCVngv.s:23     .text.read_factory_rf_calibration:0000000000000000 $a
+
+UNDEFINED SYMBOLS
+read_compal_factory_records

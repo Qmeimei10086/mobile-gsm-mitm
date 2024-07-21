@@ -1,0 +1,45 @@
+   1              		.file	"dummy.c"
+   9              	.Ltext0:
+  10              		.section	.text.battery_dummy_init,"ax",%progbits
+  11              		.align	2
+  12              		.global	battery_dummy_init
+  14              	battery_dummy_init:
+  15              	.LFB2:
+  16              		.file 1 "battery/dummy.c"
+   1:battery/dummy.c **** #include <battery/battery.h>
+   2:battery/dummy.c **** 
+   3:battery/dummy.c **** /* Battery Management: Dummy file when no charging logic exists. */
+   4:battery/dummy.c **** struct battery_info battery_info;
+   5:battery/dummy.c **** 
+   6:battery/dummy.c **** void battery_dummy_init(){
+  17              		.loc 1 6 0
+  18              		@ args = 0, pretend = 0, frame = 0
+  19              		@ frame_needed = 0, uses_anonymous_args = 0
+  20              		@ link register save eliminated.
+  21              	.LVL0:
+   7:battery/dummy.c **** 	battery_info.flags = BATTERY_FAILURE; /* not implemented */
+  22              		.loc 1 7 0
+  23 0000 08309FE5 		ldr	r3, .L3
+  24 0004 0820A0E3 		mov	r2, #8
+  25              		.loc 1 6 0
+  26              		@ lr needed for prologue
+  27              		.loc 1 7 0
+  28 0008 002083E5 		str	r2, [r3, #0]
+   8:battery/dummy.c **** }
+  29              		.loc 1 8 0
+  30 000c 1EFF2FE1 		bx	lr
+  31              	.L4:
+  32              		.align	2
+  33              	.L3:
+  34 0010 00000000 		.word	battery_info
+  35              	.LFE2:
+  37              		.comm	battery_info,20,4
+  63              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 dummy.c
+     /tmp/ccXK9t3n.s:14     .text.battery_dummy_init:0000000000000000 battery_dummy_init
+     /tmp/ccXK9t3n.s:23     .text.battery_dummy_init:0000000000000000 $a
+     /tmp/ccXK9t3n.s:34     .text.battery_dummy_init:0000000000000010 $d
+                            *COM*:0000000000000014 battery_info
+
+NO UNDEFINED SYMBOLS

@@ -1,0 +1,226 @@
+   1              	# 1 "lib/div64.S"
+   2              	# 1 "<built-in>"
+   1              	/*
+   0              	
+   0              	
+   2              	 *  linux/arch/arm/lib/div64.S
+   3              	 *
+   4              	 *  Optimized computation of 64-bit dividend / 32-bit divisor
+   5              	 *
+   6              	 *  Author:	Nicolas Pitre
+   7              	 *  Created:	Oct 5, 2003
+   8              	 *  Copyright:	Monta Vista Software, Inc.
+   9              	 *
+  10              	 *  This program is free software; you can redistribute it and/or modify
+  11              	 *  it under the terms of the GNU General Public License version 2 as
+  12              	 *  published by the Free Software Foundation.
+  13              	 */
+  14              	
+  15              	#include <asm/linkage.h>
+   1              	#ifndef __ASM_LINKAGE_H
+   2              	#define __ASM_LINKAGE_H
+   3              	
+   4              	/* asm-arm/linkage.h */
+   5              	
+   6              	#define __ALIGN .align 0
+   7              	#define __ALIGN_STR ".align 0"
+   8              	
+   9              	/* linux/linkage.h */
+  10              	
+  11              	#define ALIGN __ALIGN
+  12              	
+  13              	#define ENTRY(name) \
+  14              	  .globl name; \
+  15              	  ALIGN; \
+  16              	  name:
+  16              	
+  17              	#ifdef __ARMEB__
+  18              	#define xh r0
+  19              	#define xl r1
+  20              	#define yh r2
+  21              	#define yl r3
+  22              	#else
+  23              	#define xl r0
+  24              	#define xh r1
+  25              	#define yl r2
+  26              	#define yh r3
+  27              	#endif
+  28              	
+  29              	/*
+  30              	 * __do_div64: perform a division with 64-bit dividend and 32-bit divisor.
+  31              	 *
+  32              	 * Note: Calling convention is totally non standard for optimal code.
+  33              	 *       This is meant to be used by do_div() from include/asm/div64.h only.
+  34              	 *
+  35              	 * Input parameters:
+  36              	 * 	xh-xl	= dividend (clobbered)
+  37              	 * 	r4	= divisor (preserved)
+  38              	 *
+  39              	 * Output values:
+  40              	 * 	yh-yl	= result
+  41              	 * 	xh	= remainder
+  42              	 *
+  43              	 * Clobbered regs: xl, ip
+  44              	 */
+  45              	
+  46              	ENTRY(__do_div64)
+  47              	
+  48              		@ Test for easy paths first.
+  49 0000 01C054E2 		subs	ip, r4, #1
+  50 0004 4000009A 		bls	9f			@ divisor is 0 or 1
+  51 0008 04001CE1 		tst	ip, r4
+  52 000c 2B00000A 		beq	8f			@ divisor is power of 2
+  53              	
+  54              		@ See if we need to handle upper 32-bit result.
+  55 0010 040051E1 		cmp	xh, r4
+  56 0014 0030A0E3 		mov	yh, #0
+  57 0018 1200003A 		blo	3f
+  58              	
+  59              		@ Align divisor with upper part of dividend.
+  60              		@ The aligned divisor is stored in yl preserving the original.
+  61              		@ The bit position is stored in ip.
+  62              	
+  63              	#if __LINUX_ARM_ARCH__ >= 5
+  64              	
+  65              		clz	yl, r4
+  66              		clz	ip, xh
+  67              		sub	yl, yl, ip
+  68              		mov	ip, #1
+  69              		mov	ip, ip, lsl yl
+  70              		mov	yl, r4, lsl yl
+  71              	
+  72              	#else
+  73              	
+  74 001c 0420A0E1 		mov	yl, r4
+  75 0020 01C0A0E3 		mov	ip, #1
+  76 0024 020152E3 	1:	cmp	yl, #0x80000000
+  77 0028 01005231 		cmpcc	yl, xh
+  78 002c 8220A031 		movcc	yl, yl, lsl #1
+  79 0030 8CC0A031 		movcc	ip, ip, lsl #1
+  80 0034 0700003A 		bcc	1b
+  81              	
+  82              	#endif
+  83              	
+  84              		@ The division loop for needed upper bit positions.
+  85              	 	@ Break out early if dividend reaches 0.
+  86 0038 020051E1 	2:	cmp	xh, yl
+  87 003c 0C308321 		orrcs	yh, yh, ip
+  88 0040 02105120 		subcss	xh, xh, yl
+  89 0044 ACC0B011 		movnes	ip, ip, lsr #1
+  90 0048 A220A0E1 		mov	yl, yl, lsr #1
+  91 004c 0C00001A 		bne	2b
+  92              	
+  93              		@ See if we need to handle lower 32-bit result.
+  94 0050 000051E3 	3:	cmp	xh, #0
+  95 0054 0020A0E3 		mov	yl, #0
+  96 0058 04005001 		cmpeq	xl, r4
+  97 005c 0010A031 		movlo	xh, xl
+  98 0060 0EF0A031 		movlo	pc, lr
+  99              	
+ 100              		@ The division loop for lower bit positions.
+ 101              		@ Here we shift remainer bits leftwards rather than moving the
+ 102              		@ divisor for comparisons, considering the carry-out bit as well.
+ 103 0064 02C1A0E3 		mov	ip, #0x80000000
+ 104 0068 8000B0E1 	4:	movs	xl, xl, lsl #1
+ 105 006c 0110B1E0 		adcs	xh, xh, xh
+ 106 0070 2100000A 		beq	6f
+ 107 0074 04005131 		cmpcc	xh, r4
+ 108 0078 0C208221 	5:	orrcs	yl, yl, ip
+ 109 007c 04104120 		subcs	xh, xh, r4
+ 110 0080 ACC0B0E1 		movs	ip, ip, lsr #1
+ 111 0084 1800001A 		bne	4b
+ 112 0088 0EF0A0E1 		mov	pc, lr
+ 113              	
+ 114              		@ The top part of remainder became zero.  If carry is set
+ 115              		@ (the 33th bit) this is a false positive so resume the loop.
+ 116              		@ Otherwise, if lower part is also null then we are done.
+ 117 008c 1C00002A 	6:	bcs	5b
+ 118 0090 000050E3 		cmp	xl, #0
+ 119 0094 0EF0A001 		moveq	pc, lr
+ 120              	
+ 121              		@ We still have remainer bits in the low part.  Bring them up.
+ 122              	
+ 123              	#if __LINUX_ARM_ARCH__ >= 5
+ 124              	
+ 125              		clz	xh, xl			@ we know xh is zero here so...
+ 126              		add	xh, xh, #1
+ 127              		mov	xl, xl, lsl xh
+ 128              		mov	ip, ip, lsr xh
+ 129              	
+ 130              	#else
+ 131              	
+ 132 0098 8000B0E1 	7:	movs	xl, xl, lsl #1
+ 133 009c ACC0A0E1 		mov	ip, ip, lsr #1
+ 134 00a0 2400003A 		bcc	7b
+ 135              	
+ 136              	#endif
+ 137              	
+ 138              		@ Current remainder is now 1.  It is worthless to compare with
+ 139              		@ divisor at this point since divisor can not be smaller than 3 here.
+ 140              		@ If possible, branch for another shift in the division loop.
+ 141              		@ If no bit position left then we are done.
+ 142 00a4 ACC0B0E1 		movs	ip, ip, lsr #1
+ 143 00a8 0110A0E3 		mov	xh, #1
+ 144 00ac 1800001A 		bne	4b
+ 145 00b0 0EF0A0E1 		mov	pc, lr
+ 146              	
+ 147              	8:	@ Division by a power of 2: determine what that divisor order is
+ 148              		@ then simply shift values around
+ 149              	
+ 150              	#if __LINUX_ARM_ARCH__ >= 5
+ 151              	
+ 152              		clz	ip, r4
+ 153              		rsb	ip, ip, #31
+ 154              	
+ 155              	#else
+ 156              	
+ 157 00b4 0420A0E1 		mov	yl, r4
+ 158 00b8 010854E3 		cmp	r4, #(1 << 16)
+ 159 00bc 00C0A0E3 		mov	ip, #0
+ 160 00c0 2228A021 		movhs	yl, yl, lsr #16
+ 161 00c4 10C0A023 		movhs	ip, #16
+ 162              	
+ 163 00c8 010C52E3 		cmp	yl, #(1 << 8)
+ 164 00cc 2224A021 		movhs	yl, yl, lsr #8
+ 165 00d0 08C08C22 		addhs	ip, ip, #8
+ 166              	
+ 167 00d4 100052E3 		cmp	yl, #(1 << 4)
+ 168 00d8 2222A021 		movhs	yl, yl, lsr #4
+ 169 00dc 04C08C22 		addhs	ip, ip, #4
+ 170              	
+ 171 00e0 040052E3 		cmp	yl, #(1 << 2)
+ 172 00e4 03C08C82 		addhi	ip, ip, #3
+ 173 00e8 A2C08C90 		addls	ip, ip, yl, lsr #1
+ 174              	
+ 175              	#endif
+ 176              	
+ 177 00ec 313CA0E1 		mov	yh, xh, lsr ip
+ 178 00f0 302CA0E1 		mov	yl, xl, lsr ip
+ 179 00f4 20C06CE2 		rsb	ip, ip, #32
+ 180 00f8 112C82E1 		orr	yl, yl, xh, lsl ip
+ 181 00fc 101CA0E1 		mov	xh, xl, lsl ip
+ 182 0100 311CA0E1 		mov	xh, xh, lsr ip
+ 183 0104 0EF0A0E1 		mov	pc, lr
+ 184              	
+ 185              		@ eq -> division by 1: obvious enough...
+ 186 0108 0020A001 	9:	moveq	yl, xl
+ 187 010c 0130A001 		moveq	yh, xh
+ 188 0110 0010A003 		moveq	xh, #0
+ 189 0114 0EF0A001 		moveq	pc, lr
+ 190              	
+ 191              		@ Division by 0:
+ 192 0118 08E02DE5 		str	lr, [sp, #-8]!
+ 193 011c FEFFFFEB 		bl	__div0
+ 194              	
+ 195              		@ as wrong as it could be...
+ 196 0120 0020A0E3 		mov	yl, #0
+ 197 0124 0030A0E3 		mov	yh, #0
+ 198 0128 0010A0E3 		mov	xh, #0
+ 199 012c 08F09DE4 		ldr	pc, [sp], #8
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 lib/div64.S
+         lib/div64.S:46     .text:0000000000000000 __do_div64
+         lib/div64.S:49     .text:0000000000000000 $a
+
+UNDEFINED SYMBOLS
+__div0

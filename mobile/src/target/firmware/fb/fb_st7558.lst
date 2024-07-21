@@ -1,0 +1,359 @@
+   1              		.file	"fb_st7558.c"
+   9              	.Ltext0:
+  10              		.global	fb_bw8
+  11              		.data
+  12              		.align	2
+  15              	fb_bw8:
+  16 0000 04000000 		.word	fb_st7558_bw8
+  17              		.align	2
+  20              	fb_st7558_bw8:
+  21 0004 00000000 		.word	fb_st7558_mem
+  22 0008 00000000 		.space	8
+  22      00000000 
+  23              		.global	framebuffer
+  24              		.align	2
+  27              	framebuffer:
+  28 0010 14000000 		.word	fb_st7558_framebuffer
+  29              		.align	2
+  32              	fb_st7558_framebuffer:
+  33 0014 73743735 		.ascii	"st7558\000"
+  33      353800
+  34 001b 00       		.space	1
+  35 001c 00000000 		.word	fb_st7558_init
+  36 0020 00000000 		.word	fb_bw8_clear
+  37 0024 00000000 		.word	fb_bw8_set_p
+  38 0028 00000000 		.word	fb_bw8_boxto
+  39 002c 00000000 		.word	fb_bw8_lineto
+  40 0030 00000000 		.word	fb_bw8_putstr
+  41 0034 00000000 		.word	fb_st7558_flush
+  42 0038 6000     		.short	96
+  43 003a 4100     		.short	65
+  44 003c 00000000 		.space	16
+  44      00000000 
+  44      00000000 
+  44      00000000 
+  45              		.section	.rodata
+  48              	st7558_setup:
+  49 0000 2E       		.byte	46
+  50 0001 21       		.byte	33
+  51 0002 12       		.byte	18
+  52 0003 C0       		.byte	-64
+  53 0004 0B       		.byte	11
+  54 0005 20       		.byte	32
+  55 0006 11       		.byte	17
+  56 0007 00       		.byte	0
+  57 0008 0C       		.byte	12
+  58 0009 40       		.byte	64
+  59 000a 80       		.byte	-128
+  60              		.section	.text.fb_st7558_init,"ax",%progbits
+  61              		.align	2
+  63              	fb_st7558_init:
+  64              	.LFB15:
+  65              		.file 1 "fb/fb_st7558.c"
+   1:fb/fb_st7558.c **** /* Framebuffer implementation - ST1783 LCD driver for C123 */
+   2:fb/fb_st7558.c **** /* Based on st7558.c by Harald Welte */
+   3:fb/fb_st7558.c **** 
+   4:fb/fb_st7558.c **** /* (C) 2010 by Christian Vogel <vogelchr@vogel.cx>
+   5:fb/fb_st7558.c ****  *
+   6:fb/fb_st7558.c ****  * All Rights Reserved
+   7:fb/fb_st7558.c ****  *
+   8:fb/fb_st7558.c ****  * This program is free software; you can redistribute it and/or modify
+   9:fb/fb_st7558.c ****  * it under the terms of the GNU General Public License as published by
+  10:fb/fb_st7558.c ****  * the Free Software Foundation; either version 2 of the License, or
+  11:fb/fb_st7558.c ****  * (at your option) any later version.
+  12:fb/fb_st7558.c ****  *
+  13:fb/fb_st7558.c ****  * This program is distributed in the hope that it will be useful,
+  14:fb/fb_st7558.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  15:fb/fb_st7558.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  16:fb/fb_st7558.c ****  * GNU General Public License for more details.
+  17:fb/fb_st7558.c ****  *
+  18:fb/fb_st7558.c ****  * You should have received a copy of the GNU General Public License along
+  19:fb/fb_st7558.c ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  20:fb/fb_st7558.c ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  21:fb/fb_st7558.c ****  *
+  22:fb/fb_st7558.c ****  */
+  23:fb/fb_st7558.c **** 
+  24:fb/fb_st7558.c **** #include <fb/framebuffer.h>
+  25:fb/fb_st7558.c **** #include <fb/fb_bw8.h>
+  26:fb/fb_st7558.c **** 
+  27:fb/fb_st7558.c **** #include <i2c.h>
+  28:fb/fb_st7558.c **** #include <calypso/clock.h>
+  29:fb/fb_st7558.c **** #include <delay.h>
+  30:fb/fb_st7558.c **** 
+  31:fb/fb_st7558.c **** #include <stdio.h>
+  32:fb/fb_st7558.c **** 
+  33:fb/fb_st7558.c **** /* Sitronix ST7558 LCD Driver for OSMOCOM framebuffer interface. */
+  34:fb/fb_st7558.c **** /* (c) 2010 Christian Vogel <vogelchr@vogel.cx> */
+  35:fb/fb_st7558.c **** /* Based on the initial LCD driver by Harald Welte */
+  36:fb/fb_st7558.c **** 
+  37:fb/fb_st7558.c **** #define CONTROL_RS_CMD
+  38:fb/fb_st7558.c **** 
+  39:fb/fb_st7558.c **** #define ST7558_SLAVE_ADDR	0x3c
+  40:fb/fb_st7558.c **** #define ST7558_CMD_ADDR		0x00
+  41:fb/fb_st7558.c **** #define ST7558_RAM_ADDR		0x40
+  42:fb/fb_st7558.c **** 
+  43:fb/fb_st7558.c **** #define ST7558_WIDTH		96	/* in pixels */
+  44:fb/fb_st7558.c **** #define ST7558_HEIGHT		65
+  45:fb/fb_st7558.c **** 
+  46:fb/fb_st7558.c **** #define I2C_MAX_TRANSFER 16
+  47:fb/fb_st7558.c **** 
+  48:fb/fb_st7558.c **** static uint8_t
+  49:fb/fb_st7558.c **** fb_st7558_mem[ST7558_WIDTH * ((ST7558_HEIGHT+7)/8)];
+  50:fb/fb_st7558.c **** 
+  51:fb/fb_st7558.c **** /* setup as initially proposed by Harald in st7558.c */
+  52:fb/fb_st7558.c **** static const uint8_t st7558_setup[] = {
+  53:fb/fb_st7558.c **** 	0x2e,	/* ext. display control, set mirror X, set mirror Y*/
+  54:fb/fb_st7558.c **** 	0x21,	/* function set, enable extended instruction mode */
+  55:fb/fb_st7558.c **** 	0x12,	/* bias system BS[2,1,0] = [0,1,0] */
+  56:fb/fb_st7558.c **** 	0xc0,	/* set V_OP (V_OP6 = 1, V_OP[5:0] = 0) */
+  57:fb/fb_st7558.c **** 	0x0b,	/* booster stages PC1=1, PC0=1 */
+  58:fb/fb_st7558.c **** 	0x20,	/* function set, disable extended instruction mode */
+  59:fb/fb_st7558.c **** 	0x11,	/* V_LCD L/H select, PRS=1 */
+  60:fb/fb_st7558.c **** 	0x00,	/* NOP */
+  61:fb/fb_st7558.c **** 	0x0c,	/* normal video mode */
+  62:fb/fb_st7558.c **** 	0x40,	/* set X address to 0 */
+  63:fb/fb_st7558.c **** 	0x80	/* set Y address to 0 */
+  64:fb/fb_st7558.c **** };
+  65:fb/fb_st7558.c **** 
+  66:fb/fb_st7558.c **** 
+  67:fb/fb_st7558.c **** static void
+  68:fb/fb_st7558.c **** fb_st7558_init(){
+  66              		.loc 1 68 0
+  67              		@ args = 0, pretend = 0, frame = 0
+  68              		@ frame_needed = 0, uses_anonymous_args = 0
+  69              	.LVL0:
+  70 0000 04E02DE5 		str	lr, [sp, #-4]!
+  71              	.LCFI0:
+  69:fb/fb_st7558.c **** 	calypso_reset_set(RESET_EXT, 0);
+  72              		.loc 1 69 0
+  73 0004 0400A0E3 		mov	r0, #4
+  74              		.loc 1 68 0
+  75 0008 04D04DE2 		sub	sp, sp, #4
+  76              	.LCFI1:
+  77              	.LVL1:
+  78              		.loc 1 69 0
+  79 000c 0010A0E3 		mov	r1, #0
+  80 0010 FEFFFFEB 		bl	calypso_reset_set
+  70:fb/fb_st7558.c **** 	i2c_init(0,0);
+  81              		.loc 1 70 0
+  82 0014 0000A0E3 		mov	r0, #0
+  83 0018 0010A0E1 		mov	r1, r0
+  84 001c FEFFFFEB 		bl	i2c_init
+  71:fb/fb_st7558.c **** 
+  72:fb/fb_st7558.c **** 	/* initialize controller */
+  73:fb/fb_st7558.c **** 	i2c_write(ST7558_SLAVE_ADDR,ST7558_CMD_ADDR,1,
+  85              		.loc 1 73 0
+  86 0020 0BC0A0E3 		mov	ip, #11
+  87 0024 0010A0E3 		mov	r1, #0
+  88 0028 0120A0E3 		mov	r2, #1
+  89 002c 10309FE5 		ldr	r3, .L3
+  90 0030 3C00A0E3 		mov	r0, #60
+  91 0034 00C08DE5 		str	ip, [sp, #0]
+  92 0038 FEFFFFEB 		bl	i2c_write
+  74:fb/fb_st7558.c **** 		  st7558_setup,sizeof(st7558_setup));
+  75:fb/fb_st7558.c **** }
+  93              		.loc 1 75 0
+  94 003c 04D08DE2 		add	sp, sp, #4
+  95 0040 0080BDE8 		ldmfd	sp!, {pc}
+  96              	.L4:
+  97              		.align	2
+  98              	.L3:
+  99 0044 00000000 		.word	st7558_setup
+ 100              	.LFE15:
+ 102              		.section	.text.fb_st7558_flush,"ax",%progbits
+ 103              		.align	2
+ 105              	fb_st7558_flush:
+ 106              	.LFB16:
+  76:fb/fb_st7558.c **** 
+  77:fb/fb_st7558.c **** static void
+  78:fb/fb_st7558.c **** fb_st7558_flush(){
+ 107              		.loc 1 78 0
+ 108              		@ args = 0, pretend = 0, frame = 4
+ 109              		@ frame_needed = 0, uses_anonymous_args = 0
+ 110              	.LVL2:
+ 111 0000 F0452DE9 		stmfd	sp!, {r4, r5, r6, r7, r8, sl, lr}
+ 112              	.LCFI2:
+  79:fb/fb_st7558.c **** 	uint16_t x;
+  80:fb/fb_st7558.c **** 	int page,chunksize,nbytes;
+  81:fb/fb_st7558.c **** 	uint8_t *p;
+  82:fb/fb_st7558.c **** 	uint8_t cmd[2];
+  83:fb/fb_st7558.c **** 
+  84:fb/fb_st7558.c **** 	if(fb_bw8->damage_y1 == fb_bw8->damage_y2 ||
+ 113              		.loc 1 84 0
+ 114 0004 08319FE5 		ldr	r3, .L16
+ 115 0008 001093E5 		ldr	r1, [r3, #0]
+ 116 000c B630D1E1 		ldrh	r3, [r1, #6]
+ 117 0010 BA20D1E1 		ldrh	r2, [r1, #10]
+ 118 0014 0308A0E1 		mov	r0, r3, asl #16
+ 119 0018 200852E1 		cmp	r2, r0, lsr #16
+ 120              		.loc 1 78 0
+ 121 001c 08D04DE2 		sub	sp, sp, #8
+ 122              	.LCFI3:
+ 123              	.LVL3:
+ 124              		.loc 1 84 0
+ 125 0020 4100000A 		beq	.L15
+ 126 0024 B820D1E1 		ldrh	r2, [r1, #8]
+ 127 0028 B430D1E1 		ldrh	r3, [r1, #4]
+ 128 002c 020053E1 		cmp	r3, r2
+  85:fb/fb_st7558.c **** 		fb_bw8->damage_x1 == fb_bw8->damage_x2)
+  86:fb/fb_st7558.c **** 			return; /* nothing to update */
+  87:fb/fb_st7558.c **** 
+  88:fb/fb_st7558.c **** 	/* update display in stripes of 8 rows, called "pages" */
+  89:fb/fb_st7558.c **** 	for(page=fb_bw8->damage_y1 >> 3;page <= fb_bw8->damage_y2>>3;page++){
+ 129              		.loc 1 89 0
+ 130 0030 A089A011 		movne	r8, r0, lsr #19
+ 131              	.LVL4:
+ 132 0034 FFA00812 		andne	sl, r8, #255
+ 133              		.loc 1 84 0
+ 134 0038 3700001A 		bne	.L9
+ 135 003c 410000EA 		b	.L15
+ 136              	.LVL5:
+ 137              	.L10:
+  90:fb/fb_st7558.c **** 		/* base offset in RAM framebuffer */
+  91:fb/fb_st7558.c **** 		x = fb_bw8->damage_x1;
+  92:fb/fb_st7558.c **** 		nbytes = fb_bw8->damage_x2 - fb_bw8->damage_x1;
+  93:fb/fb_st7558.c **** 		p = fb_bw8->mem + (page * framebuffer->width + x);
+ 138              		.loc 1 93 0
+ 139 0040 D0309FE5 		ldr	r3, .L16+4
+ 140 0044 003093E5 		ldr	r3, [r3, #0]
+ 141              		.loc 1 91 0
+ 142 0048 B450D2E1 		ldrh	r5, [r2, #4]
+ 143              		.loc 1 93 0
+ 144 004c B432D3E1 		ldrh	r3, [r3, #36]
+ 145 0050 935821E0 		mla	r1, r3, r8, r5
+ 146 0054 003092E5 		ldr	r3, [r2, #0]
+ 147              		.loc 1 92 0
+ 148 0058 B820D2E1 		ldrh	r2, [r2, #8]
+ 149              		.loc 1 93 0
+ 150 005c 017083E0 		add	r7, r3, r1
+ 151              		.loc 1 92 0
+ 152 0060 026065E0 		rsb	r6, r5, r2
+ 153 0064 2B0000EA 		b	.L11
+ 154              	.L12:
+  94:fb/fb_st7558.c **** 
+  95:fb/fb_st7558.c **** 		/* i2c fifo can only handle a maximum of 16 bytes */
+  96:fb/fb_st7558.c **** 		while(nbytes){
+  97:fb/fb_st7558.c **** 			cmd[0]=0x40 | page; /* Set Y address of RAM. */
+  98:fb/fb_st7558.c **** 			cmd[1]=0x80 | x;
+ 155              		.loc 1 98 0
+ 156 0068 07C0CDE5 		strb	ip, [sp, #7]
+  99:fb/fb_st7558.c **** 			chunksize = nbytes > I2C_MAX_TRANSFER ? I2C_MAX_TRANSFER : nbytes;
+ 100:fb/fb_st7558.c **** 
+ 101:fb/fb_st7558.c **** 			i2c_write(ST7558_SLAVE_ADDR,ST7558_CMD_ADDR,1,cmd,sizeof(cmd));
+ 157              		.loc 1 101 0
+ 158 006c 02C0A0E3 		mov	ip, #2
+ 159              		.loc 1 99 0
+ 160 0070 100056E3 		cmp	r6, #16
+ 161 0074 0640A0B1 		movlt	r4, r6
+ 162 0078 1040A0A3 		movge	r4, #16
+ 163              		.loc 1 97 0
+ 164 007c 06E0CDE5 		strb	lr, [sp, #6]
+ 165              		.loc 1 101 0
+ 166 0080 00C08DE5 		str	ip, [sp, #0]
+ 167 0084 FEFFFFEB 		bl	i2c_write
+ 102:fb/fb_st7558.c **** 			i2c_write(ST7558_SLAVE_ADDR,ST7558_RAM_ADDR,1,p,chunksize);
+ 168              		.loc 1 102 0
+ 169 0088 0730A0E1 		mov	r3, r7
+ 170 008c 3C00A0E3 		mov	r0, #60
+ 171 0090 4010A0E3 		mov	r1, #64
+ 172 0094 0120A0E3 		mov	r2, #1
+ 173 0098 00408DE5 		str	r4, [sp, #0]
+ 174 009c FEFFFFEB 		bl	i2c_write
+ 103:fb/fb_st7558.c **** 
+ 104:fb/fb_st7558.c **** 			nbytes -= chunksize;
+ 105:fb/fb_st7558.c **** 			p+=I2C_MAX_TRANSFER;
+ 175              		.loc 1 105 0
+ 176 00a0 103085E2 		add	r3, r5, #16
+ 177 00a4 0338A0E1 		mov	r3, r3, asl #16
+ 178              		.loc 1 104 0
+ 179 00a8 066064E0 		rsb	r6, r4, r6
+ 180              		.loc 1 105 0
+ 181 00ac 107087E2 		add	r7, r7, #16
+ 182 00b0 2358A0E1 		mov	r5, r3, lsr #16
+ 183              	.L11:
+ 184              		.loc 1 101 0
+ 185 00b4 0010A0E3 		mov	r1, #0
+ 186              		.loc 1 98 0
+ 187 00b8 85CCE0E1 		mvn	ip, r5, asl #25
+ 188              		.loc 1 96 0
+ 189 00bc 010056E1 		cmp	r6, r1
+ 190              		.loc 1 98 0
+ 191 00c0 ACCCE0E1 		mvn	ip, ip, lsr #25
+ 192              		.loc 1 101 0
+ 193 00c4 0120A0E3 		mov	r2, #1
+ 194 00c8 06308DE2 		add	r3, sp, #6
+ 195              		.loc 1 97 0
+ 196 00cc 40E08AE3 		orr	lr, sl, #64
+ 197              		.loc 1 101 0
+ 198 00d0 3C00A0E3 		mov	r0, #60
+ 199              		.loc 1 96 0
+ 200 00d4 1800001A 		bne	.L12
+ 201              		.loc 1 89 0
+ 202 00d8 02308AE0 		add	r3, sl, r2
+ 203 00dc 028088E0 		add	r8, r8, r2
+ 204 00e0 FFA003E2 		and	sl, r3, #255
+ 205              	.L9:
+ 206 00e4 28309FE5 		ldr	r3, .L16
+ 207 00e8 002093E5 		ldr	r2, [r3, #0]
+ 208 00ec BA30D2E1 		ldrh	r3, [r2, #10]
+ 209 00f0 A30158E1 		cmp	r8, r3, lsr #3
+ 210 00f4 0E0000DA 		ble	.L10
+ 106:fb/fb_st7558.c **** 			x+=I2C_MAX_TRANSFER;
+ 107:fb/fb_st7558.c **** 		}
+ 108:fb/fb_st7558.c **** 	}
+ 109:fb/fb_st7558.c **** 
+ 110:fb/fb_st7558.c **** 	/* mark current buffer as unmodified! */
+ 111:fb/fb_st7558.c **** 	fb_bw8->damage_x1 = fb_bw8->damage_x2 = 0;
+ 112:fb/fb_st7558.c **** 	fb_bw8->damage_y1 = fb_bw8->damage_y2 = 0;
+ 211              		.loc 1 112 0
+ 212 00f8 0030A0E3 		mov	r3, #0	@ movhi
+ 213 00fc B630C2E1 		strh	r3, [r2, #6]	@ movhi
+ 214              		.loc 1 111 0
+ 215 0100 B830C2E1 		strh	r3, [r2, #8]	@ movhi
+ 216 0104 B430C2E1 		strh	r3, [r2, #4]	@ movhi
+ 217              		.loc 1 112 0
+ 218 0108 BA30C2E1 		strh	r3, [r2, #10]	@ movhi
+ 219              	.L15:
+ 113:fb/fb_st7558.c **** }
+ 220              		.loc 1 113 0
+ 221 010c 08D08DE2 		add	sp, sp, #8
+ 222 0110 F085BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, sl, pc}
+ 223              	.L17:
+ 224              		.align	2
+ 225              	.L16:
+ 226 0114 00000000 		.word	fb_bw8
+ 227 0118 00000000 		.word	framebuffer
+ 228              	.LFE16:
+ 230              		.bss
+ 231              	fb_st7558_mem:
+ 232 0000 00000000 		.space	864
+ 232      00000000 
+ 232      00000000 
+ 232      00000000 
+ 232      00000000 
+ 301              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 fb_st7558.c
+     /tmp/ccDl9Yg3.s:15     .data:0000000000000000 fb_bw8
+     /tmp/ccDl9Yg3.s:16     .data:0000000000000000 $d
+     /tmp/ccDl9Yg3.s:20     .data:0000000000000004 fb_st7558_bw8
+     /tmp/ccDl9Yg3.s:231    .bss:0000000000000000 fb_st7558_mem
+     /tmp/ccDl9Yg3.s:27     .data:0000000000000010 framebuffer
+     /tmp/ccDl9Yg3.s:32     .data:0000000000000014 fb_st7558_framebuffer
+     /tmp/ccDl9Yg3.s:63     .text.fb_st7558_init:0000000000000000 fb_st7558_init
+     /tmp/ccDl9Yg3.s:105    .text.fb_st7558_flush:0000000000000000 fb_st7558_flush
+     /tmp/ccDl9Yg3.s:48     .rodata:0000000000000000 st7558_setup
+     /tmp/ccDl9Yg3.s:70     .text.fb_st7558_init:0000000000000000 $a
+     /tmp/ccDl9Yg3.s:99     .text.fb_st7558_init:0000000000000044 $d
+     /tmp/ccDl9Yg3.s:111    .text.fb_st7558_flush:0000000000000000 $a
+     /tmp/ccDl9Yg3.s:226    .text.fb_st7558_flush:0000000000000114 $d
+
+UNDEFINED SYMBOLS
+fb_bw8_clear
+fb_bw8_set_p
+fb_bw8_boxto
+fb_bw8_lineto
+fb_bw8_putstr
+calypso_reset_set
+i2c_init
+i2c_write

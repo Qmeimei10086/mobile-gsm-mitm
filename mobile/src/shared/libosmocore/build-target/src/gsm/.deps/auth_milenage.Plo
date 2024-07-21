@@ -1,0 +1,79 @@
+auth_milenage.lo auth_milenage.o: ../../../src/gsm/auth_milenage.c \
+  ../../../include/osmocom/crypt/auth.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h \
+  ../../../include/osmocom/core/linuxlist.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stddef.h \
+  ../../../src/gsm/milenage/common.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdlib.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/_ansi.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/newlib.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/config.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/ieeefp.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/reent.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/_ansi.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/_types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/lock.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/stdlib.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/alloca.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/string.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/_types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/limits.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/syslimits.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/limits.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/features.h \
+  ../../../src/gsm/milenage/milenage.h
+
+../../../include/osmocom/crypt/auth.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h:
+
+../../../include/osmocom/core/linuxlist.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stddef.h:
+
+../../../src/gsm/milenage/common.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdlib.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/_ansi.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/newlib.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/config.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/ieeefp.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/reent.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/_ansi.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/_types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/lock.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/stdlib.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/alloca.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/string.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/_types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/limits.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/syslimits.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/limits.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/features.h:
+
+../../../src/gsm/milenage/milenage.h:

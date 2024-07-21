@@ -1,0 +1,354 @@
+   1              		.file	"init.c"
+   9              	.Ltext0:
+  10              		.section	.rodata
+  13              	ffs_sector_signature:
+  14 0000 46       		.byte	70
+  15 0001 66       		.byte	102
+  16 0002 73       		.byte	115
+  17 0003 23       		.byte	35
+  18 0004 10       		.byte	16
+  19 0005 02       		.byte	2
+  20              		.section	.rodata.str1.4,"aMS",%progbits,1
+  21              		.align	2
+  22              	.LC0:
+  23 0000 4C6F6F6B 		.ascii	"Looking for TIFFS (TI Flash File System) header at "
+  23      696E6720 
+  23      666F7220 
+  23      54494646 
+  23      53202854 
+  24 0033 3078256C 		.ascii	"0x%lx, %u sectors of 0x%lx bytes\012\000"
+  24      782C2025 
+  24      75207365 
+  24      63746F72 
+  24      73206F66 
+  25 0055 000000   		.align	2
+  26              	.LC1:
+  27 0058 466F756E 		.ascii	"Found TIFFS active index block at 0x%lx\012\000"
+  27      64205449 
+  27      46465320 
+  27      61637469 
+  27      76652069 
+  28 0081 000000   		.align	2
+  29              	.LC2:
+  30 0084 54494646 		.ascii	"TIFFS error: no active index block found\012\000"
+  30      53206572 
+  30      726F723A 
+  30      206E6F20 
+  30      61637469 
+  31 00ae 0000     		.align	2
+  32              	.LC3:
+  33 00b0 466F756E 		.ascii	"Found TIFFS root inode at #%x\012\000"
+  33      64205449 
+  33      46465320 
+  33      726F6F74 
+  33      20696E6F 
+  34 00cf 00       		.align	2
+  35              	.LC4:
+  36 00d0 54494646 		.ascii	"TIFFS error: no root inode found\012\000"
+  36      53206572 
+  36      726F723A 
+  36      206E6F20 
+  36      726F6F74 
+  37 00f2 0000     		.section	.text.tiffs_init,"ax",%progbits
+  38              		.align	2
+  39              		.global	tiffs_init
+  41              	tiffs_init:
+  42              	.LFB4:
+  43              		.file 1 "tiffs/init.c"
+   1:tiffs/init.c  **** /* TIFFS (TI Flash File System) reader implementation */
+   2:tiffs/init.c  **** 
+   3:tiffs/init.c  **** /*
+   4:tiffs/init.c  ****  * This code was written by Mychaela Falconia <falcon@freecalypso.org>
+   5:tiffs/init.c  ****  * who refuses to claim copyright on it and has released it as public domain
+   6:tiffs/init.c  ****  * instead. NO rights reserved, all rights relinquished.
+   7:tiffs/init.c  ****  *
+   8:tiffs/init.c  ****  * Tweaked (coding style changes) by Vadim Yanitskiy <axilirator@gmail.com>
+   9:tiffs/init.c  ****  *
+  10:tiffs/init.c  ****  * This program is free software; you can redistribute it and/or modify
+  11:tiffs/init.c  ****  * it under the terms of the GNU General Public License as published by
+  12:tiffs/init.c  ****  * the Free Software Foundation; either version 2 of the License, or
+  13:tiffs/init.c  ****  * (at your option) any later version.
+  14:tiffs/init.c  ****  *
+  15:tiffs/init.c  ****  * This program is distributed in the hope that it will be useful,
+  16:tiffs/init.c  ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  17:tiffs/init.c  ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  18:tiffs/init.c  ****  * GNU General Public License for more details.
+  19:tiffs/init.c  ****  *
+  20:tiffs/init.c  ****  * You should have received a copy of the GNU General Public License along
+  21:tiffs/init.c  ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  22:tiffs/init.c  ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  23:tiffs/init.c  ****  *
+  24:tiffs/init.c  ****  */
+  25:tiffs/init.c  **** 
+  26:tiffs/init.c  **** #include <stdio.h>
+  27:tiffs/init.c  **** #include <stdint.h>
+  28:tiffs/init.c  **** #include <string.h>
+  29:tiffs/init.c  **** #include <inttypes.h>
+  30:tiffs/init.c  **** 
+  31:tiffs/init.c  **** #include <tiffs.h>
+  32:tiffs/init.c  **** #include "globals.h"
+  33:tiffs/init.c  **** 
+  34:tiffs/init.c  **** /* Each flash sector used for TIFFS begins with this 6-byte signature */
+  35:tiffs/init.c  **** static const uint8_t ffs_sector_signature[6] = {
+  36:tiffs/init.c  **** 	'F', 'f', 's', '#', 0x10, 0x02
+  37:tiffs/init.c  **** };
+  38:tiffs/init.c  **** 
+  39:tiffs/init.c  **** static int find_indexblk(void)
+  40:tiffs/init.c  **** {
+  41:tiffs/init.c  **** 	uint32_t sector_addr;
+  42:tiffs/init.c  **** 	uint8_t *sector_ptr;
+  43:tiffs/init.c  **** 	unsigned i;
+  44:tiffs/init.c  **** 
+  45:tiffs/init.c  **** 	sector_addr = tiffs_base_addr;
+  46:tiffs/init.c  **** 	for (i = 0; i < tiffs_nsectors; i++) {
+  47:tiffs/init.c  **** 		sector_ptr = (uint8_t *) sector_addr;
+  48:tiffs/init.c  **** 		if (!memcmp(sector_ptr, ffs_sector_signature, 6)
+  49:tiffs/init.c  **** 		    && sector_ptr[8] == 0xAB) {
+  50:tiffs/init.c  **** 			printf("Found TIFFS active index block "
+  51:tiffs/init.c  **** 				"at 0x%" PRIx32 "\n", sector_addr);
+  52:tiffs/init.c  **** 			tiffs_active_index = (struct tiffs_inode *) sector_addr;
+  53:tiffs/init.c  **** 			return 0;
+  54:tiffs/init.c  **** 		}
+  55:tiffs/init.c  **** 		sector_addr += tiffs_sector_size;
+  56:tiffs/init.c  **** 	}
+  57:tiffs/init.c  **** 
+  58:tiffs/init.c  **** 	puts("TIFFS error: no active index block found\n");
+  59:tiffs/init.c  **** 	return -1;
+  60:tiffs/init.c  **** }
+  61:tiffs/init.c  **** 
+  62:tiffs/init.c  **** static int find_rootino(void)
+  63:tiffs/init.c  **** {
+  64:tiffs/init.c  **** 	struct tiffs_inode *irec;
+  65:tiffs/init.c  **** 	unsigned ino = 0;
+  66:tiffs/init.c  **** 
+  67:tiffs/init.c  **** 	while (++ino < tiffs_sector_size >> 4) {
+  68:tiffs/init.c  **** 		irec = tiffs_active_index + ino;
+  69:tiffs/init.c  **** 		if (irec->type != TIFFS_OBJTYPE_DIR)
+  70:tiffs/init.c  **** 			continue;
+  71:tiffs/init.c  **** 		if (*INODE_TO_DATAPTR(irec) != '/')
+  72:tiffs/init.c  **** 			continue;
+  73:tiffs/init.c  **** 
+  74:tiffs/init.c  **** 		printf("Found TIFFS root inode at #%x\n", ino);
+  75:tiffs/init.c  **** 		tiffs_root_ino = ino;
+  76:tiffs/init.c  **** 		return 0;
+  77:tiffs/init.c  **** 	}
+  78:tiffs/init.c  **** 
+  79:tiffs/init.c  **** 	puts("TIFFS error: no root inode found\n");
+  80:tiffs/init.c  **** 	return -1;
+  81:tiffs/init.c  **** }
+  82:tiffs/init.c  **** 
+  83:tiffs/init.c  **** int tiffs_init(uint32_t base_addr, uint32_t sector_size, unsigned nsectors)
+  84:tiffs/init.c  **** {
+  44              		.loc 1 84 0
+  45              		@ args = 0, pretend = 0, frame = 0
+  46              		@ frame_needed = 0, uses_anonymous_args = 0
+  47              	.LVL0:
+  48 0000 F0412DE9 		stmfd	sp!, {r4, r5, r6, r7, r8, lr}
+  49              	.LCFI0:
+  50              		.loc 1 84 0
+  51 0004 0040A0E1 		mov	r4, r0
+  52 0008 0150A0E1 		mov	r5, r1
+  85:tiffs/init.c  **** 	int rc;
+  86:tiffs/init.c  **** 
+  87:tiffs/init.c  **** 	printf("Looking for TIFFS (TI Flash File System) header at "
+  53              		.loc 1 87 0
+  54 000c 0530A0E1 		mov	r3, r5
+  55 0010 04019FE5 		ldr	r0, .L17
+  56              	.LVL1:
+  57 0014 0410A0E1 		mov	r1, r4
+  58              	.LVL2:
+  59              		.loc 1 84 0
+  60 0018 0270A0E1 		mov	r7, r2
+  61              		.loc 1 87 0
+  62 001c FEFFFFEB 		bl	printf
+  63              	.LVL3:
+  88:tiffs/init.c  **** 		"0x%" PRIx32 ", %u sectors of 0x%" PRIx32 " bytes\n",
+  89:tiffs/init.c  **** 		base_addr, nsectors, sector_size);
+  90:tiffs/init.c  **** 
+  91:tiffs/init.c  **** 	tiffs_base_addr = base_addr;
+  64              		.loc 1 91 0
+  65 0020 F8309FE5 		ldr	r3, .L17+4
+  66 0024 004083E5 		str	r4, [r3, #0]
+  92:tiffs/init.c  **** 	tiffs_sector_size = sector_size;
+  67              		.loc 1 92 0
+  68 0028 F4309FE5 		ldr	r3, .L17+8
+  69 002c 005083E5 		str	r5, [r3, #0]
+  93:tiffs/init.c  **** 	tiffs_nsectors = nsectors;
+  70              		.loc 1 93 0
+  71 0030 F0309FE5 		ldr	r3, .L17+12
+  72 0034 0060A0E3 		mov	r6, #0
+  73              	.LVL4:
+  74 0038 007083E5 		str	r7, [r3, #0]
+  75 003c 150000EA 		b	.L2
+  76              	.LVL5:
+  77              	.L3:
+  78              	.LBB2:
+  79              	.LBB3:
+  80              		.loc 1 48 0
+  81 0040 FEFFFFEB 		bl	memcmp
+  82              	.LVL6:
+  83 0044 008050E2 		subs	r8, r0, #0
+  84 0048 1400001A 		bne	.L4
+  85 004c 0830D4E5 		ldrb	r3, [r4, #8]	@ zero_extendqisi2
+  86 0050 AB0053E3 		cmp	r3, #171
+  87 0054 3000000A 		beq	.L16
+  88              	.L4:
+  89              		.loc 1 55 0
+  90 0058 054084E0 		add	r4, r4, r5
+  91              	.L2:
+  92              		.loc 1 46 0
+  93 005c 070056E1 		cmp	r6, r7
+  94              		.loc 1 48 0
+  95 0060 0400A0E1 		mov	r0, r4
+  96              	.LVL7:
+  97 0064 C0109FE5 		ldr	r1, .L17+16
+  98 0068 0620A0E3 		mov	r2, #6
+  99              		.loc 1 46 0
+ 100 006c 016086E2 		add	r6, r6, #1
+ 101 0070 0E00003A 		bcc	.L3
+ 102              		.loc 1 58 0
+ 103 0074 B4009FE5 		ldr	r0, .L17+20
+ 104              	.LVL8:
+ 105 0078 FEFFFFEB 		bl	puts
+ 106 007c 0000E0E3 		mvn	r0, #0
+ 107              	.LVL9:
+ 108 0080 F081BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, pc}
+ 109              	.LVL10:
+ 110              	.L10:
+ 111              	.LBE3:
+ 112              	.LBE2:
+ 113              	.LBB4:
+ 114              	.LBB5:
+ 115              		.loc 1 69 0
+ 116 0084 053051E5 		ldrb	r3, [r1, #-5]	@ zero_extendqisi2
+ 117 0088 F20053E3 		cmp	r3, #242
+ 118 008c 3D00001A 		bne	.L11
+ 119              		.loc 1 71 0
+ 120 0090 003091E5 		ldr	r3, [r1, #0]
+ 121 0094 0332D0E7 		ldrb	r3, [r0, r3, asl #4]	@ zero_extendqisi2
+ 122 0098 2F0053E3 		cmp	r3, #47
+ 123 009c 3D00001A 		bne	.L11
+ 124              		.loc 1 74 0
+ 125 00a0 8C009FE5 		ldr	r0, .L17+24
+ 126 00a4 0510A0E1 		mov	r1, r5
+ 127 00a8 FEFFFFEB 		bl	printf
+ 128              		.loc 1 75 0
+ 129 00ac 84309FE5 		ldr	r3, .L17+28
+ 130 00b0 005083E5 		str	r5, [r3, #0]
+ 131              	.LBE5:
+ 132              	.LBE4:
+  94:tiffs/init.c  **** 
+  95:tiffs/init.c  **** 	rc = find_indexblk();
+  96:tiffs/init.c  **** 	if (rc < 0)
+  97:tiffs/init.c  **** 		return rc;
+  98:tiffs/init.c  **** 	rc = find_rootino();
+  99:tiffs/init.c  **** 	if (rc < 0)
+ 100:tiffs/init.c  **** 		return rc;
+ 101:tiffs/init.c  **** 
+ 102:tiffs/init.c  **** 	tiffs_init_done = 1;
+ 133              		.loc 1 102 0
+ 134 00b4 80309FE5 		ldr	r3, .L17+32
+ 135 00b8 0120A0E3 		mov	r2, #1
+ 136 00bc 0000A0E3 		mov	r0, #0
+ 137              	.LVL11:
+ 138 00c0 002083E5 		str	r2, [r3, #0]
+ 139 00c4 F081BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, pc}
+ 140              	.LVL12:
+ 141              	.L16:
+ 142              	.LBB6:
+ 143              	.LBB7:
+ 144              		.loc 1 50 0
+ 145 00c8 0410A0E1 		mov	r1, r4
+ 146 00cc 6C009FE5 		ldr	r0, .L17+36
+ 147 00d0 FEFFFFEB 		bl	printf
+ 148              	.LBE7:
+ 149              	.LBE6:
+ 150              	.LBB8:
+ 151              	.LBB9:
+ 152              		.loc 1 67 0
+ 153 00d4 48309FE5 		ldr	r3, .L17+8
+ 154 00d8 002093E5 		ldr	r2, [r3, #0]
+ 155              		.loc 1 71 0
+ 156 00dc 3C309FE5 		ldr	r3, .L17+4
+ 157 00e0 000093E5 		ldr	r0, [r3, #0]
+ 158              	.LBE9:
+ 159              	.LBE8:
+ 160              	.LBB10:
+ 161              	.LBB11:
+ 162              		.loc 1 52 0
+ 163 00e4 58309FE5 		ldr	r3, .L17+40
+ 164              	.LBE11:
+ 165              	.LBE10:
+ 166              	.LBB12:
+ 167              	.LBB13:
+ 168              		.loc 1 67 0
+ 169 00e8 2222A0E1 		mov	r2, r2, lsr #4
+ 170              		.loc 1 71 0
+ 171 00ec 181084E2 		add	r1, r4, #24
+ 172 00f0 0850A0E1 		mov	r5, r8
+ 173              	.LVL13:
+ 174              	.LBE13:
+ 175              	.LBE12:
+ 176              	.LBB14:
+ 177              	.LBB15:
+ 178              		.loc 1 52 0
+ 179 00f4 004083E5 		str	r4, [r3, #0]
+ 180 00f8 3E0000EA 		b	.L7
+ 181              	.L11:
+ 182              	.LBE15:
+ 183              	.LBE14:
+ 103:tiffs/init.c  **** 	return 0;
+ 184              		.loc 1 103 0
+ 185 00fc 101081E2 		add	r1, r1, #16
+ 186              	.L7:
+ 187              	.LBB16:
+ 188              	.LBB17:
+ 189              		.loc 1 67 0
+ 190 0100 015085E2 		add	r5, r5, #1
+ 191 0104 020055E1 		cmp	r5, r2
+ 192 0108 1F00003A 		bcc	.L10
+ 193              		.loc 1 79 0
+ 194 010c 34009FE5 		ldr	r0, .L17+44
+ 195 0110 FEFFFFEB 		bl	puts
+ 196 0114 0000E0E3 		mvn	r0, #0
+ 197              	.LVL14:
+ 198              	.LVL15:
+ 199              	.LBE17:
+ 200              	.LBE16:
+ 104:tiffs/init.c  **** }
+ 201              		.loc 1 104 0
+ 202 0118 F081BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, pc}
+ 203              	.L18:
+ 204              		.align	2
+ 205              	.L17:
+ 206 011c 00000000 		.word	.LC0
+ 207 0120 00000000 		.word	tiffs_base_addr
+ 208 0124 00000000 		.word	tiffs_sector_size
+ 209 0128 00000000 		.word	tiffs_nsectors
+ 210 012c 00000000 		.word	ffs_sector_signature
+ 211 0130 84000000 		.word	.LC2
+ 212 0134 B0000000 		.word	.LC3
+ 213 0138 00000000 		.word	tiffs_root_ino
+ 214 013c 00000000 		.word	tiffs_init_done
+ 215 0140 58000000 		.word	.LC1
+ 216 0144 00000000 		.word	tiffs_active_index
+ 217 0148 D0000000 		.word	.LC4
+ 218              	.LFE4:
+ 263              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 init.c
+     /tmp/ccMrTga0.s:13     .rodata:0000000000000000 ffs_sector_signature
+     /tmp/ccMrTga0.s:41     .text.tiffs_init:0000000000000000 tiffs_init
+     /tmp/ccMrTga0.s:48     .text.tiffs_init:0000000000000000 $a
+     /tmp/ccMrTga0.s:206    .text.tiffs_init:000000000000011c $d
+
+UNDEFINED SYMBOLS
+printf
+memcmp
+puts
+tiffs_base_addr
+tiffs_sector_size
+tiffs_nsectors
+tiffs_root_ino
+tiffs_init_done
+tiffs_active_index

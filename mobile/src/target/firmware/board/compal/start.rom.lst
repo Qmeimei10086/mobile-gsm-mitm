@@ -1,0 +1,165 @@
+   1              	# 1 "board/compal/start.rom.S"
+   2              	# 1 "<built-in>"
+   1              	
+   0              	
+   0              	
+   2              	.section .text.start
+   3              	
+   4              	#include "macros.S"
+   1              	
+   2              	.macro clear_bss
+   3              		mov   r0, #0
+   4              		ldr   r1, =__bss_start
+   5              		ldr   r2, =__bss_end
+   6              	loop_bss:
+   7              		cmp   r1, r2
+   8              		strlo r0, [r1], #4
+   9              		blo   loop_bss
+  10              	.endm
+  11              	
+  12              	.macro copy_data
+  13              	    ldr   r0, =__data_start
+  14              	    ldr   r1, =_data_start
+  15              	    ldr   r2, =__data_end
+  16              		cmp r0, r2
+  17              		beq done_data
+  18              	loop_data:
+  19              	    ldrb  r4, [r0], #1
+  20              	    strb  r4, [r1], #1
+  21              		cmp r0, r2
+  22              	    bne   loop_data
+  23              	done_data:
+  24              	.endm
+  25              	
+  26              	.macro copy_ramtext
+  27              	    ldr   r0, =__ramtext_start
+  28              	    ldr   r1, =_ramtext_start
+  29              	    ldr   r2, =__ramtext_end
+  30              		cmp r0, r2
+  31              		beq done_ramtext
+  32              	loop_ramtext:
+  33              	    ldrb  r4, [r0], #1
+  34              	    strb  r4, [r1], #1
+  35              		cmp r0, r2
+  36              	    bne   loop_ramtext
+  37              	done_ramtext:
+  38              	.endm
+  39              			
+  40              		.EQU	ARM_MODE_FIQ,	0x11
+  41              		.EQU	ARM_MODE_IRQ,	0x12
+  42              		.EQU	ARM_MODE_SVC,	0x13
+  43              	
+  44              		.EQU	I_BIT,		0x80
+  45              		.EQU	F_BIT,		0x40
+  46              	
+  47              	#define	TOP_OF_RAM	0x083fff0
+  48              	#define FIQ_STACK_SIZE	1024
+  49              	#define IRQ_STACK_SIZE	1024
+  50              			
+  51              	.macro init_stacks
+  52              		/* initialize stacks, starting at TOP_OF_RAM */
+  53              		ldr	r0, =TOP_OF_RAM
+  54              	
+  55              		/* initialize FIQ stack */
+  56              		msr	CPSR_c, #ARM_MODE_FIQ | I_BIT | F_BIT
+  57              		mov	r13, r0
+  58              		sub	r0, r0, #FIQ_STACK_SIZE
+  59              	
+  60              		/* initialize IRQ stack */
+  61              		msr	CPSR_c, #ARM_MODE_IRQ | I_BIT | F_BIT
+  62              		mov	r13, r0
+  63              		sub	r0, r0, #IRQ_STACK_SIZE
+  64              	
+  65              		/* initialize supervisor stack */
+  66              		msr	CPSR_c, #ARM_MODE_SVC | I_BIT | F_BIT
+  67              		mov	r13, r0
+  68              	.endm
+  69              	
+  70              	.macro call_ctors
+  71              		/* call constructor functions */
+  72              		ldr	r0, =_ctor_start
+  73              		ldr	r1, =_ctor_end
+  74              		bl	do_global_ctors
+  75              	.endm
+  76              	
+   5              			
+   6              	.globl _start
+   7              	_start:
+   8              		/* clear bss section */
+   9 0000 0000A0E3 		clear_bss
+   9      94109FE5 
+   9      94209FE5 
+   9      020051E1 
+   9      04008134 
+  10              	
+  11              		/* copy data to ram */
+  12 0018 88009FE5 		copy_data
+  12      88109FE5 
+  12      88209FE5 
+  12      020050E1 
+  12      0D00000A 
+  13              	
+  14              		/* copy alway-in-ram code */
+  15 003c 70009FE5 		copy_ramtext
+  15      70109FE5 
+  15      70209FE5 
+  15      020050E1 
+  15      1600000A 
+  16              	
+  17              		/* initialize all stacks */
+  18 0060 58009FE5 		init_stacks
+  18      D1F021E3 
+  18      00D0A0E1 
+  18      010B40E2 
+  18      D2F021E3 
+  19              	
+  20              		/* call constructors */
+  21 0084 38009FE5 		call_ctors
+  21      38109FE5 
+  21      FEFFFFEB 
+  22              	
+  23              		/* jump to main */
+  24 0090 04F09FE5 		ldr	pc, _jump_main
+  25              	
+  26              		/* endless loop at end of program */
+  27              	_loop:
+  28 0094 230000EA 		b	_loop
+  29 0098 FEFFFFEA 		b	_start
+  30              	
+  31              	_jump_main:
+  32 009c 00000000 		.word main
+  32      00000000 
+  32      00000000 
+  32      00000000 
+  32      00000000 
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 board/compal/start.rom.S
+board/compal/macros.S:40     *ABS*:0000000000000011 ARM_MODE_FIQ
+board/compal/macros.S:41     *ABS*:0000000000000012 ARM_MODE_IRQ
+board/compal/macros.S:42     *ABS*:0000000000000013 ARM_MODE_SVC
+board/compal/macros.S:44     *ABS*:0000000000000080 I_BIT
+board/compal/macros.S:45     *ABS*:0000000000000040 F_BIT
+board/compal/start.rom.S:7      .text.start:0000000000000000 _start
+board/compal/start.rom.S:9      .text.start:0000000000000000 $a
+board/compal/start.rom.S:9      .text.start:000000000000000c loop_bss
+board/compal/start.rom.S:12     .text.start:000000000000003c done_data
+board/compal/start.rom.S:12     .text.start:000000000000002c loop_data
+board/compal/start.rom.S:15     .text.start:0000000000000060 done_ramtext
+board/compal/start.rom.S:15     .text.start:0000000000000050 loop_ramtext
+board/compal/start.rom.S:31     .text.start:000000000000009c _jump_main
+board/compal/start.rom.S:27     .text.start:0000000000000094 _loop
+board/compal/start.rom.S:32     .text.start:000000000000009c $d
+
+UNDEFINED SYMBOLS
+__bss_start
+__bss_end
+__data_start
+_data_start
+__data_end
+__ramtext_start
+_ramtext_start
+__ramtext_end
+_ctor_start
+_ctor_end
+do_global_ctors
+main

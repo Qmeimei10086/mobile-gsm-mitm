@@ -1,0 +1,12 @@
+crc64gen.lo crc64gen.o: crc64gen.c \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h \
+  ../../include/osmocom/core/bits.h ../include/osmocom/core/crc64gen.h
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h:
+
+../../include/osmocom/core/bits.h:
+
+../include/osmocom/core/crc64gen.h:

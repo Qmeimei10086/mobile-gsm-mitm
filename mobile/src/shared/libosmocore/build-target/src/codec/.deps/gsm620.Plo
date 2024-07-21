@@ -1,0 +1,7 @@
+gsm620.lo gsm620.o: ../../../src/codec/gsm620.c \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h:

@@ -1,0 +1,12 @@
+crc32gen.lo crc32gen.o: crc32gen.c \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h \
+  ../../include/osmocom/core/bits.h ../include/osmocom/core/crc32gen.h
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h:
+
+../../include/osmocom/core/bits.h:
+
+../include/osmocom/core/crc32gen.h:

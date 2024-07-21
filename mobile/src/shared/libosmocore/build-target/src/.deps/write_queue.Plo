@@ -1,0 +1,30 @@
+write_queue.lo write_queue.o: ../../src/write_queue.c \
+  ../../include/osmocom/core/write_queue.h \
+  ../../include/osmocom/core/select.h \
+  ../../include/osmocom/core/linuxlist.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stddef.h \
+  ../../include/osmocom/core/msgb.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h \
+  ../../include/osmocom/core/utils.h ../../include/osmocom/core/panic.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stdarg.h
+
+../../include/osmocom/core/write_queue.h:
+
+../../include/osmocom/core/select.h:
+
+../../include/osmocom/core/linuxlist.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stddef.h:
+
+../../include/osmocom/core/msgb.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h:
+
+../../include/osmocom/core/utils.h:
+
+../../include/osmocom/core/panic.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stdarg.h:

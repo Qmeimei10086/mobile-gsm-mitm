@@ -1,0 +1,587 @@
+   1              		.file	"fb_td014.c"
+   9              	.Ltext0:
+  10              		.global	fb_rgb332
+  11              		.data
+  12              		.align	2
+  15              	fb_rgb332:
+  16 0000 04000000 		.word	fb_td014_rgb332
+  17              		.align	2
+  20              	fb_td014_rgb332:
+  21 0004 00000000 		.word	fb_td014_mem
+  22 0008 00000000 		.space	8
+  22      00000000 
+  23              		.global	framebuffer
+  24              		.align	2
+  27              	framebuffer:
+  28 0010 14000000 		.word	fb_td014_framebuffer
+  29              		.align	2
+  32              	fb_td014_framebuffer:
+  33 0014 74643031 		.ascii	"td014\000"
+  33      3400
+  34 001a 0000     		.space	2
+  35 001c 00000000 		.word	fb_td014_init
+  36 0020 00000000 		.word	fb_rgb332_clear
+  37 0024 00000000 		.space	4
+  38 0028 00000000 		.word	fb_rgb332_boxto
+  39 002c 00000000 		.word	fb_rgb332_lineto
+  40 0030 00000000 		.word	fb_rgb332_putstr
+  41 0034 00000000 		.word	fb_td014_flush
+  42 0038 6000     		.short	96
+  43 003a 4000     		.short	64
+  44 003c 00000000 		.space	16
+  44      00000000 
+  44      00000000 
+  44      00000000 
+  45              		.section	.rodata
+  48              	td014_initdata:
+  49 0000 00       		.byte	0
+  50 0001 3F       		.byte	63
+  51 0002 01       		.byte	1
+  52 0003 01       		.byte	1
+  53 0004 00       		.byte	0
+  54 0005 20       		.byte	32
+  55 0006 01       		.byte	1
+  56 0007 03       		.byte	3
+  57 0008 00       		.byte	0
+  58 0009 31       		.byte	49
+  59 000a 01       		.byte	1
+  60 000b 03       		.byte	3
+  61 000c 02       		.byte	2
+  62 000d 00       		.byte	0
+  63              		.section	.text.fb_td014_send_cmdlist,"ax",%progbits
+  64              		.align	2
+  66              	fb_td014_send_cmdlist:
+  67              	.LFB16:
+  68              		.file 1 "fb/fb_td014.c"
+   1:fb/fb_td014.c **** /* Framebuffer implementation - Toppoly TD014 LCD driver for Motorola C139/40 */
+   2:fb/fb_td014.c **** /* Based on td014.c by Steve Markgraf and Harald Welte */
+   3:fb/fb_td014.c **** 
+   4:fb/fb_td014.c **** /* (C) 2010 by Christian Vogel <vogelchr@vogel.cx>
+   5:fb/fb_td014.c ****  * (C) 2012 by Steve Markgraf <steve@steve-m.de>
+   6:fb/fb_td014.c ****  *
+   7:fb/fb_td014.c ****  * All Rights Reserved
+   8:fb/fb_td014.c ****  *
+   9:fb/fb_td014.c ****  * This program is free software; you can redistribute it and/or modify
+  10:fb/fb_td014.c ****  * it under the terms of the GNU General Public License as published by
+  11:fb/fb_td014.c ****  * the Free Software Foundation; either version 2 of the License, or
+  12:fb/fb_td014.c ****  * (at your option) any later version.
+  13:fb/fb_td014.c ****  *
+  14:fb/fb_td014.c ****  * This program is distributed in the hope that it will be useful,
+  15:fb/fb_td014.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  16:fb/fb_td014.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  17:fb/fb_td014.c ****  * GNU General Public License for more details.
+  18:fb/fb_td014.c ****  *
+  19:fb/fb_td014.c ****  * You should have received a copy of the GNU General Public License along
+  20:fb/fb_td014.c ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  21:fb/fb_td014.c ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  22:fb/fb_td014.c ****  *
+  23:fb/fb_td014.c ****  */
+  24:fb/fb_td014.c **** 
+  25:fb/fb_td014.c **** #include <fb/framebuffer.h>
+  26:fb/fb_td014.c **** #include <fb/fb_rgb332.h>
+  27:fb/fb_td014.c **** 
+  28:fb/fb_td014.c **** #include <stdint.h>
+  29:fb/fb_td014.c **** #include <stdio.h>
+  30:fb/fb_td014.c **** #include <delay.h>
+  31:fb/fb_td014.c **** #include <uwire.h>
+  32:fb/fb_td014.c **** #include <calypso/clock.h>
+  33:fb/fb_td014.c **** 
+  34:fb/fb_td014.c **** #define TD014_WIDTH		96
+  35:fb/fb_td014.c **** #define TD014_HEIGHT		64
+  36:fb/fb_td014.c **** #define TD014_UWIRE_BITLEN	9
+  37:fb/fb_td014.c **** #define TD014_DEV_ID		0
+  38:fb/fb_td014.c **** 
+  39:fb/fb_td014.c **** static uint8_t fb_td014_mem[TD014_WIDTH * TD014_HEIGHT];
+  40:fb/fb_td014.c **** 
+  41:fb/fb_td014.c **** enum td014_cmdflag { CMD, DATA, END };
+  42:fb/fb_td014.c **** 
+  43:fb/fb_td014.c **** struct td014_cmdlist {
+  44:fb/fb_td014.c **** 	enum td014_cmdflag is_cmd:8;	/* 1: is a command, 0: is data, 2: end marker! */
+  45:fb/fb_td014.c **** 	uint8_t data;  			/* 8 bit to send to LC display */
+  46:fb/fb_td014.c **** } __attribute__((packed));
+  47:fb/fb_td014.c **** 
+  48:fb/fb_td014.c **** static const struct td014_cmdlist
+  49:fb/fb_td014.c **** td014_initdata[] = {
+  50:fb/fb_td014.c **** 	{ CMD,  0x3f },
+  51:fb/fb_td014.c **** 	{ DATA, 0x01 },
+  52:fb/fb_td014.c **** 	{ CMD,  0x20 },
+  53:fb/fb_td014.c **** 	{ DATA, 0x03 },
+  54:fb/fb_td014.c **** 	{ CMD,  0x31 },
+  55:fb/fb_td014.c **** 	{ DATA, 0x03 },
+  56:fb/fb_td014.c **** 	{ END,  0x00 }, /* MARKER: end of list */
+  57:fb/fb_td014.c **** };
+  58:fb/fb_td014.c **** 
+  59:fb/fb_td014.c **** static void
+  60:fb/fb_td014.c **** fb_td014_send_cmdlist(const struct td014_cmdlist *p) {
+  69              		.loc 1 60 0
+  70              		@ args = 0, pretend = 0, frame = 4
+  71              		@ frame_needed = 0, uses_anonymous_args = 0
+  72              	.LVL0:
+  73 0000 10402DE9 		stmfd	sp!, {r4, lr}
+  74              	.LCFI0:
+  75 0004 0040A0E1 		mov	r4, r0
+  76 0008 04D04DE2 		sub	sp, sp, #4
+  77              	.LCFI1:
+  78              	.LVL1:
+  79 000c 090000EA 		b	.L2
+  80              	.LVL2:
+  81              	.L3:
+  82              	.LBB2:
+  61:fb/fb_td014.c **** 	int i=0;
+  62:fb/fb_td014.c **** 	while(p->is_cmd != END){
+  63:fb/fb_td014.c **** 		uint16_t sendcmd = p->data;
+  83              		.loc 1 63 0
+  84 0010 01C0D4E5 		ldrb	ip, [r4, #1]	@ zero_extendqisi2
+  64:fb/fb_td014.c **** 		if(p->is_cmd == DATA)
+  85              		.loc 1 64 0
+  86 0014 01005EE3 		cmp	lr, #1
+  65:fb/fb_td014.c **** 			sendcmd |= 0x0100; /* 9th bit is cmd/data flag */
+  87              		.loc 1 65 0
+  88 0018 01EC8CE3 		orr	lr, ip, #256
+  89              		.loc 1 63 0
+  90 001c B2C0CDE1 		strh	ip, [sp, #2]	@ movhi
+  66:fb/fb_td014.c **** 		uwire_xfer(TD014_DEV_ID, TD014_UWIRE_BITLEN, &sendcmd, NULL);
+  67:fb/fb_td014.c **** 		p++;
+  91              		.loc 1 67 0
+  92 0020 024084E2 		add	r4, r4, #2
+  93              		.loc 1 65 0
+  94 0024 B2E0CD01 		streqh	lr, [sp, #2]	@ movhi
+  95              		.loc 1 66 0
+  96 0028 FEFFFFEB 		bl	uwire_xfer
+  97              	.LVL3:
+  98              	.L2:
+  99              	.LBE2:
+ 100              		.loc 1 62 0
+ 101 002c 00E0D4E5 		ldrb	lr, [r4, #0]	@ zero_extendqisi2
+ 102              	.LBB3:
+ 103              		.loc 1 66 0
+ 104 0030 0000A0E3 		mov	r0, #0
+ 105              	.LBE3:
+ 106              		.loc 1 62 0
+ 107 0034 02005EE3 		cmp	lr, #2
+ 108              	.LBB4:
+ 109              		.loc 1 66 0
+ 110 0038 0910A0E3 		mov	r1, #9
+ 111 003c 02208DE2 		add	r2, sp, #2
+ 112 0040 0030A0E1 		mov	r3, r0
+ 113              	.LBE4:
+ 114              		.loc 1 62 0
+ 115 0044 0200001A 		bne	.L3
+  68:fb/fb_td014.c **** 		i++;
+  69:fb/fb_td014.c **** 	}
+  70:fb/fb_td014.c **** }
+ 116              		.loc 1 70 0
+ 117 0048 04D08DE2 		add	sp, sp, #4
+ 118 004c 1080BDE8 		ldmfd	sp!, {r4, pc}
+ 119              	.LFE16:
+ 121              		.section	.rodata
+ 122 000e 0000     		.align	2
+ 125              	__FUNCTION__.1688:
+ 126 0010 66625F74 		.ascii	"fb_td014_init\000"
+ 126      64303134 
+ 126      5F696E69 
+ 126      7400
+ 127              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 128              		.align	2
+ 129              	.LC0:
+ 130 0000 25733A20 		.ascii	"%s: initializing LCD.\012\000"
+ 130      696E6974 
+ 130      69616C69 
+ 130      7A696E67 
+ 130      204C4344 
+ 131              		.section	.text.fb_td014_init,"ax",%progbits
+ 132              		.align	2
+ 134              	fb_td014_init:
+ 135              	.LFB17:
+  71:fb/fb_td014.c **** 
+  72:fb/fb_td014.c **** static void
+  73:fb/fb_td014.c **** fb_td014_init(void) {
+ 136              		.loc 1 73 0
+ 137              		@ args = 0, pretend = 0, frame = 0
+ 138              		@ frame_needed = 0, uses_anonymous_args = 0
+ 139              	.LVL4:
+ 140 0000 04E02DE5 		str	lr, [sp, #-4]!
+ 141              	.LCFI2:
+  74:fb/fb_td014.c **** 	printf("%s: initializing LCD.\n",__FUNCTION__);
+ 142              		.loc 1 74 0
+ 143 0004 30109FE5 		ldr	r1, .L10
+ 144 0008 30009FE5 		ldr	r0, .L10+4
+ 145 000c FEFFFFEB 		bl	printf
+  75:fb/fb_td014.c **** 	calypso_reset_set(RESET_EXT, 0);
+ 146              		.loc 1 75 0
+ 147 0010 0010A0E3 		mov	r1, #0
+ 148 0014 0400A0E3 		mov	r0, #4
+ 149 0018 FEFFFFEB 		bl	calypso_reset_set
+  76:fb/fb_td014.c **** 	delay_ms(5);
+ 150              		.loc 1 76 0
+ 151 001c 0500A0E3 		mov	r0, #5
+ 152 0020 FEFFFFEB 		bl	delay_ms
+  77:fb/fb_td014.c **** 	uwire_init();
+ 153              		.loc 1 77 0
+ 154 0024 FEFFFFEB 		bl	uwire_init
+  78:fb/fb_td014.c **** 	delay_ms(5);
+ 155              		.loc 1 78 0
+ 156 0028 0500A0E3 		mov	r0, #5
+ 157 002c FEFFFFEB 		bl	delay_ms
+  79:fb/fb_td014.c **** 
+  80:fb/fb_td014.c **** 	fb_td014_send_cmdlist(td014_initdata);
+ 158              		.loc 1 80 0
+ 159 0030 0C009FE5 		ldr	r0, .L10+8
+  81:fb/fb_td014.c **** }
+ 160              		.loc 1 81 0
+ 161 0034 04E09DE4 		ldr	lr, [sp], #4
+ 162              		.loc 1 80 0
+ 163 0038 FEFFFFEA 		b	fb_td014_send_cmdlist
+ 164              	.L11:
+ 165              		.align	2
+ 166              	.L10:
+ 167 003c 10000000 		.word	__FUNCTION__.1688
+ 168 0040 00000000 		.word	.LC0
+ 169 0044 00000000 		.word	td014_initdata
+ 170              	.LFE17:
+ 172              		.section	.rodata
+ 173 001e 0000     		.align	2
+ 176              	__FUNCTION__.1696:
+ 177 0020 66625F74 		.ascii	"fb_td014_flush\000"
+ 177      64303134 
+ 177      5F666C75 
+ 177      736800
+ 178 002f 00       		.section	.rodata.str1.4
+ 179 0017 00       		.align	2
+ 180              	.LC1:
+ 181 0018 25733A20 		.ascii	"%s: no damage\012\000"
+ 181      6E6F2064 
+ 181      616D6167 
+ 181      650A00
+ 182 0027 00       		.section	.text.fb_td014_flush,"ax",%progbits
+ 183              		.align	2
+ 185              	fb_td014_flush:
+ 186              	.LFB18:
+  82:fb/fb_td014.c **** 
+  83:fb/fb_td014.c **** static void
+  84:fb/fb_td014.c **** fb_td014_flush(void) {
+ 187              		.loc 1 84 0
+ 188              		@ args = 0, pretend = 0, frame = 28
+ 189              		@ frame_needed = 0, uses_anonymous_args = 0
+ 190              	.LVL5:
+ 191 0000 F0452DE9 		stmfd	sp!, {r4, r5, r6, r7, r8, sl, lr}
+ 192              	.LCFI3:
+  85:fb/fb_td014.c **** 	int x,y;
+  86:fb/fb_td014.c **** 	uint8_t *p;
+  87:fb/fb_td014.c **** 	struct td014_cmdlist prepare_disp_write_cmds[] = {
+  88:fb/fb_td014.c **** 		{ CMD,  0x10 },
+  89:fb/fb_td014.c **** 		{ DATA, fb_rgb332->damage_x1 },
+  90:fb/fb_td014.c **** 		{ CMD,  0x11 },
+  91:fb/fb_td014.c **** 		{ DATA, fb_rgb332->damage_y1 },
+  92:fb/fb_td014.c **** 		{ CMD,  0x12 },
+  93:fb/fb_td014.c **** 		{ DATA, fb_rgb332->damage_x2-1 },
+  94:fb/fb_td014.c **** 		{ CMD,  0x13 },
+  95:fb/fb_td014.c **** 		{ DATA, fb_rgb332->damage_y2-1 },
+  96:fb/fb_td014.c **** 		{ CMD,  0x14 },
+  97:fb/fb_td014.c **** 		{ DATA, fb_rgb332->damage_x1 },
+  98:fb/fb_td014.c **** 		{ CMD,  0x15 },
+  99:fb/fb_td014.c **** 		{ DATA, fb_rgb332->damage_y1 },
+ 100:fb/fb_td014.c **** 		{ END,  0x00 }
+ 101:fb/fb_td014.c **** 	};
+ 193              		.loc 1 101 0
+ 194 0004 E0619FE5 		ldr	r6, .L24
+ 195 0008 005096E5 		ldr	r5, [r6, #0]
+ 196              		.loc 1 84 0
+ 197 000c 1CD04DE2 		sub	sp, sp, #28
+ 198              	.LCFI4:
+ 199              	.LVL6:
+ 200              		.loc 1 101 0
+ 201 0010 01C0A0E3 		mov	ip, #1
+ 202 0014 1030A0E3 		mov	r3, #16
+ 203 0018 0810D5E5 		ldrb	r1, [r5, #8]	@ zero_extendqisi2
+ 204 001c 0A00D5E5 		ldrb	r0, [r5, #10]	@ zero_extendqisi2
+ 205 0020 04E0D5E5 		ldrb	lr, [r5, #4]	@ zero_extendqisi2
+ 206 0024 0640D5E5 		ldrb	r4, [r5, #6]	@ zero_extendqisi2
+ 207 0028 0130CDE5 		strb	r3, [sp, #1]
+ 208 002c 0C3083E0 		add	r3, r3, ip
+ 209 0030 0530CDE5 		strb	r3, [sp, #5]
+ 210 0034 0C3083E0 		add	r3, r3, ip
+ 211 0038 0930CDE5 		strb	r3, [sp, #9]
+ 212 003c 0C3083E0 		add	r3, r3, ip
+ 213 0040 0D30CDE5 		strb	r3, [sp, #13]
+ 214 0044 0C3083E0 		add	r3, r3, ip
+ 215 0048 1130CDE5 		strb	r3, [sp, #17]
+ 216 004c 0C3083E0 		add	r3, r3, ip
+ 217 0050 0020A0E3 		mov	r2, #0
+ 218 0054 1530CDE5 		strb	r3, [sp, #21]
+ 219 0058 011041E2 		sub	r1, r1, #1
+ 220 005c 0230A0E3 		mov	r3, #2
+ 221 0060 010040E2 		sub	r0, r0, #1
+ 222 0064 0B10CDE5 		strb	r1, [sp, #11]
+ 223 0068 0F00CDE5 		strb	r0, [sp, #15]
+ 224 006c 13E0CDE5 		strb	lr, [sp, #19]
+ 225 0070 16C0CDE5 		strb	ip, [sp, #22]
+ 226 0074 1740CDE5 		strb	r4, [sp, #23]
+ 227 0078 1830CDE5 		strb	r3, [sp, #24]
+ 228 007c 1920CDE5 		strb	r2, [sp, #25]
+ 229 0080 0020CDE5 		strb	r2, [sp, #0]
+ 230 0084 02C0CDE5 		strb	ip, [sp, #2]
+ 231 0088 03E0CDE5 		strb	lr, [sp, #3]
+ 232 008c 0420CDE5 		strb	r2, [sp, #4]
+ 233 0090 06C0CDE5 		strb	ip, [sp, #6]
+ 234 0094 0740CDE5 		strb	r4, [sp, #7]
+ 235 0098 0820CDE5 		strb	r2, [sp, #8]
+ 236 009c 0AC0CDE5 		strb	ip, [sp, #10]
+ 237 00a0 0C20CDE5 		strb	r2, [sp, #12]
+ 238 00a4 0EC0CDE5 		strb	ip, [sp, #14]
+ 239 00a8 1020CDE5 		strb	r2, [sp, #16]
+ 240 00ac 12C0CDE5 		strb	ip, [sp, #18]
+ 241 00b0 1420CDE5 		strb	r2, [sp, #20]
+ 102:fb/fb_td014.c **** 
+ 103:fb/fb_td014.c **** 	/* If everything's clean, just return */
+ 104:fb/fb_td014.c **** 	if(fb_rgb332->damage_x1 == fb_rgb332->damage_x2 ||
+ 242              		.loc 1 104 0
+ 243 00b4 B420D5E1 		ldrh	r2, [r5, #4]
+ 244 00b8 B830D5E1 		ldrh	r3, [r5, #8]
+ 245 00bc 030052E1 		cmp	r2, r3
+ 246 00c0 3300000A 		beq	.L13
+ 247 00c4 BA20D5E1 		ldrh	r2, [r5, #10]
+ 248 00c8 B630D5E1 		ldrh	r3, [r5, #6]
+ 249 00cc 020053E1 		cmp	r3, r2
+ 250 00d0 3700001A 		bne	.L15
+ 251              	.L13:
+ 105:fb/fb_td014.c **** 		fb_rgb332->damage_y1 == fb_rgb332->damage_y2) {
+ 106:fb/fb_td014.c **** 			printf("%s: no damage\n",__FUNCTION__);
+ 252              		.loc 1 106 0
+ 253 00d4 14119FE5 		ldr	r1, .L24+4
+ 254 00d8 14019FE5 		ldr	r0, .L24+8
+ 255 00dc FEFFFFEB 		bl	printf
+ 256 00e0 770000EA 		b	.L23
+ 257              	.L15:
+ 107:fb/fb_td014.c **** 			return;
+ 108:fb/fb_td014.c **** 	}
+ 109:fb/fb_td014.c **** 
+ 110:fb/fb_td014.c **** 	fb_td014_send_cmdlist(prepare_disp_write_cmds);
+ 258              		.loc 1 110 0
+ 259 00e4 0D00A0E1 		mov	r0, sp
+ 260 00e8 FEFFFFEB 		bl	fb_td014_send_cmdlist
+ 111:fb/fb_td014.c **** 
+ 112:fb/fb_td014.c **** 	for(y=fb_rgb332->damage_y1;y<fb_rgb332->damage_y2;y++) {
+ 261              		.loc 1 112 0
+ 262 00ec 003096E5 		ldr	r3, [r6, #0]
+ 263 00f0 B6A0D3E1 		ldrh	sl, [r3, #6]
+ 264              	.LVL7:
+ 265 00f4 6D0000EA 		b	.L17
+ 266              	.LVL8:
+ 267              	.L18:
+ 113:fb/fb_td014.c **** 		p = & fb_rgb332->mem[y * framebuffer->width]; // start of line
+ 268              		.loc 1 113 0
+ 269 00f8 F8309FE5 		ldr	r3, .L24+12
+ 270 00fc 003093E5 		ldr	r3, [r3, #0]
+ 271 0100 B422D3E1 		ldrh	r2, [r3, #36]
+ 272 0104 003091E5 		ldr	r3, [r1, #0]
+ 273 0108 923A23E0 		mla	r3, r2, sl, r3
+ 274              	.LVL9:
+ 114:fb/fb_td014.c **** 		p += fb_rgb332->damage_x1; // start of damage area
+ 275              		.loc 1 114 0
+ 276 010c B470D1E1 		ldrh	r7, [r1, #4]
+ 115:fb/fb_td014.c **** 
+ 116:fb/fb_td014.c **** 		for(x=fb_rgb332->damage_x1; x<fb_rgb332->damage_x2; x++) {
+ 277              		.loc 1 116 0
+ 278 0110 078083E0 		add	r8, r3, r7
+ 279 0114 610000EA 		b	.L19
+ 280              	.LVL10:
+ 281              	.L20:
+ 282 0118 01C058E5 		ldrb	ip, [r8, #-1]	@ zero_extendqisi2
+ 283              	.LBB5:
+ 284              	.LBB6:
+ 285              	.LBB7:
+ 286              		.file 2 "include/fb/fb_rgb332.h"
+   1:include/fb/fb_rgb332.h **** #ifndef FB_RGB332_H
+   2:include/fb/fb_rgb332.h **** #define FB_RGB332_H
+   3:include/fb/fb_rgb332.h **** 
+   4:include/fb/fb_rgb332.h **** /* RGB framebuffer with 1 byte per pixel, bits mapped as RRRGGGBB */
+   5:include/fb/fb_rgb332.h **** 
+   6:include/fb/fb_rgb332.h **** struct fb_rgb332 {
+   7:include/fb/fb_rgb332.h **** 	uint8_t *mem;			/* set to backingstore memory */
+   8:include/fb/fb_rgb332.h **** 	uint16_t damage_x1,damage_y1;	/* current damage window, ul (incl) */
+   9:include/fb/fb_rgb332.h **** 	uint16_t damage_x2,damage_y2;	/* current damage window, lr (excl) */
+  10:include/fb/fb_rgb332.h **** };
+  11:include/fb/fb_rgb332.h **** 
+  12:include/fb/fb_rgb332.h **** extern void fb_rgb332_clear();
+  13:include/fb/fb_rgb332.h **** 
+  14:include/fb/fb_rgb332.h **** /* draw a box from cursor to x,y */
+  15:include/fb/fb_rgb332.h **** extern void fb_rgb332_boxto(uint16_t x,uint16_t y);
+  16:include/fb/fb_rgb332.h **** /* draw a line from cursor to x,y */
+  17:include/fb/fb_rgb332.h **** extern void fb_rgb332_lineto(uint16_t x,uint16_t y);
+  18:include/fb/fb_rgb332.h **** 
+  19:include/fb/fb_rgb332.h **** /* put string str onto framebuffer with line (bottom
+  20:include/fb/fb_rgb332.h ****    left pixel of, e.g. "m") starting at cursor.
+  21:include/fb/fb_rgb332.h ****    Maximum width consumed is maxwidth, actual width
+  22:include/fb/fb_rgb332.h ****    needed is returned */
+  23:include/fb/fb_rgb332.h **** extern int fb_rgb332_putstr(char *str,int maxwidth);
+  24:include/fb/fb_rgb332.h **** 
+  25:include/fb/fb_rgb332.h **** extern struct fb_rgb332 *fb_rgb332;
+  26:include/fb/fb_rgb332.h **** 
+  27:include/fb/fb_rgb332.h **** /* this convenience function can be used if you choose to
+  28:include/fb/fb_rgb332.h ****  * back a RGB565 display with a RGB332 framebuffer to conserve
+  29:include/fb/fb_rgb332.h ****  * ARM memory. It converts a rgb332 value to rgb565 as indicated
+  30:include/fb/fb_rgb332.h ****  * in the comments. */
+  31:include/fb/fb_rgb332.h **** 
+  32:include/fb/fb_rgb332.h **** static inline uint16_t
+  33:include/fb/fb_rgb332.h **** rgb332_to_565(uint8_t rgb332){
+  34:include/fb/fb_rgb332.h **** 
+  35:include/fb/fb_rgb332.h **** 	uint8_t red   =  (rgb332 & 0xe0) >> 5 ; // rrr. .... -> .... .rrr
+  36:include/fb/fb_rgb332.h **** 	uint8_t green = ((rgb332 & 0x1c) >> 2); // ...g gg.. -> .... .ggg
+ 287              		.loc 2 36 0
+ 288 011c 1C200CE2 		and	r2, ip, #28
+  37:include/fb/fb_rgb332.h **** 	uint8_t blue  =   rgb332 & 0x03;        // .... ..bb -> .... ..bb
+ 289              		.loc 2 37 0
+ 290 0120 03500CE2 		and	r5, ip, #3
+ 291              		.loc 2 36 0
+ 292 0124 2221A0E1 		mov	r2, r2, lsr #2
+ 293              	.LVL11:
+ 294              		.loc 2 35 0
+ 295 0128 ACC2A0E1 		mov	ip, ip, lsr #5
+ 296              	.LVL12:
+ 297              	.LBE7:
+ 298              	.LBE6:
+ 117:fb/fb_td014.c **** 			uint16_t pixel = rgb332_to_565(*p++);
+ 299              		.loc 1 117 0
+ 300 012c ACE0A0E1 		mov	lr, ip, lsr #1
+ 301 0130 822182E1 		orr	r2, r2, r2, asl #3
+ 302              	.LVL13:
+ 303 0134 8540A0E1 		mov	r4, r5, asl #1
+ 304 0138 0CE18EE1 		orr	lr, lr, ip, asl #2
+ 305 013c 8222A0E1 		mov	r2, r2, asl #5
+ 306 0140 854184E1 		orr	r4, r4, r5, asl #3
+ 307 0144 8E2582E1 		orr	r2, r2, lr, asl #11
+ 308 0148 A54084E1 		orr	r4, r4, r5, lsr #1
+ 309 014c 024084E1 		orr	r4, r4, r2
+ 310 0150 0448A0E1 		mov	r4, r4, asl #16
+ 118:fb/fb_td014.c **** 			uint16_t data = 0x0100 | (pixel >> 8);
+ 311              		.loc 1 118 0
+ 312 0154 242CA0E1 		mov	r2, r4, lsr #24
+ 313 0158 012C82E3 		orr	r2, r2, #256
+ 314 015c B22066E1 		strh	r2, [r6, #-2]!	@ movhi
+ 315              		.loc 1 117 0
+ 316 0160 2448A0E1 		mov	r4, r4, lsr #16
+ 317              	.LVL14:
+ 119:fb/fb_td014.c **** 
+ 120:fb/fb_td014.c **** 			uwire_xfer(TD014_DEV_ID, TD014_UWIRE_BITLEN,
+ 318              		.loc 1 120 0
+ 319 0164 0620A0E1 		mov	r2, r6
+ 320 0168 FEFFFFEB 		bl	uwire_xfer
+ 321              	.LVL15:
+ 121:fb/fb_td014.c **** 					&data, NULL);
+ 122:fb/fb_td014.c **** 
+ 123:fb/fb_td014.c **** 			data = 0x0100 | (pixel & 0xff);
+ 322              		.loc 1 123 0
+ 323 016c FF4004E2 		and	r4, r4, #255
+ 324              	.LVL16:
+ 124:fb/fb_td014.c **** 			uwire_xfer(TD014_DEV_ID, TD014_UWIRE_BITLEN,
+ 325              		.loc 1 124 0
+ 326 0170 0000A0E3 		mov	r0, #0
+ 327              		.loc 1 123 0
+ 328 0174 014C84E3 		orr	r4, r4, #256
+ 329              		.loc 1 124 0
+ 330 0178 0620A0E1 		mov	r2, r6
+ 331 017c 0910A0E3 		mov	r1, #9
+ 332 0180 0030A0E1 		mov	r3, r0
+ 333              		.loc 1 123 0
+ 334 0184 BA41CDE1 		strh	r4, [sp, #26]	@ movhi
+ 335              		.loc 1 124 0
+ 336 0188 FEFFFFEB 		bl	uwire_xfer
+ 337              	.LVL17:
+ 338              	.L19:
+ 339              	.LBE5:
+ 340              		.loc 1 116 0
+ 341 018c 58209FE5 		ldr	r2, .L24
+ 342 0190 002092E5 		ldr	r2, [r2, #0]
+ 343 0194 B820D2E1 		ldrh	r2, [r2, #8]
+ 344              	.LBB8:
+ 345              		.loc 1 120 0
+ 346 0198 0000A0E3 		mov	r0, #0
+ 347              	.LBE8:
+ 348              		.loc 1 116 0
+ 349 019c 020057E1 		cmp	r7, r2
+ 350              	.LBB9:
+ 351              		.loc 1 118 0
+ 352 01a0 1C608DE2 		add	r6, sp, #28
+ 353              		.loc 1 120 0
+ 354 01a4 0910A0E3 		mov	r1, #9
+ 355 01a8 0030A0E1 		mov	r3, r0
+ 356              	.LVL18:
+ 357              	.LBE9:
+ 358              		.loc 1 116 0
+ 359 01ac 017087E2 		add	r7, r7, #1
+ 360 01b0 018088E2 		add	r8, r8, #1
+ 361 01b4 440000BA 		blt	.L20
+ 362              		.loc 1 112 0
+ 363 01b8 01A08AE2 		add	sl, sl, #1
+ 364              	.L17:
+ 365 01bc 28309FE5 		ldr	r3, .L24
+ 366 01c0 001093E5 		ldr	r1, [r3, #0]
+ 367 01c4 BA30D1E1 		ldrh	r3, [r1, #10]
+ 368 01c8 03005AE1 		cmp	sl, r3
+ 369 01cc 3C0000BA 		blt	.L18
+ 125:fb/fb_td014.c **** 				&data, NULL);
+ 126:fb/fb_td014.c **** 		}
+ 127:fb/fb_td014.c **** 	}
+ 128:fb/fb_td014.c **** 
+ 129:fb/fb_td014.c **** 	fb_rgb332->damage_x1 = fb_rgb332->damage_x2 = 0;
+ 130:fb/fb_td014.c **** 	fb_rgb332->damage_y1 = fb_rgb332->damage_y2 = 0;
+ 370              		.loc 1 130 0
+ 371 01d0 0030A0E3 		mov	r3, #0	@ movhi
+ 372 01d4 B630C1E1 		strh	r3, [r1, #6]	@ movhi
+ 373              		.loc 1 129 0
+ 374 01d8 B830C1E1 		strh	r3, [r1, #8]	@ movhi
+ 375 01dc B430C1E1 		strh	r3, [r1, #4]	@ movhi
+ 376              		.loc 1 130 0
+ 377 01e0 BA30C1E1 		strh	r3, [r1, #10]	@ movhi
+ 378              	.L23:
+ 131:fb/fb_td014.c **** }
+ 379              		.loc 1 131 0
+ 380 01e4 1CD08DE2 		add	sp, sp, #28
+ 381 01e8 F085BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, sl, pc}
+ 382              	.L25:
+ 383              		.align	2
+ 384              	.L24:
+ 385 01ec 00000000 		.word	fb_rgb332
+ 386 01f0 20000000 		.word	__FUNCTION__.1696
+ 387 01f4 18000000 		.word	.LC1
+ 388 01f8 00000000 		.word	framebuffer
+ 389              	.LFE18:
+ 391              		.bss
+ 392              	fb_td014_mem:
+ 393 0000 00000000 		.space	6144
+ 393      00000000 
+ 393      00000000 
+ 393      00000000 
+ 393      00000000 
+ 477              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 fb_td014.c
+     /tmp/cczoYZbv.s:15     .data:0000000000000000 fb_rgb332
+     /tmp/cczoYZbv.s:16     .data:0000000000000000 $d
+     /tmp/cczoYZbv.s:20     .data:0000000000000004 fb_td014_rgb332
+     /tmp/cczoYZbv.s:392    .bss:0000000000000000 fb_td014_mem
+     /tmp/cczoYZbv.s:27     .data:0000000000000010 framebuffer
+     /tmp/cczoYZbv.s:32     .data:0000000000000014 fb_td014_framebuffer
+     /tmp/cczoYZbv.s:134    .text.fb_td014_init:0000000000000000 fb_td014_init
+     /tmp/cczoYZbv.s:185    .text.fb_td014_flush:0000000000000000 fb_td014_flush
+     /tmp/cczoYZbv.s:48     .rodata:0000000000000000 td014_initdata
+     /tmp/cczoYZbv.s:66     .text.fb_td014_send_cmdlist:0000000000000000 fb_td014_send_cmdlist
+     /tmp/cczoYZbv.s:73     .text.fb_td014_send_cmdlist:0000000000000000 $a
+     /tmp/cczoYZbv.s:125    .rodata:0000000000000010 __FUNCTION__.1688
+     /tmp/cczoYZbv.s:140    .text.fb_td014_init:0000000000000000 $a
+     /tmp/cczoYZbv.s:167    .text.fb_td014_init:000000000000003c $d
+     /tmp/cczoYZbv.s:176    .rodata:0000000000000020 __FUNCTION__.1696
+     /tmp/cczoYZbv.s:191    .text.fb_td014_flush:0000000000000000 $a
+     /tmp/cczoYZbv.s:385    .text.fb_td014_flush:00000000000001ec $d
+
+UNDEFINED SYMBOLS
+fb_rgb332_clear
+fb_rgb332_boxto
+fb_rgb332_lineto
+fb_rgb332_putstr
+uwire_xfer
+printf
+calypso_reset_set
+delay_ms
+uwire_init

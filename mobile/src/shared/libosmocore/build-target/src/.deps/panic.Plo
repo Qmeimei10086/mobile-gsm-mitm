@@ -1,0 +1,20 @@
+panic.lo panic.o: ../../src/panic.c ../../include/osmocom/gsm/gsm_utils.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h \
+  ../../include/osmocom/core/panic.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stdarg.h \
+  ../../include/osmocom/core/backtrace.h ../config.h
+
+../../include/osmocom/gsm/gsm_utils.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h:
+
+../../include/osmocom/core/panic.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stdarg.h:
+
+../../include/osmocom/core/backtrace.h:
+
+../config.h:

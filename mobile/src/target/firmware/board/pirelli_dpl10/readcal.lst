@@ -1,0 +1,374 @@
+   1              		.file	"readcal.c"
+   9              	.Ltext0:
+  10              		.section	.rodata.str1.4,"aMS",%progbits,1
+  11              		.align	2
+  12              	.LC0:
+  13 0000 61666364 		.ascii	"afcdac\000"
+  13      616300
+  14 0007 00       		.align	2
+  15              	.LC1:
+  16 0008 54782072 		.ascii	"Tx ramps 900\000"
+  16      616D7073 
+  16      20393030 
+  16      00
+  17 0015 000000   		.align	2
+  18              	.LC2:
+  19 0018 5478206C 		.ascii	"Tx levels 900\000"
+  19      6576656C 
+  19      73203930 
+  19      3000
+  20 0026 0000     		.align	2
+  21              	.LC3:
+  22 0028 54782063 		.ascii	"Tx calchan 900\000"
+  22      616C6368 
+  22      616E2039 
+  22      303000
+  23 0037 00       		.align	2
+  24              	.LC4:
+  25 0038 54782072 		.ascii	"Tx ramps 1800\000"
+  25      616D7073 
+  25      20313830 
+  25      3000
+  26 0046 0000     		.align	2
+  27              	.LC5:
+  28 0048 5478206C 		.ascii	"Tx levels 1800\000"
+  28      6576656C 
+  28      73203138 
+  28      303000
+  29 0057 00       		.align	2
+  30              	.LC6:
+  31 0058 54782063 		.ascii	"Tx calchan 1800\000"
+  31      616C6368 
+  31      616E2031 
+  31      38303000 
+  32              		.align	2
+  33              	.LC7:
+  34 0068 54782072 		.ascii	"Tx ramps 1900\000"
+  34      616D7073 
+  34      20313930 
+  34      3000
+  35 0076 0000     		.align	2
+  36              	.LC8:
+  37 0078 5478206C 		.ascii	"Tx levels 1900\000"
+  37      6576656C 
+  37      73203139 
+  37      303000
+  38 0087 00       		.align	2
+  39              	.LC9:
+  40 0088 54782063 		.ascii	"Tx calchan 1900\000"
+  40      616C6368 
+  40      616E2031 
+  40      39303000 
+  41              		.section	.rodata
+  42              		.align	2
+  45              	rf_cal_list:
+  46 0000 00000000 		.word	.LC0
+  47 0004 28050000 		.word	1320
+  48 0008 02000000 		.word	2
+  49 000c 00000000 		.word	afcdac_shifted
+  50 0010 00000000 		.word	afcdac_postproc
+  51 0014 08000000 		.word	.LC1
+  52 0018 2B070000 		.word	1835
+  53 001c 00020000 		.word	512
+  54 0020 00000000 		.word	rf_tx_ramps_900
+  55 0024 00000000 		.word	0
+  56 0028 18000000 		.word	.LC2
+  57 002c 2C090000 		.word	2348
+  58 0030 80000000 		.word	128
+  59 0034 00000000 		.word	rf_tx_levels_900
+  60 0038 00000000 		.word	0
+  61 003c 28000000 		.word	.LC3
+  62 0040 AD090000 		.word	2477
+  63 0044 80000000 		.word	128
+  64 0048 00000000 		.word	rf_tx_chan_cal_900
+  65 004c 00000000 		.word	0
+  66 0050 38000000 		.word	.LC4
+  67 0054 2E0A0000 		.word	2606
+  68 0058 00020000 		.word	512
+  69 005c 00000000 		.word	rf_tx_ramps_1800
+  70 0060 00000000 		.word	0
+  71 0064 48000000 		.word	.LC5
+  72 0068 2F0C0000 		.word	3119
+  73 006c 80000000 		.word	128
+  74 0070 00000000 		.word	rf_tx_levels_1800
+  75 0074 00000000 		.word	0
+  76 0078 58000000 		.word	.LC6
+  77 007c B00C0000 		.word	3248
+  78 0080 80000000 		.word	128
+  79 0084 00000000 		.word	rf_tx_chan_cal_1800
+  80 0088 00000000 		.word	0
+  81 008c 68000000 		.word	.LC7
+  82 0090 310D0000 		.word	3377
+  83 0094 00020000 		.word	512
+  84 0098 00000000 		.word	rf_tx_ramps_1900
+  85 009c 00000000 		.word	0
+  86 00a0 78000000 		.word	.LC8
+  87 00a4 320F0000 		.word	3890
+  88 00a8 80000000 		.word	128
+  89 00ac 00000000 		.word	rf_tx_levels_1900
+  90 00b0 00000000 		.word	0
+  91 00b4 88000000 		.word	.LC9
+  92 00b8 B30F0000 		.word	4019
+  93 00bc 80000000 		.word	128
+  94 00c0 00000000 		.word	rf_tx_chan_cal_1900
+  95 00c4 00000000 		.word	0
+  96 00c8 00000000 		.word	0
+  97 00cc 00000000 		.word	0
+  98 00d0 00000000 		.word	0
+  99 00d4 00000000 		.word	0
+ 100 00d8 00000000 		.word	0
+ 101              		.section	.text.afcdac_postproc,"ax",%progbits
+ 102              		.align	2
+ 104              	afcdac_postproc:
+ 105              	.LFB2:
+ 106              		.file 1 "board/pirelli_dpl10/readcal.c"
+   1:board/pirelli_dpl10/readcal.c **** /*
+   2:board/pirelli_dpl10/readcal.c ****  * This code was written by Mychaela Falconia <falcon@freecalypso.org>
+   3:board/pirelli_dpl10/readcal.c ****  * who refuses to claim copyright on it and has released it as public domain
+   4:board/pirelli_dpl10/readcal.c ****  * instead. NO rights reserved, all rights relinquished.
+   5:board/pirelli_dpl10/readcal.c ****  *
+   6:board/pirelli_dpl10/readcal.c ****  * Tweaked (coding style changes) by Vadim Yanitskiy <axilirator@gmail.com>
+   7:board/pirelli_dpl10/readcal.c ****  *
+   8:board/pirelli_dpl10/readcal.c ****  * This program is free software; you can redistribute it and/or modify
+   9:board/pirelli_dpl10/readcal.c ****  * it under the terms of the GNU General Public License as published by
+  10:board/pirelli_dpl10/readcal.c ****  * the Free Software Foundation; either version 2 of the License, or
+  11:board/pirelli_dpl10/readcal.c ****  * (at your option) any later version.
+  12:board/pirelli_dpl10/readcal.c ****  *
+  13:board/pirelli_dpl10/readcal.c ****  * This program is distributed in the hope that it will be useful,
+  14:board/pirelli_dpl10/readcal.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  15:board/pirelli_dpl10/readcal.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  16:board/pirelli_dpl10/readcal.c ****  * GNU General Public License for more details.
+  17:board/pirelli_dpl10/readcal.c ****  *
+  18:board/pirelli_dpl10/readcal.c ****  * You should have received a copy of the GNU General Public License along
+  19:board/pirelli_dpl10/readcal.c ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  20:board/pirelli_dpl10/readcal.c ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  21:board/pirelli_dpl10/readcal.c ****  *
+  22:board/pirelli_dpl10/readcal.c ****  */
+  23:board/pirelli_dpl10/readcal.c **** 
+  24:board/pirelli_dpl10/readcal.c **** #include <stdio.h>
+  25:board/pirelli_dpl10/readcal.c **** #include <stdint.h>
+  26:board/pirelli_dpl10/readcal.c **** #include <string.h>
+  27:board/pirelli_dpl10/readcal.c **** 
+  28:board/pirelli_dpl10/readcal.c **** #include <rf/readcal.h>
+  29:board/pirelli_dpl10/readcal.c **** #include <rf/txcal.h>
+  30:board/pirelli_dpl10/readcal.c **** #include <rf/vcxocal.h>
+  31:board/pirelli_dpl10/readcal.c **** 
+  32:board/pirelli_dpl10/readcal.c **** static int16_t afcdac_shifted;
+  33:board/pirelli_dpl10/readcal.c **** 
+  34:board/pirelli_dpl10/readcal.c **** static void afcdac_postproc(void)
+  35:board/pirelli_dpl10/readcal.c **** {
+ 107              		.loc 1 35 0
+ 108              		@ args = 0, pretend = 0, frame = 0
+ 109              		@ frame_needed = 0, uses_anonymous_args = 0
+ 110              		@ link register save eliminated.
+ 111              	.LVL0:
+  36:board/pirelli_dpl10/readcal.c **** 	afc_initial_dac_value = afcdac_shifted >> 3;
+ 112              		.loc 1 36 0
+ 113 0000 14309FE5 		ldr	r3, .L3
+ 114 0004 B030D3E1 		ldrh	r3, [r3, #0]
+ 115 0008 10209FE5 		ldr	r2, .L3+4
+ 116 000c 0338A0E1 		mov	r3, r3, asl #16
+ 117 0010 C339A0E1 		mov	r3, r3, asr #19
+ 118              		.loc 1 35 0
+ 119              		@ lr needed for prologue
+ 120              		.loc 1 36 0
+ 121 0014 B030C2E1 		strh	r3, [r2, #0]	@ movhi
+  37:board/pirelli_dpl10/readcal.c **** }
+ 122              		.loc 1 37 0
+ 123 0018 1EFF2FE1 		bx	lr
+ 124              	.L4:
+ 125              		.align	2
+ 126              	.L3:
+ 127 001c 00000000 		.word	afcdac_shifted
+ 128 0020 00000000 		.word	afc_initial_dac_value
+ 129              	.LFE2:
+ 131              		.section	.rodata.str1.4
+ 132              		.align	2
+ 133              	.LC10:
+ 134 0098 43686563 		.ascii	"Checking factory data block for the RF calibration "
+ 134      6B696E67 
+ 134      20666163 
+ 134      746F7279 
+ 134      20646174 
+ 135 00cb 7265636F 		.ascii	"records\012\000"
+ 135      7264730A 
+ 135      00
+ 136              		.align	2
+ 137              	.LC11:
+ 138 00d4 466F756E 		.ascii	"Found '%s' record, applying\012\000"
+ 138      64202725 
+ 138      73272072 
+ 138      65636F72 
+ 138      642C2061 
+ 139 00f1 000000   		.section	.text.read_factory_rf_calibration,"ax",%progbits
+ 140              		.align	2
+ 141              		.global	read_factory_rf_calibration
+ 143              	read_factory_rf_calibration:
+ 144              	.LFB4:
+  38:board/pirelli_dpl10/readcal.c **** 
+  39:board/pirelli_dpl10/readcal.c **** static int verify_checksum(const uint8_t *start, size_t len)
+  40:board/pirelli_dpl10/readcal.c **** {
+  41:board/pirelli_dpl10/readcal.c **** 	const uint8_t *p, *endp;
+  42:board/pirelli_dpl10/readcal.c **** 	uint8_t accum;
+  43:board/pirelli_dpl10/readcal.c **** 
+  44:board/pirelli_dpl10/readcal.c **** 	p = start;
+  45:board/pirelli_dpl10/readcal.c **** 	endp = start + len;
+  46:board/pirelli_dpl10/readcal.c **** 	accum = 0;
+  47:board/pirelli_dpl10/readcal.c **** 	while (p < endp)
+  48:board/pirelli_dpl10/readcal.c **** 		accum += *p++;
+  49:board/pirelli_dpl10/readcal.c **** 
+  50:board/pirelli_dpl10/readcal.c **** 	if (accum == *p)
+  51:board/pirelli_dpl10/readcal.c **** 		return 0;	/* good */
+  52:board/pirelli_dpl10/readcal.c **** 	else
+  53:board/pirelli_dpl10/readcal.c **** 		return -1;	/* bad */
+  54:board/pirelli_dpl10/readcal.c **** }
+  55:board/pirelli_dpl10/readcal.c **** 
+  56:board/pirelli_dpl10/readcal.c **** static const struct calmap {
+  57:board/pirelli_dpl10/readcal.c **** 	char		*desc;
+  58:board/pirelli_dpl10/readcal.c **** 	unsigned	offset;
+  59:board/pirelli_dpl10/readcal.c **** 	size_t		record_len;
+  60:board/pirelli_dpl10/readcal.c **** 	void		*buffer;
+  61:board/pirelli_dpl10/readcal.c **** 	void		(*postproc)(void);
+  62:board/pirelli_dpl10/readcal.c **** } rf_cal_list[] = {
+  63:board/pirelli_dpl10/readcal.c **** 	{ "afcdac",          0x528, 2,   &afcdac_shifted,     afcdac_postproc },
+  64:board/pirelli_dpl10/readcal.c **** 	{ "Tx ramps 900",    0x72B, 512, rf_tx_ramps_900,     NULL },
+  65:board/pirelli_dpl10/readcal.c **** 	{ "Tx levels 900",   0x92C, 128, rf_tx_levels_900,    NULL },
+  66:board/pirelli_dpl10/readcal.c **** 	{ "Tx calchan 900",  0x9AD, 128, rf_tx_chan_cal_900,  NULL },
+  67:board/pirelli_dpl10/readcal.c **** 	{ "Tx ramps 1800",   0xA2E, 512, rf_tx_ramps_1800,    NULL },
+  68:board/pirelli_dpl10/readcal.c **** 	{ "Tx levels 1800",  0xC2F, 128, rf_tx_levels_1800,   NULL },
+  69:board/pirelli_dpl10/readcal.c **** 	{ "Tx calchan 1800", 0xCB0, 128, rf_tx_chan_cal_1800, NULL },
+  70:board/pirelli_dpl10/readcal.c **** 	{ "Tx ramps 1900",   0xD31, 512, rf_tx_ramps_1900,    NULL },
+  71:board/pirelli_dpl10/readcal.c **** 	{ "Tx levels 1900",  0xF32, 128, rf_tx_levels_1900,   NULL },
+  72:board/pirelli_dpl10/readcal.c **** 	{ "Tx calchan 1900", 0xFB3, 128, rf_tx_chan_cal_1900, NULL },
+  73:board/pirelli_dpl10/readcal.c **** 	{ NULL,              0,     0,   NULL,                NULL }
+  74:board/pirelli_dpl10/readcal.c **** };
+  75:board/pirelli_dpl10/readcal.c **** 
+  76:board/pirelli_dpl10/readcal.c **** void read_factory_rf_calibration(void)
+  77:board/pirelli_dpl10/readcal.c **** {
+ 145              		.loc 1 77 0
+ 146              		@ args = 0, pretend = 0, frame = 0
+ 147              		@ frame_needed = 0, uses_anonymous_args = 0
+ 148              	.LVL1:
+ 149 0000 70402DE9 		stmfd	sp!, {r4, r5, r6, lr}
+ 150              	.LCFI0:
+  78:board/pirelli_dpl10/readcal.c **** 	const struct calmap *tp;
+  79:board/pirelli_dpl10/readcal.c **** 	const uint8_t *record;
+  80:board/pirelli_dpl10/readcal.c **** 
+  81:board/pirelli_dpl10/readcal.c **** 	puts("Checking factory data block for the RF calibration records\n");
+ 151              		.loc 1 81 0
+ 152 0004 8C009FE5 		ldr	r0, .L16
+ 153 0008 FEFFFFEB 		bl	puts
+ 154 000c 88509FE5 		ldr	r5, .L16+4
+ 155 0010 88609FE5 		ldr	r6, .L16+8
+ 156 0014 200000EA 		b	.L6
+ 157              	.LVL2:
+ 158              	.L7:
+  82:board/pirelli_dpl10/readcal.c **** 	for (tp = rf_cal_list; tp->desc; tp++) {
+  83:board/pirelli_dpl10/readcal.c **** 		record = (const uint8_t *)0x027F0000 + tp->offset;
+ 159              		.loc 1 83 0
+ 160 0018 103015E5 		ldr	r3, [r5, #-16]
+ 161 001c 9F4783E2 		add	r4, r3, #41680896
+ 162              	.LBB2:
+ 163              	.LBB3:
+ 164              		.loc 1 45 0
+ 165 0020 0C3015E5 		ldr	r3, [r5, #-12]
+ 166              	.LBE3:
+ 167              	.LBE2:
+ 168              		.loc 1 83 0
+ 169 0024 034884E2 		add	r4, r4, #196608
+ 170              	.LBB4:
+ 171              	.LBB5:
+ 172              		.loc 1 45 0
+ 173 0028 03C084E0 		add	ip, r4, r3
+ 174 002c 0420A0E1 		mov	r2, r4
+ 175 0030 0000A0E3 		mov	r0, #0
+ 176 0034 0F0000EA 		b	.L8
+ 177              	.L9:
+ 178              		.loc 1 48 0
+ 179 0038 033080E0 		add	r3, r0, r3
+ 180 003c FF0003E2 		and	r0, r3, #255
+ 181 0040 012082E2 		add	r2, r2, #1
+ 182              	.L8:
+ 183              		.loc 1 47 0
+ 184 0044 0C0052E1 		cmp	r2, ip
+ 185 0048 0030D2E5 		ldrb	r3, [r2, #0]	@ zero_extendqisi2
+ 186 004c 0C00003A 		bcc	.L9
+ 187              		.loc 1 50 0
+ 188 0050 000053E1 		cmp	r3, r0
+ 189 0054 1E00001A 		bne	.L11
+ 190              	.LBE5:
+ 191              	.LBE4:
+  84:board/pirelli_dpl10/readcal.c **** 		if (verify_checksum(record, tp->record_len) < 0)
+  85:board/pirelli_dpl10/readcal.c **** 			continue;
+  86:board/pirelli_dpl10/readcal.c **** 		printf("Found '%s' record, applying\n", tp->desc);
+ 192              		.loc 1 86 0
+ 193 0058 44009FE5 		ldr	r0, .L16+12
+ 194              	.LVL3:
+ 195 005c FEFFFFEB 		bl	printf
+ 196              	.LVL4:
+  87:board/pirelli_dpl10/readcal.c **** 		memcpy(tp->buffer, record, tp->record_len);
+ 197              		.loc 1 87 0
+ 198 0060 0410A0E1 		mov	r1, r4
+ 199 0064 080015E5 		ldr	r0, [r5, #-8]
+ 200 0068 002096E5 		ldr	r2, [r6, #0]
+ 201 006c FEFFFFEB 		bl	memcpy
+  88:board/pirelli_dpl10/readcal.c **** 		if (tp->postproc)
+ 202              		.loc 1 88 0
+ 203 0070 043015E5 		ldr	r3, [r5, #-4]
+ 204 0074 000053E3 		cmp	r3, #0
+  89:board/pirelli_dpl10/readcal.c **** 			tp->postproc();
+ 205              		.loc 1 89 0
+ 206 0078 0FE0A011 		movne	lr, pc
+ 207 007c 13FF2F11 		bxne	r3
+ 208              	.LVL5:
+ 209              	.L11:
+ 210 0080 145085E2 		add	r5, r5, #20
+ 211 0084 146086E2 		add	r6, r6, #20
+ 212              	.L6:
+ 213              		.loc 1 82 0
+ 214 0088 141015E5 		ldr	r1, [r5, #-20]
+ 215 008c 000051E3 		cmp	r1, #0
+ 216 0090 0400001A 		bne	.L7
+  90:board/pirelli_dpl10/readcal.c **** 	}
+  91:board/pirelli_dpl10/readcal.c **** }
+ 217              		.loc 1 91 0
+ 218 0094 7080BDE8 		ldmfd	sp!, {r4, r5, r6, pc}
+ 219              	.L17:
+ 220              		.align	2
+ 221              	.L16:
+ 222 0098 98000000 		.word	.LC10
+ 223 009c 14000000 		.word	rf_cal_list+20
+ 224 00a0 08000000 		.word	rf_cal_list+8
+ 225 00a4 D4000000 		.word	.LC11
+ 226              	.LFE4:
+ 228              		.bss
+ 229              		.align	1
+ 230              	afcdac_shifted:
+ 231 0000 0000     		.space	2
+ 280              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 readcal.c
+     /tmp/ccW45kUC.s:45     .rodata:0000000000000000 rf_cal_list
+     /tmp/ccW45kUC.s:46     .rodata:0000000000000000 $d
+     /tmp/ccW45kUC.s:230    .bss:0000000000000000 afcdac_shifted
+     /tmp/ccW45kUC.s:104    .text.afcdac_postproc:0000000000000000 afcdac_postproc
+     /tmp/ccW45kUC.s:113    .text.afcdac_postproc:0000000000000000 $a
+     /tmp/ccW45kUC.s:127    .text.afcdac_postproc:000000000000001c $d
+     /tmp/ccW45kUC.s:143    .text.read_factory_rf_calibration:0000000000000000 read_factory_rf_calibration
+     /tmp/ccW45kUC.s:149    .text.read_factory_rf_calibration:0000000000000000 $a
+     /tmp/ccW45kUC.s:222    .text.read_factory_rf_calibration:0000000000000098 $d
+
+UNDEFINED SYMBOLS
+rf_tx_ramps_900
+rf_tx_levels_900
+rf_tx_chan_cal_900
+rf_tx_ramps_1800
+rf_tx_levels_1800
+rf_tx_chan_cal_1800
+rf_tx_ramps_1900
+rf_tx_levels_1900
+rf_tx_chan_cal_1900
+afc_initial_dac_value
+puts
+printf
+memcpy

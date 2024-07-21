@@ -1,0 +1,375 @@
+   1              		.file	"readcal_tiffs.c"
+   9              	.Ltext0:
+  10              		.section	.rodata.str1.4,"aMS",%progbits,1
+  11              		.align	2
+  12              	.LC0:
+  13 0000 2F67736D 		.ascii	"/gsm/rf/afcdac\000"
+  13      2F72662F 
+  13      61666364 
+  13      616300
+  14 000f 00       		.align	2
+  15              	.LC1:
+  16 0010 2F67736D 		.ascii	"/gsm/rf/tx/ramps.850\000"
+  16      2F72662F 
+  16      74782F72 
+  16      616D7073 
+  16      2E383530 
+  17 0025 000000   		.align	2
+  18              	.LC2:
+  19 0028 2F67736D 		.ascii	"/gsm/rf/tx/levels.850\000"
+  19      2F72662F 
+  19      74782F6C 
+  19      6576656C 
+  19      732E3835 
+  20 003e 0000     		.align	2
+  21              	.LC3:
+  22 0040 2F67736D 		.ascii	"/gsm/rf/tx/calchan.850\000"
+  22      2F72662F 
+  22      74782F63 
+  22      616C6368 
+  22      616E2E38 
+  23 0057 00       		.align	2
+  24              	.LC4:
+  25 0058 2F67736D 		.ascii	"/gsm/rf/tx/ramps.900\000"
+  25      2F72662F 
+  25      74782F72 
+  25      616D7073 
+  25      2E393030 
+  26 006d 000000   		.align	2
+  27              	.LC5:
+  28 0070 2F67736D 		.ascii	"/gsm/rf/tx/levels.900\000"
+  28      2F72662F 
+  28      74782F6C 
+  28      6576656C 
+  28      732E3930 
+  29 0086 0000     		.align	2
+  30              	.LC6:
+  31 0088 2F67736D 		.ascii	"/gsm/rf/tx/calchan.900\000"
+  31      2F72662F 
+  31      74782F63 
+  31      616C6368 
+  31      616E2E39 
+  32 009f 00       		.align	2
+  33              	.LC7:
+  34 00a0 2F67736D 		.ascii	"/gsm/rf/tx/ramps.1800\000"
+  34      2F72662F 
+  34      74782F72 
+  34      616D7073 
+  34      2E313830 
+  35 00b6 0000     		.align	2
+  36              	.LC8:
+  37 00b8 2F67736D 		.ascii	"/gsm/rf/tx/levels.1800\000"
+  37      2F72662F 
+  37      74782F6C 
+  37      6576656C 
+  37      732E3138 
+  38 00cf 00       		.align	2
+  39              	.LC9:
+  40 00d0 2F67736D 		.ascii	"/gsm/rf/tx/calchan.1800\000"
+  40      2F72662F 
+  40      74782F63 
+  40      616C6368 
+  40      616E2E31 
+  41              		.align	2
+  42              	.LC10:
+  43 00e8 2F67736D 		.ascii	"/gsm/rf/tx/ramps.1900\000"
+  43      2F72662F 
+  43      74782F72 
+  43      616D7073 
+  43      2E313930 
+  44 00fe 0000     		.align	2
+  45              	.LC11:
+  46 0100 2F67736D 		.ascii	"/gsm/rf/tx/levels.1900\000"
+  46      2F72662F 
+  46      74782F6C 
+  46      6576656C 
+  46      732E3139 
+  47 0117 00       		.align	2
+  48              	.LC12:
+  49 0118 2F67736D 		.ascii	"/gsm/rf/tx/calchan.1900\000"
+  49      2F72662F 
+  49      74782F63 
+  49      616C6368 
+  49      616E2E31 
+  50              		.section	.rodata
+  51              		.align	2
+  54              	rf_cal_list:
+  55 0000 00000000 		.word	.LC0
+  56 0004 02000000 		.word	2
+  57 0008 00000000 		.word	afcdac_shifted
+  58 000c 00000000 		.word	afcdac_postproc
+  59 0010 10000000 		.word	.LC1
+  60 0014 00020000 		.word	512
+  61 0018 00000000 		.word	rf_tx_ramps_850
+  62 001c 00000000 		.word	0
+  63 0020 28000000 		.word	.LC2
+  64 0024 80000000 		.word	128
+  65 0028 00000000 		.word	rf_tx_levels_850
+  66 002c 00000000 		.word	0
+  67 0030 40000000 		.word	.LC3
+  68 0034 80000000 		.word	128
+  69 0038 00000000 		.word	rf_tx_chan_cal_850
+  70 003c 00000000 		.word	0
+  71 0040 58000000 		.word	.LC4
+  72 0044 00020000 		.word	512
+  73 0048 00000000 		.word	rf_tx_ramps_900
+  74 004c 00000000 		.word	0
+  75 0050 70000000 		.word	.LC5
+  76 0054 80000000 		.word	128
+  77 0058 00000000 		.word	rf_tx_levels_900
+  78 005c 00000000 		.word	0
+  79 0060 88000000 		.word	.LC6
+  80 0064 80000000 		.word	128
+  81 0068 00000000 		.word	rf_tx_chan_cal_900
+  82 006c 00000000 		.word	0
+  83 0070 A0000000 		.word	.LC7
+  84 0074 00020000 		.word	512
+  85 0078 00000000 		.word	rf_tx_ramps_1800
+  86 007c 00000000 		.word	0
+  87 0080 B8000000 		.word	.LC8
+  88 0084 80000000 		.word	128
+  89 0088 00000000 		.word	rf_tx_levels_1800
+  90 008c 00000000 		.word	0
+  91 0090 D0000000 		.word	.LC9
+  92 0094 80000000 		.word	128
+  93 0098 00000000 		.word	rf_tx_chan_cal_1800
+  94 009c 00000000 		.word	0
+  95 00a0 E8000000 		.word	.LC10
+  96 00a4 00020000 		.word	512
+  97 00a8 00000000 		.word	rf_tx_ramps_1900
+  98 00ac 00000000 		.word	0
+  99 00b0 00010000 		.word	.LC11
+ 100 00b4 80000000 		.word	128
+ 101 00b8 00000000 		.word	rf_tx_levels_1900
+ 102 00bc 00000000 		.word	0
+ 103 00c0 18010000 		.word	.LC12
+ 104 00c4 80000000 		.word	128
+ 105 00c8 00000000 		.word	rf_tx_chan_cal_1900
+ 106 00cc 00000000 		.word	0
+ 107 00d0 00000000 		.word	0
+ 108 00d4 00000000 		.word	0
+ 109 00d8 00000000 		.word	0
+ 110 00dc 00000000 		.word	0
+ 111              		.section	.text.afcdac_postproc,"ax",%progbits
+ 112              		.align	2
+ 114              	afcdac_postproc:
+ 115              	.LFB2:
+ 116              		.file 1 "board/common/readcal_tiffs.c"
+   1:board/common/readcal_tiffs.c **** /*
+   2:board/common/readcal_tiffs.c ****  * This code was written by Mychaela Falconia <falcon@freecalypso.org>
+   3:board/common/readcal_tiffs.c ****  * who refuses to claim copyright on it and has released it as public domain
+   4:board/common/readcal_tiffs.c ****  * instead. NO rights reserved, all rights relinquished.
+   5:board/common/readcal_tiffs.c ****  *
+   6:board/common/readcal_tiffs.c ****  * Tweaked (coding style changes) by Vadim Yanitskiy <axilirator@gmail.com>
+   7:board/common/readcal_tiffs.c ****  *
+   8:board/common/readcal_tiffs.c ****  * This program is free software; you can redistribute it and/or modify
+   9:board/common/readcal_tiffs.c ****  * it under the terms of the GNU General Public License as published by
+  10:board/common/readcal_tiffs.c ****  * the Free Software Foundation; either version 2 of the License, or
+  11:board/common/readcal_tiffs.c ****  * (at your option) any later version.
+  12:board/common/readcal_tiffs.c ****  *
+  13:board/common/readcal_tiffs.c ****  * This program is distributed in the hope that it will be useful,
+  14:board/common/readcal_tiffs.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  15:board/common/readcal_tiffs.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  16:board/common/readcal_tiffs.c ****  * GNU General Public License for more details.
+  17:board/common/readcal_tiffs.c ****  *
+  18:board/common/readcal_tiffs.c ****  * You should have received a copy of the GNU General Public License along
+  19:board/common/readcal_tiffs.c ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  20:board/common/readcal_tiffs.c ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  21:board/common/readcal_tiffs.c ****  *
+  22:board/common/readcal_tiffs.c ****  */
+  23:board/common/readcal_tiffs.c **** 
+  24:board/common/readcal_tiffs.c **** #include <stdio.h>
+  25:board/common/readcal_tiffs.c **** #include <stdint.h>
+  26:board/common/readcal_tiffs.c **** #include <string.h>
+  27:board/common/readcal_tiffs.c **** 
+  28:board/common/readcal_tiffs.c **** #include <rf/readcal.h>
+  29:board/common/readcal_tiffs.c **** #include <rf/vcxocal.h>
+  30:board/common/readcal_tiffs.c **** #include <rf/txcal.h>
+  31:board/common/readcal_tiffs.c **** #include <tiffs.h>
+  32:board/common/readcal_tiffs.c **** 
+  33:board/common/readcal_tiffs.c **** static int16_t afcdac_shifted;
+  34:board/common/readcal_tiffs.c **** 
+  35:board/common/readcal_tiffs.c **** static void afcdac_postproc(void)
+  36:board/common/readcal_tiffs.c **** {
+ 117              		.loc 1 36 0
+ 118              		@ args = 0, pretend = 0, frame = 0
+ 119              		@ frame_needed = 0, uses_anonymous_args = 0
+ 120              		@ link register save eliminated.
+ 121              	.LVL0:
+  37:board/common/readcal_tiffs.c **** 	afc_initial_dac_value = afcdac_shifted >> 3;
+ 122              		.loc 1 37 0
+ 123 0000 14309FE5 		ldr	r3, .L3
+ 124 0004 B030D3E1 		ldrh	r3, [r3, #0]
+ 125 0008 10209FE5 		ldr	r2, .L3+4
+ 126 000c 0338A0E1 		mov	r3, r3, asl #16
+ 127 0010 C339A0E1 		mov	r3, r3, asr #19
+ 128              		.loc 1 36 0
+ 129              		@ lr needed for prologue
+ 130              		.loc 1 37 0
+ 131 0014 B030C2E1 		strh	r3, [r2, #0]	@ movhi
+  38:board/common/readcal_tiffs.c **** }
+ 132              		.loc 1 38 0
+ 133 0018 1EFF2FE1 		bx	lr
+ 134              	.L4:
+ 135              		.align	2
+ 136              	.L3:
+ 137 001c 00000000 		.word	afcdac_shifted
+ 138 0020 00000000 		.word	afc_initial_dac_value
+ 139              	.LFE2:
+ 141              		.section	.rodata.str1.4
+ 142              		.align	2
+ 143              	.LC13:
+ 144 0130 43686563 		.ascii	"Checking TIFFS for the RF calibration records\012\000"
+ 144      6B696E67 
+ 144      20544946 
+ 144      46532066 
+ 144      6F722074 
+ 145 015f 00       		.align	2
+ 146              	.LC14:
+ 147 0160 466F756E 		.ascii	"Found '%s', applying\012\000"
+ 147      64202725 
+ 147      73272C20 
+ 147      6170706C 
+ 147      79696E67 
+ 148 0176 0000     		.section	.text.read_factory_rf_calibration,"ax",%progbits
+ 149              		.align	2
+ 150              		.global	read_factory_rf_calibration
+ 152              	read_factory_rf_calibration:
+ 153              	.LFB3:
+  39:board/common/readcal_tiffs.c **** 
+  40:board/common/readcal_tiffs.c **** static const struct calmap {
+  41:board/common/readcal_tiffs.c **** 	char	*pathname;
+  42:board/common/readcal_tiffs.c **** 	size_t	record_len;
+  43:board/common/readcal_tiffs.c **** 	void	*buffer;
+  44:board/common/readcal_tiffs.c **** 	void	(*postproc)(void);
+  45:board/common/readcal_tiffs.c **** } rf_cal_list[] = {
+  46:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/afcdac",          2,   &afcdac_shifted,     afcdac_postproc },
+  47:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/ramps.850",    512, rf_tx_ramps_850,     NULL },
+  48:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/levels.850",   128, rf_tx_levels_850,    NULL },
+  49:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/calchan.850",  128, rf_tx_chan_cal_850,  NULL },
+  50:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/ramps.900",    512, rf_tx_ramps_900,     NULL },
+  51:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/levels.900",   128, rf_tx_levels_900,    NULL },
+  52:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/calchan.900",  128, rf_tx_chan_cal_900,  NULL },
+  53:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/ramps.1800",   512, rf_tx_ramps_1800,    NULL },
+  54:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/levels.1800",  128, rf_tx_levels_1800,   NULL },
+  55:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/calchan.1800", 128, rf_tx_chan_cal_1800, NULL },
+  56:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/ramps.1900",   512, rf_tx_ramps_1900,    NULL },
+  57:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/levels.1900",  128, rf_tx_levels_1900,   NULL },
+  58:board/common/readcal_tiffs.c **** 	{ "/gsm/rf/tx/calchan.1900", 128, rf_tx_chan_cal_1900, NULL },
+  59:board/common/readcal_tiffs.c **** 	{ NULL,                      0,   NULL,                NULL }
+  60:board/common/readcal_tiffs.c **** };
+  61:board/common/readcal_tiffs.c **** 
+  62:board/common/readcal_tiffs.c **** void read_factory_rf_calibration(void)
+  63:board/common/readcal_tiffs.c **** {
+ 154              		.loc 1 63 0
+ 155              		@ args = 0, pretend = 0, frame = 512
+ 156              		@ frame_needed = 0, uses_anonymous_args = 0
+ 157              	.LVL1:
+ 158 0000 30402DE9 		stmfd	sp!, {r4, r5, lr}
+ 159              	.LCFI0:
+  64:board/common/readcal_tiffs.c **** 	const struct calmap *tp;
+  65:board/common/readcal_tiffs.c **** 	uint8_t buf[512];
+  66:board/common/readcal_tiffs.c **** 	int rc;
+  67:board/common/readcal_tiffs.c **** 
+  68:board/common/readcal_tiffs.c **** 	puts("Checking TIFFS for the RF calibration records\n");
+ 160              		.loc 1 68 0
+ 161 0004 68009FE5 		ldr	r0, .L13
+ 162              		.loc 1 63 0
+ 163 0008 02DC4DE2 		sub	sp, sp, #512
+ 164              	.LCFI1:
+ 165              	.LVL2:
+ 166              		.loc 1 68 0
+ 167 000c FEFFFFEB 		bl	puts
+ 168 0010 60409FE5 		ldr	r4, .L13+4
+ 169 0014 140000EA 		b	.L6
+ 170              	.L7:
+  69:board/common/readcal_tiffs.c **** 	for (tp = rf_cal_list; tp->pathname; tp++) {
+  70:board/common/readcal_tiffs.c **** 		rc = tiffs_read_file_fixedlen(tp->pathname, buf,
+ 171              		.loc 1 70 0
+ 172 0018 0C2014E5 		ldr	r2, [r4, #-12]
+ 173 001c FEFFFFEB 		bl	tiffs_read_file_fixedlen
+  71:board/common/readcal_tiffs.c **** 					      tp->record_len);
+  72:board/common/readcal_tiffs.c **** 		if (rc <= 0)
+ 174              		.loc 1 72 0
+ 175 0020 000050E3 		cmp	r0, #0
+  73:board/common/readcal_tiffs.c **** 			continue;
+  74:board/common/readcal_tiffs.c **** 		printf("Found '%s', applying\n", tp->pathname);
+ 176              		.loc 1 74 0
+ 177 0024 50009FE5 		ldr	r0, .L13+8
+ 178              		.loc 1 72 0
+ 179 0028 130000DA 		ble	.L8
+ 180              		.loc 1 74 0
+ 181 002c 101014E5 		ldr	r1, [r4, #-16]
+ 182 0030 FEFFFFEB 		bl	printf
+  75:board/common/readcal_tiffs.c **** 		memcpy(tp->buffer, buf, tp->record_len);
+ 183              		.loc 1 75 0
+ 184 0034 0D10A0E1 		mov	r1, sp
+ 185 0038 0C2014E5 		ldr	r2, [r4, #-12]
+ 186 003c 080014E5 		ldr	r0, [r4, #-8]
+ 187 0040 FEFFFFEB 		bl	memcpy
+  76:board/common/readcal_tiffs.c **** 		if (tp->postproc)
+ 188              		.loc 1 76 0
+ 189 0044 043014E5 		ldr	r3, [r4, #-4]
+ 190 0048 000053E3 		cmp	r3, #0
+  77:board/common/readcal_tiffs.c **** 			tp->postproc();
+ 191              		.loc 1 77 0
+ 192 004c 0FE0A011 		movne	lr, pc
+ 193 0050 13FF2F11 		bxne	r3
+ 194              	.L8:
+ 195 0054 104084E2 		add	r4, r4, #16
+ 196              	.L6:
+ 197              		.loc 1 69 0
+ 198 0058 103014E5 		ldr	r3, [r4, #-16]
+ 199 005c 000053E2 		subs	r0, r3, #0
+ 200              		.loc 1 70 0
+ 201 0060 0D50A0E1 		mov	r5, sp
+ 202 0064 0D10A0E1 		mov	r1, sp
+ 203              		.loc 1 69 0
+ 204 0068 0400001A 		bne	.L7
+  78:board/common/readcal_tiffs.c **** 	}
+  79:board/common/readcal_tiffs.c **** }
+ 205              		.loc 1 79 0
+ 206 006c 02DC8DE2 		add	sp, sp, #512
+ 207 0070 3080BDE8 		ldmfd	sp!, {r4, r5, pc}
+ 208              	.L14:
+ 209              		.align	2
+ 210              	.L13:
+ 211 0074 30010000 		.word	.LC13
+ 212 0078 10000000 		.word	rf_cal_list+16
+ 213 007c 60010000 		.word	.LC14
+ 214              	.LFE3:
+ 216              		.bss
+ 217              		.align	1
+ 218              	afcdac_shifted:
+ 219 0000 0000     		.space	2
+ 270              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 readcal_tiffs.c
+     /tmp/ccHyCbGf.s:54     .rodata:0000000000000000 rf_cal_list
+     /tmp/ccHyCbGf.s:55     .rodata:0000000000000000 $d
+     /tmp/ccHyCbGf.s:218    .bss:0000000000000000 afcdac_shifted
+     /tmp/ccHyCbGf.s:114    .text.afcdac_postproc:0000000000000000 afcdac_postproc
+     /tmp/ccHyCbGf.s:123    .text.afcdac_postproc:0000000000000000 $a
+     /tmp/ccHyCbGf.s:137    .text.afcdac_postproc:000000000000001c $d
+     /tmp/ccHyCbGf.s:152    .text.read_factory_rf_calibration:0000000000000000 read_factory_rf_calibration
+     /tmp/ccHyCbGf.s:158    .text.read_factory_rf_calibration:0000000000000000 $a
+     /tmp/ccHyCbGf.s:211    .text.read_factory_rf_calibration:0000000000000074 $d
+
+UNDEFINED SYMBOLS
+rf_tx_ramps_850
+rf_tx_levels_850
+rf_tx_chan_cal_850
+rf_tx_ramps_900
+rf_tx_levels_900
+rf_tx_chan_cal_900
+rf_tx_ramps_1800
+rf_tx_levels_1800
+rf_tx_chan_cal_1800
+rf_tx_ramps_1900
+rf_tx_levels_1900
+rf_tx_chan_cal_1900
+afc_initial_dac_value
+puts
+tiffs_read_file_fixedlen
+printf
+memcpy

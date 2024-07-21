@@ -1,0 +1,150 @@
+   1              		.file	"agc.c"
+   9              	.Ltext0:
+  10              		.section	.text.agc_inp_dbm8_by_pm,"ax",%progbits
+  11              		.align	2
+  12              		.global	agc_inp_dbm8_by_pm
+  14              	agc_inp_dbm8_by_pm:
+  15              	.LFB6:
+  16              		.file 1 "layer1/agc.c"
+   1:layer1/agc.c  **** /* AFC (Automatic Gain Control) Implementation */
+   2:layer1/agc.c  **** 
+   3:layer1/agc.c  **** /* (C) 2010 by Harald Welte <laforge@gnumonks.org>
+   4:layer1/agc.c  ****  *
+   5:layer1/agc.c  ****  * All Rights Reserved
+   6:layer1/agc.c  ****  *
+   7:layer1/agc.c  ****  * This program is free software; you can redistribute it and/or modify
+   8:layer1/agc.c  ****  * it under the terms of the GNU General Public License as published by
+   9:layer1/agc.c  ****  * the Free Software Foundation; either version 2 of the License, or
+  10:layer1/agc.c  ****  * (at your option) any later version.
+  11:layer1/agc.c  ****  *
+  12:layer1/agc.c  ****  * This program is distributed in the hope that it will be useful,
+  13:layer1/agc.c  ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  14:layer1/agc.c  ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  15:layer1/agc.c  ****  * GNU General Public License for more details.
+  16:layer1/agc.c  ****  *
+  17:layer1/agc.c  ****  * You should have received a copy of the GNU General Public License along
+  18:layer1/agc.c  ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  19:layer1/agc.c  ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  20:layer1/agc.c  ****  *
+  21:layer1/agc.c  ****  */
+  22:layer1/agc.c  **** 
+  23:layer1/agc.c  **** #include <stdint.h>
+  24:layer1/agc.c  **** #include <stdio.h>
+  25:layer1/agc.c  **** 
+  26:layer1/agc.c  **** #include <osmocom/gsm/gsm_utils.h>
+  27:layer1/agc.c  **** #include <debug.h>
+  28:layer1/agc.c  **** #include <rffe.h>
+  29:layer1/agc.c  **** 
+  30:layer1/agc.c  **** #include <layer1/agc.h>
+  31:layer1/agc.c  **** #include <calypso/dsp.h>
+  32:layer1/agc.c  **** 
+  33:layer1/agc.c  **** /* compute the input level present at the antenna based on a baseband
+  34:layer1/agc.c  ****  * power measurement of the DSP at baseband */
+  35:layer1/agc.c  **** int16_t agc_inp_dbm8_by_pm(int16_t pm)
+  36:layer1/agc.c  **** {
+  17              		.loc 1 36 0
+  18              		@ args = 0, pretend = 0, frame = 0
+  19              		@ frame_needed = 0, uses_anonymous_args = 0
+  20              	.LVL0:
+  21 0000 10402DE9 		stmfd	sp!, {r4, lr}
+  22              	.LCFI0:
+  23              		.loc 1 36 0
+  24 0004 0048A0E1 		mov	r4, r0, asl #16
+  37:layer1/agc.c  **** 	/* pm is in 1/8 dBm at baseband */
+  38:layer1/agc.c  **** 	int16_t total_gain_dbm8;
+  39:layer1/agc.c  **** 
+  40:layer1/agc.c  **** 	/* compute total current gain */
+  41:layer1/agc.c  **** 	total_gain_dbm8 = (system_inherent_gain + rffe_get_gain()) * 8;
+  25              		.loc 1 41 0
+  26 0008 FEFFFFEB 		bl	rffe_get_gain
+  27              	.LVL1:
+  28 000c 18309FE5 		ldr	r3, .L3
+  29 0010 0030D3E5 		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+  30              		.loc 1 36 0
+  31 0014 2448A0E1 		mov	r4, r4, lsr #16
+  32              	.LVL2:
+  33              		.loc 1 41 0
+  34 0018 003083E0 		add	r3, r3, r0
+  35 001c 834144E0 		sub	r4, r4, r3, asl #3
+  36              	.LVL3:
+  37 0020 0448A0E1 		mov	r4, r4, asl #16
+  42:layer1/agc.c  **** 
+  43:layer1/agc.c  **** 	/* subtract gain from power measurement at baseband level */
+  44:layer1/agc.c  **** 	return pm - total_gain_dbm8;
+  45:layer1/agc.c  **** }
+  38              		.loc 1 45 0
+  39 0024 4408A0E1 		mov	r0, r4, asr #16
+  40 0028 1080BDE8 		ldmfd	sp!, {r4, pc}
+  41              	.L4:
+  42              		.align	2
+  43              	.L3:
+  44 002c 00000000 		.word	system_inherent_gain
+  45              	.LFE6:
+  47              		.section	.text.agc_il_by_dbm8,"ax",%progbits
+  48              		.align	2
+  49              		.global	agc_il_by_dbm8
+  51              	agc_il_by_dbm8:
+  52              	.LFB7:
+  46:layer1/agc.c  **** 
+  47:layer1/agc.c  **** uint8_t agc_il_by_dbm8(int16_t dbm8)
+  48:layer1/agc.c  **** {
+  53              		.loc 1 48 0
+  54              		@ args = 0, pretend = 0, frame = 0
+  55              		@ frame_needed = 0, uses_anonymous_args = 0
+  56              		@ link register save eliminated.
+  57              	.LVL4:
+  58 0000 0008A0E1 		mov	r0, r0, asl #16
+  59              	.LVL5:
+  49:layer1/agc.c  **** 	uint16_t il;
+  50:layer1/agc.c  **** 
+  51:layer1/agc.c  **** 	/* convert from 1/8 dBm to l1c format: [220..0] in -1/2dBm unit */
+  52:layer1/agc.c  **** 	if (dbm8 >= 0)
+  60              		.loc 1 52 0
+  61 0004 000050E3 		cmp	r0, #0
+  62 0008 2008A0E1 		mov	r0, r0, lsr #16
+  63              	.LVL6:
+  53:layer1/agc.c  **** 		il = 0;
+  54:layer1/agc.c  **** 	else
+  55:layer1/agc.c  **** 		il = -dbm8;
+  64              		.loc 1 55 0
+  65 000c 000060E2 		rsb	r0, r0, #0
+  66              	.LVL7:
+  67              		.loc 1 48 0
+  68              		@ lr needed for prologue
+  69              		.loc 1 52 0
+  70 0010 0030A0E3 		mov	r3, #0
+  71              	.LVL8:
+  72              		.loc 1 55 0
+  73 0014 0008A0E1 		mov	r0, r0, asl #16
+  74              		.loc 1 52 0
+  75 0018 080000AA 		bge	.L8
+  76              		.loc 1 55 0
+  77 001c 2038A0E1 		mov	r3, r0, lsr #16
+  56:layer1/agc.c  **** 
+  57:layer1/agc.c  **** 	/* saturate */
+  58:layer1/agc.c  **** 	if (il > 4 * 255)
+  78              		.loc 1 58 0
+  79 0020 FF0F53E3 		cmp	r3, #1020
+  80 0024 FF3FA023 		movcs	r3, #1020
+  81              	.L8:
+  82 0028 2301A0E1 		mov	r0, r3, lsr #2
+  59:layer1/agc.c  **** 		il = 4 * 255;
+  60:layer1/agc.c  **** 
+  61:layer1/agc.c  **** 	return (uint8_t)(il >> 2);
+  62:layer1/agc.c  **** }
+  83              		.loc 1 62 0
+  84 002c FF0000E2 		and	r0, r0, #255
+  85 0030 1EFF2FE1 		bx	lr
+  86              	.LFE7:
+ 130              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 agc.c
+     /tmp/ccisVi8T.s:14     .text.agc_inp_dbm8_by_pm:0000000000000000 agc_inp_dbm8_by_pm
+     /tmp/ccisVi8T.s:21     .text.agc_inp_dbm8_by_pm:0000000000000000 $a
+     /tmp/ccisVi8T.s:44     .text.agc_inp_dbm8_by_pm:000000000000002c $d
+     /tmp/ccisVi8T.s:51     .text.agc_il_by_dbm8:0000000000000000 agc_il_by_dbm8
+     /tmp/ccisVi8T.s:58     .text.agc_il_by_dbm8:0000000000000000 $a
+
+UNDEFINED SYMBOLS
+rffe_get_gain
+system_inherent_gain

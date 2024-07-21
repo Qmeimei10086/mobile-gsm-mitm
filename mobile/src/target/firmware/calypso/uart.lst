@@ -1,0 +1,1507 @@
+   1              		.file	"uart.c"
+   9              	.Ltext0:
+  10              		.section	.rodata
+  11              		.align	1
+  14              	divider:
+  15 0000 1500     		.short	21
+  16 0002 0E00     		.short	14
+  17 0004 0700     		.short	7
+  18 0006 0400     		.short	4
+  19 0008 0200     		.short	2
+  20 000a 0000     		.space	2
+  21 000c 0100     		.short	1
+  24              	uart2irq:
+  25 000e 12       		.byte	18
+  26 000f 07       		.byte	7
+  27              		.section	.text.uart_set_lcr7bit,"ax",%progbits
+  28              		.align	2
+  30              	uart_set_lcr7bit:
+  31              	.LFB39:
+  32              		.file 1 "calypso/uart.c"
+   1:calypso/uart.c **** /* Calypso DBB internal UART Driver */
+   2:calypso/uart.c **** 
+   3:calypso/uart.c **** /* (C) 2010 by Harald Welte <laforge@gnumonks.org>
+   4:calypso/uart.c ****  * (C) 2010 by Ingo Albrecht <prom@berlin.ccc.de>
+   5:calypso/uart.c ****  *
+   6:calypso/uart.c ****  * All Rights Reserved
+   7:calypso/uart.c ****  *
+   8:calypso/uart.c ****  * This program is free software; you can redistribute it and/or modify
+   9:calypso/uart.c ****  * it under the terms of the GNU General Public License as published by
+  10:calypso/uart.c ****  * the Free Software Foundation; either version 2 of the License, or
+  11:calypso/uart.c ****  * (at your option) any later version.
+  12:calypso/uart.c ****  *
+  13:calypso/uart.c ****  * This program is distributed in the hope that it will be useful,
+  14:calypso/uart.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  15:calypso/uart.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  16:calypso/uart.c ****  * GNU General Public License for more details.
+  17:calypso/uart.c ****  *
+  18:calypso/uart.c ****  * You should have received a copy of the GNU General Public License along
+  19:calypso/uart.c ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  20:calypso/uart.c ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  21:calypso/uart.c ****  *
+  22:calypso/uart.c ****  */
+  23:calypso/uart.c **** 
+  24:calypso/uart.c **** #include <debug.h>
+  25:calypso/uart.c **** 
+  26:calypso/uart.c **** #include <memory.h>
+  27:calypso/uart.c **** #include <stdint.h>
+  28:calypso/uart.c **** #include <string.h>
+  29:calypso/uart.c **** #include <stdio.h>
+  30:calypso/uart.c **** 
+  31:calypso/uart.c **** #include <defines.h>
+  32:calypso/uart.c **** #include <console.h>
+  33:calypso/uart.c **** #include <comm/sercomm.h>
+  34:calypso/uart.c **** 
+  35:calypso/uart.c **** #include <calypso/irq.h>
+  36:calypso/uart.c **** #include <uart.h>
+  37:calypso/uart.c **** 
+  38:calypso/uart.c **** #define BASE_ADDR_UART_MODEM	0xffff5000
+  39:calypso/uart.c **** #define OFFSET_IRDA		0x800
+  40:calypso/uart.c **** 
+  41:calypso/uart.c **** #define UART_REG(n,m)	(BASE_ADDR_UART_MODEM + ((n)*OFFSET_IRDA)+(m))
+  42:calypso/uart.c **** 
+  43:calypso/uart.c **** #define LCR7BIT		0x80
+  44:calypso/uart.c **** #define LCRBFBIT	0x40
+  45:calypso/uart.c **** #define MCR6BIT		0x20
+  46:calypso/uart.c **** #define REG_OFFS(m)	((m) & ~(LCR7BIT|LCRBFBIT|MCR6BIT))
+  47:calypso/uart.c **** /* read access LCR[7] = 0 */
+  48:calypso/uart.c **** enum uart_reg {
+  49:calypso/uart.c **** 	RHR	= 0,
+  50:calypso/uart.c **** 	IER	= 1,
+  51:calypso/uart.c **** 	IIR	= 2,
+  52:calypso/uart.c **** 	LCR	= 3,
+  53:calypso/uart.c **** 	MCR	= 4,
+  54:calypso/uart.c **** 	LSR	= 5,
+  55:calypso/uart.c **** 	MSR	= 6,
+  56:calypso/uart.c **** 	SPR	= 7,
+  57:calypso/uart.c **** 	MDR1	= 8,
+  58:calypso/uart.c **** 	DMR2	= 9,
+  59:calypso/uart.c **** 	SFLSR	= 0x0a,
+  60:calypso/uart.c **** 	RESUME	= 0x0b,
+  61:calypso/uart.c **** 	SFREGL	= 0x0c,
+  62:calypso/uart.c **** 	SFREGH	= 0x0d,
+  63:calypso/uart.c **** 	BLR	= 0x0e,
+  64:calypso/uart.c **** 	ACREG	= 0x0f,
+  65:calypso/uart.c **** 	SCR	= 0x10,
+  66:calypso/uart.c **** 	SSR	= 0x11,
+  67:calypso/uart.c **** 	EBLR	= 0x12,
+  68:calypso/uart.c **** /* read access LCR[7] = 1 */
+  69:calypso/uart.c **** 	DLL	= RHR | LCR7BIT,
+  70:calypso/uart.c **** 	DLH	= IER | LCR7BIT,
+  71:calypso/uart.c **** 	DIV1_6	= ACREG | LCR7BIT,
+  72:calypso/uart.c **** /* read/write access LCR[7:0] = 0xbf */
+  73:calypso/uart.c **** 	EFR	= IIR | LCRBFBIT,
+  74:calypso/uart.c **** 	XON1	= MCR | LCRBFBIT,
+  75:calypso/uart.c **** 	XON2	= LSR | LCRBFBIT,
+  76:calypso/uart.c **** 	XOFF1	= MSR | LCRBFBIT,
+  77:calypso/uart.c **** 	XOFF2 	= SPR | LCRBFBIT,
+  78:calypso/uart.c **** /* read/write access if EFR[4] = 1 and MCR[6] = 1 */
+  79:calypso/uart.c **** 	TCR	= MSR | MCR6BIT,
+  80:calypso/uart.c **** 	TLR	= SPR | MCR6BIT,
+  81:calypso/uart.c **** };
+  82:calypso/uart.c **** /* write access LCR[7] = 0 */
+  83:calypso/uart.c **** #define THR	RHR
+  84:calypso/uart.c **** #define FCR	IIR		/* only if EFR[4] = 1 */
+  85:calypso/uart.c **** #define TXFLL	SFLSR
+  86:calypso/uart.c **** #define TXFLH	RESUME
+  87:calypso/uart.c **** #define RXFLL	SFREGL
+  88:calypso/uart.c **** #define RXFLH	SFREGH
+  89:calypso/uart.c **** 
+  90:calypso/uart.c **** enum fcr_bits {
+  91:calypso/uart.c **** 	FIFO_EN		= (1 << 0),
+  92:calypso/uart.c **** 	RX_FIFO_CLEAR	= (1 << 1),
+  93:calypso/uart.c **** 	TX_FIFO_CLEAR	= (1 << 2),
+  94:calypso/uart.c **** 	DMA_MODE	= (1 << 3),
+  95:calypso/uart.c **** };
+  96:calypso/uart.c **** #define TX_FIFO_TRIG_SHIFT	4
+  97:calypso/uart.c **** #define RX_FIFO_TRIG_SHIFT	6
+  98:calypso/uart.c **** 
+  99:calypso/uart.c **** enum iir_bits {
+ 100:calypso/uart.c **** 	IIR_INT_PENDING			= 0x01,
+ 101:calypso/uart.c **** 	IIR_INT_TYPE			= 0x3E,
+ 102:calypso/uart.c **** 	IIR_INT_TYPE_RX_STATUS_ERROR 	= 0x06,
+ 103:calypso/uart.c **** 	IIR_INT_TYPE_RX_TIMEOUT		= 0x0C,
+ 104:calypso/uart.c **** 	IIR_INT_TYPE_RHR		= 0x04,
+ 105:calypso/uart.c **** 	IIR_INT_TYPE_THR		= 0x02,
+ 106:calypso/uart.c **** 	IIR_INT_TYPE_MSR		= 0x00,
+ 107:calypso/uart.c **** 	IIR_INT_TYPE_XOFF		= 0x10,
+ 108:calypso/uart.c **** 	IIR_INT_TYPE_FLOW		= 0x20,
+ 109:calypso/uart.c **** 	IIR_FCR0_MIRROR			= 0xC0,
+ 110:calypso/uart.c **** };
+ 111:calypso/uart.c **** 
+ 112:calypso/uart.c **** #define UART_REG_UIR	0xffff6000
+ 113:calypso/uart.c **** 
+ 114:calypso/uart.c **** /* enable or disable the divisor latch for access to DLL, DLH */
+ 115:calypso/uart.c **** static void uart_set_lcr7bit(int uart, int on)
+ 116:calypso/uart.c **** {
+  33              		.loc 1 116 0
+  34              		@ args = 0, pretend = 0, frame = 0
+  35              		@ frame_needed = 0, uses_anonymous_args = 0
+  36              		@ link register save eliminated.
+  37              	.LVL0:
+ 117:calypso/uart.c **** 	uint8_t reg;
+ 118:calypso/uart.c **** 
+ 119:calypso/uart.c **** 	reg = readb(UART_REG(uart, LCR));
+  38              		.loc 1 119 0
+  39 0000 8005A0E1 		mov	r0, r0, asl #11
+  40              	.LVL1:
+  41 0004 AF0C40E2 		sub	r0, r0, #44800
+  42 0008 FD0040E2 		sub	r0, r0, #253
+  43 000c 0030D0E5 		ldrb	r3, [r0, #0]	@ zero_extendqisi2
+ 120:calypso/uart.c **** 	if (on)
+  44              		.loc 1 120 0
+  45 0010 000051E3 		cmp	r1, #0
+ 121:calypso/uart.c **** 		reg |= (1 << 7);
+ 122:calypso/uart.c **** 	else
+ 123:calypso/uart.c **** 		reg &= ~(1 << 7);
+  46              		.loc 1 123 0
+  47 0014 7F2003E2 		and	r2, r3, #127
+  48              	.LVL2:
+  49              		.loc 1 119 0
+  50 0018 FF3003E2 		and	r3, r3, #255
+  51              	.LVL3:
+  52              		.loc 1 121 0
+  53 001c 80208313 		orrne	r2, r3, #128
+  54              		.loc 1 116 0
+  55              		@ lr needed for prologue
+ 124:calypso/uart.c **** 	writeb(reg, UART_REG(uart, LCR));
+  56              		.loc 1 124 0
+  57 0020 0020C0E5 		strb	r2, [r0, #0]
+ 125:calypso/uart.c **** }
+  58              		.loc 1 125 0
+  59 0024 1EFF2FE1 		bx	lr
+  60              	.LFE39:
+  62              		.section	.text.uart_set_lcr_bf,"ax",%progbits
+  63              		.align	2
+  65              	uart_set_lcr_bf:
+  66              	.LFB40:
+ 126:calypso/uart.c **** 
+ 127:calypso/uart.c **** static uint8_t old_lcr;
+ 128:calypso/uart.c **** static void uart_set_lcr_bf(int uart, int on)
+ 129:calypso/uart.c **** {
+  67              		.loc 1 129 0
+  68              		@ args = 0, pretend = 0, frame = 0
+  69              		@ frame_needed = 0, uses_anonymous_args = 0
+  70              		@ link register save eliminated.
+  71              	.LVL4:
+ 130:calypso/uart.c **** 	if (on) {
+ 131:calypso/uart.c **** 		old_lcr = readb(UART_REG(uart, LCR));
+  72              		.loc 1 131 0
+  73 0000 24C09FE5 		ldr	ip, .L11
+  74              		.loc 1 130 0
+  75 0004 000051E3 		cmp	r1, #0
+  76 0008 20209FE5 		ldr	r2, .L11+4
+  77              		.loc 1 131 0
+  78 000c 8035DC17 		ldrneb	r3, [ip, r0, asl #11]	@ zero_extendqisi2
+ 132:calypso/uart.c **** 		writeb(0xBF, UART_REG(uart, LCR));
+ 133:calypso/uart.c **** 	} else {
+ 134:calypso/uart.c **** 		writeb(old_lcr, UART_REG(uart, LCR));
+  79              		.loc 1 134 0
+  80 0010 0020D205 		ldreqb	r2, [r2, #0]	@ zero_extendqisi2
+  81 0014 10309F05 		ldreq	r3, .L11
+  82              		.loc 1 131 0
+  83 0018 0030C215 		strneb	r3, [r2, #0]
+  84              		.loc 1 132 0
+  85 001c 4030E013 		mvnne	r3, #64
+  86              		.loc 1 129 0
+  87              		@ lr needed for prologue
+  88              		.loc 1 132 0
+  89 0020 8035CC17 		strneb	r3, [ip, r0, asl #11]
+  90              		.loc 1 134 0
+  91 0024 8025C307 		streqb	r2, [r3, r0, asl #11]
+  92 0028 1EFF2FE1 		bx	lr
+  93              	.L12:
+  94              		.align	2
+  95              	.L11:
+  96 002c 0350FFFF 		.word	-45053
+  97 0030 00000000 		.word	old_lcr
+  98              	.LFE40:
+ 100              		.section	.text.uart_set_mcr6bit,"ax",%progbits
+ 101              		.align	2
+ 103              	uart_set_mcr6bit:
+ 104              	.LFB41:
+ 135:calypso/uart.c **** 	}
+ 136:calypso/uart.c **** }
+ 137:calypso/uart.c **** 
+ 138:calypso/uart.c **** /* Enable or disable the TCR_TLR latch bit in MCR[6] */
+ 139:calypso/uart.c **** static void uart_set_mcr6bit(int uart, int on)
+ 140:calypso/uart.c **** {
+ 105              		.loc 1 140 0
+ 106              		@ args = 0, pretend = 0, frame = 0
+ 107              		@ frame_needed = 0, uses_anonymous_args = 0
+ 108              		@ link register save eliminated.
+ 109              	.LVL5:
+ 141:calypso/uart.c **** 	uint8_t mcr;
+ 142:calypso/uart.c **** 	/* we assume EFR[4] is always set to 1 */
+ 143:calypso/uart.c **** 	mcr = readb(UART_REG(uart, MCR));
+ 110              		.loc 1 143 0
+ 111 0000 8005A0E1 		mov	r0, r0, asl #11
+ 112              	.LVL6:
+ 113 0004 AF0C40E2 		sub	r0, r0, #44800
+ 114 0008 FC0040E2 		sub	r0, r0, #252
+ 115 000c 0030D0E5 		ldrb	r3, [r0, #0]	@ zero_extendqisi2
+ 144:calypso/uart.c **** 	if (on)
+ 116              		.loc 1 144 0
+ 117 0010 000051E3 		cmp	r1, #0
+ 145:calypso/uart.c **** 		mcr |= (1 << 6);
+ 146:calypso/uart.c **** 	else
+ 147:calypso/uart.c **** 		mcr &= ~(1 << 6);
+ 118              		.loc 1 147 0
+ 119 0014 BF2003E2 		and	r2, r3, #191
+ 120              	.LVL7:
+ 121              		.loc 1 143 0
+ 122 0018 FF3003E2 		and	r3, r3, #255
+ 123              	.LVL8:
+ 124              		.loc 1 145 0
+ 125 001c 40208313 		orrne	r2, r3, #64
+ 126              		.loc 1 140 0
+ 127              		@ lr needed for prologue
+ 148:calypso/uart.c **** 	writeb(mcr, UART_REG(uart, MCR));
+ 128              		.loc 1 148 0
+ 129 0020 0020C0E5 		strb	r2, [r0, #0]
+ 149:calypso/uart.c **** }
+ 130              		.loc 1 149 0
+ 131 0024 1EFF2FE1 		bx	lr
+ 132              	.LFE41:
+ 134              		.section	.text.uart_reg_write,"ax",%progbits
+ 135              		.align	2
+ 137              	uart_reg_write:
+ 138              	.LFB42:
+ 150:calypso/uart.c **** 
+ 151:calypso/uart.c **** static void uart_reg_write(int uart, enum uart_reg reg, uint8_t val)
+ 152:calypso/uart.c **** {
+ 139              		.loc 1 152 0
+ 140              		@ args = 0, pretend = 0, frame = 0
+ 141              		@ frame_needed = 0, uses_anonymous_args = 0
+ 142              	.LVL9:
+ 153:calypso/uart.c **** 	if (reg & LCRBFBIT)
+ 143              		.loc 1 153 0
+ 144 0000 2133A0E1 		mov	r3, r1, lsr #6
+ 145              		.loc 1 152 0
+ 146 0004 F0402DE9 		stmfd	sp!, {r4, r5, r6, r7, lr}
+ 147              	.LCFI0:
+ 148              		.loc 1 153 0
+ 149 0008 016013E2 		ands	r6, r3, #1
+ 150              		.loc 1 152 0
+ 151 000c 0140A0E1 		mov	r4, r1
+ 152 0010 FF7002E2 		and	r7, r2, #255
+ 153 0014 0050A0E1 		mov	r5, r0
+ 154              		.loc 1 153 0
+ 155 0018 0800000A 		beq	.L19
+ 156              	.LVL10:
+ 154:calypso/uart.c **** 		uart_set_lcr_bf(uart, 1);
+ 157              		.loc 1 154 0
+ 158 001c 0110A0E3 		mov	r1, #1
+ 159 0020 FEFFFFEB 		bl	uart_set_lcr_bf
+ 160 0024 100000EA 		b	.L21
+ 161              	.LVL11:
+ 162              	.L19:
+ 155:calypso/uart.c **** 	else if (reg & LCR7BIT)
+ 163              		.loc 1 155 0
+ 164 0028 800011E3 		tst	r1, #128
+ 165 002c 0D00000A 		beq	.L22
+ 166              	.LVL12:
+ 156:calypso/uart.c **** 		uart_set_lcr7bit(uart, 1);
+ 167              		.loc 1 156 0
+ 168 0030 0110A0E3 		mov	r1, #1
+ 169              	.LVL13:
+ 170 0034 FEFFFFEB 		bl	uart_set_lcr7bit
+ 171 0038 100000EA 		b	.L21
+ 172              	.LVL14:
+ 173              	.L22:
+ 157:calypso/uart.c **** 	else if (reg & MCR6BIT)
+ 174              		.loc 1 157 0
+ 175 003c 200011E3 		tst	r1, #32
+ 158:calypso/uart.c **** 		uart_set_mcr6bit(uart, 1);
+ 176              		.loc 1 158 0
+ 177 0040 0110A013 		movne	r1, #1
+ 178              	.LVL15:
+ 179 0044 FEFFFF1B 		blne	uart_set_mcr6bit
+ 180              	.LVL16:
+ 181              	.L21:
+ 159:calypso/uart.c **** 
+ 160:calypso/uart.c **** 	writeb(val, UART_REG(uart, REG_OFFS(reg)));
+ 182              		.loc 1 160 0
+ 183 0048 E030C4E3 		bic	r3, r4, #224
+ 184 004c 853583E0 		add	r3, r3, r5, asl #11
+ 185 0050 0B3A43E2 		sub	r3, r3, #45056
+ 161:calypso/uart.c **** 
+ 162:calypso/uart.c **** 	if (reg & LCRBFBIT)
+ 186              		.loc 1 162 0
+ 187 0054 000056E3 		cmp	r6, #0
+ 188              		.loc 1 160 0
+ 189 0058 0070C3E5 		strb	r7, [r3, #0]
+ 190              		.loc 1 162 0
+ 191 005c 1A00000A 		beq	.L25
+ 163:calypso/uart.c **** 		uart_set_lcr_bf(uart, 0);
+ 192              		.loc 1 163 0
+ 193 0060 0500A0E1 		mov	r0, r5
+ 194 0064 0010A0E3 		mov	r1, #0
+ 164:calypso/uart.c **** 	else if (reg & LCR7BIT)
+ 165:calypso/uart.c **** 		uart_set_lcr7bit(uart, 0);
+ 166:calypso/uart.c **** 	else if (reg & MCR6BIT)
+ 167:calypso/uart.c **** 		uart_set_mcr6bit(uart, 0);
+ 168:calypso/uart.c **** }
+ 195              		.loc 1 168 0
+ 196 0068 F040BDE8 		ldmfd	sp!, {r4, r5, r6, r7, lr}
+ 197              		.loc 1 163 0
+ 198 006c FEFFFFEA 		b	uart_set_lcr_bf
+ 199              	.LVL17:
+ 200              	.L25:
+ 201              		.loc 1 164 0
+ 202 0070 801014E2 		ands	r1, r4, #128
+ 203 0074 2000000A 		beq	.L27
+ 204              		.loc 1 165 0
+ 205 0078 0500A0E1 		mov	r0, r5
+ 206 007c 0610A0E1 		mov	r1, r6
+ 207              		.loc 1 168 0
+ 208 0080 F040BDE8 		ldmfd	sp!, {r4, r5, r6, r7, lr}
+ 209              		.loc 1 165 0
+ 210 0084 FEFFFFEA 		b	uart_set_lcr7bit
+ 211              	.LVL18:
+ 212              	.L27:
+ 213              		.loc 1 166 0
+ 214 0088 200014E3 		tst	r4, #32
+ 215 008c F080BD08 		ldmeqfd	sp!, {r4, r5, r6, r7, pc}
+ 216              		.loc 1 167 0
+ 217 0090 0500A0E1 		mov	r0, r5
+ 218              		.loc 1 168 0
+ 219 0094 F040BDE8 		ldmfd	sp!, {r4, r5, r6, r7, lr}
+ 220              		.loc 1 167 0
+ 221 0098 FEFFFFEA 		b	uart_set_mcr6bit
+ 222              	.LFE42:
+ 224              		.section	.text.uart_reg_read,"ax",%progbits
+ 225              		.align	2
+ 227              	uart_reg_read:
+ 228              	.LFB43:
+ 169:calypso/uart.c **** 
+ 170:calypso/uart.c **** /* read from a UART register, applying any required latch bits */
+ 171:calypso/uart.c **** static uint8_t uart_reg_read(int uart, enum uart_reg reg)
+ 172:calypso/uart.c **** {
+ 229              		.loc 1 172 0
+ 230              		@ args = 0, pretend = 0, frame = 0
+ 231              		@ frame_needed = 0, uses_anonymous_args = 0
+ 232              	.LVL19:
+ 173:calypso/uart.c **** 	uint8_t ret;
+ 174:calypso/uart.c **** 
+ 175:calypso/uart.c **** 	if (reg & LCRBFBIT)
+ 233              		.loc 1 175 0
+ 234 0000 2133A0E1 		mov	r3, r1, lsr #6
+ 235              		.loc 1 172 0
+ 236 0004 F0402DE9 		stmfd	sp!, {r4, r5, r6, r7, lr}
+ 237              	.LCFI1:
+ 238              		.loc 1 175 0
+ 239 0008 016013E2 		ands	r6, r3, #1
+ 240              		.loc 1 172 0
+ 241 000c 0140A0E1 		mov	r4, r1
+ 242 0010 0050A0E1 		mov	r5, r0
+ 243              		.loc 1 175 0
+ 244 0014 0700000A 		beq	.L33
+ 245              	.LVL20:
+ 176:calypso/uart.c **** 		uart_set_lcr_bf(uart, 1);
+ 246              		.loc 1 176 0
+ 247 0018 0110A0E3 		mov	r1, #1
+ 248 001c FEFFFFEB 		bl	uart_set_lcr_bf
+ 249 0020 0F0000EA 		b	.L35
+ 250              	.LVL21:
+ 251              	.L33:
+ 177:calypso/uart.c **** 	else if (reg & LCR7BIT)
+ 252              		.loc 1 177 0
+ 253 0024 800011E3 		tst	r1, #128
+ 254 0028 0C00000A 		beq	.L36
+ 255              	.LVL22:
+ 178:calypso/uart.c **** 		uart_set_lcr7bit(uart, 1);
+ 256              		.loc 1 178 0
+ 257 002c 0110A0E3 		mov	r1, #1
+ 258              	.LVL23:
+ 259 0030 FEFFFFEB 		bl	uart_set_lcr7bit
+ 260 0034 0F0000EA 		b	.L35
+ 261              	.LVL24:
+ 262              	.L36:
+ 179:calypso/uart.c **** 	else if (reg & MCR6BIT)
+ 263              		.loc 1 179 0
+ 264 0038 200011E3 		tst	r1, #32
+ 180:calypso/uart.c **** 		uart_set_mcr6bit(uart, 1);
+ 265              		.loc 1 180 0
+ 266 003c 0110A013 		movne	r1, #1
+ 267              	.LVL25:
+ 268 0040 FEFFFF1B 		blne	uart_set_mcr6bit
+ 269              	.LVL26:
+ 270              	.L35:
+ 181:calypso/uart.c **** 
+ 182:calypso/uart.c **** 	ret = readb(UART_REG(uart, REG_OFFS(reg)));
+ 271              		.loc 1 182 0
+ 272 0044 E030C4E3 		bic	r3, r4, #224
+ 273 0048 853583E0 		add	r3, r3, r5, asl #11
+ 274 004c 0B3A43E2 		sub	r3, r3, #45056
+ 275 0050 0030D3E5 		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 183:calypso/uart.c **** 
+ 184:calypso/uart.c **** 	if (reg & LCRBFBIT)
+ 276              		.loc 1 184 0
+ 277 0054 000056E3 		cmp	r6, #0
+ 278              		.loc 1 182 0
+ 279 0058 FF7003E2 		and	r7, r3, #255
+ 280              	.LVL27:
+ 281              		.loc 1 184 0
+ 282 005c 1A00000A 		beq	.L39
+ 185:calypso/uart.c **** 		uart_set_lcr_bf(uart, 0);
+ 283              		.loc 1 185 0
+ 284 0060 0500A0E1 		mov	r0, r5
+ 285 0064 0010A0E3 		mov	r1, #0
+ 286 0068 FEFFFFEB 		bl	uart_set_lcr_bf
+ 287 006c 230000EA 		b	.L41
+ 288              	.LVL28:
+ 289              	.L39:
+ 186:calypso/uart.c **** 	else if (reg & LCR7BIT)
+ 290              		.loc 1 186 0
+ 291 0070 801014E2 		ands	r1, r4, #128
+ 292 0074 2000000A 		beq	.L42
+ 187:calypso/uart.c **** 		uart_set_lcr7bit(uart, 0);
+ 293              		.loc 1 187 0
+ 294 0078 0500A0E1 		mov	r0, r5
+ 295 007c 0610A0E1 		mov	r1, r6
+ 296 0080 FEFFFFEB 		bl	uart_set_lcr7bit
+ 297 0084 230000EA 		b	.L41
+ 298              	.LVL29:
+ 299              	.L42:
+ 188:calypso/uart.c **** 	else if (reg & MCR6BIT)
+ 300              		.loc 1 188 0
+ 301 0088 200014E3 		tst	r4, #32
+ 189:calypso/uart.c **** 		uart_set_mcr6bit(uart, 0);
+ 302              		.loc 1 189 0
+ 303 008c 0500A011 		movne	r0, r5
+ 304 0090 FEFFFF1B 		blne	uart_set_mcr6bit
+ 305              	.LVL30:
+ 306              	.L41:
+ 190:calypso/uart.c **** 
+ 191:calypso/uart.c **** 	return ret;
+ 192:calypso/uart.c **** }
+ 307              		.loc 1 192 0
+ 308 0094 0700A0E1 		mov	r0, r7
+ 309 0098 F080BDE8 		ldmfd	sp!, {r4, r5, r6, r7, pc}
+ 310              	.LFE43:
+ 312              		.section	.text.uart_irq_handler_cons,"ax",%progbits
+ 313              		.align	2
+ 315              	uart_irq_handler_cons:
+ 316              	.LFB44:
+ 193:calypso/uart.c **** 
+ 194:calypso/uart.c **** static void uart_irq_handler_cons(__unused enum irq_nr irqnr)
+ 195:calypso/uart.c **** {
+ 317              		.loc 1 195 0
+ 318              		@ args = 0, pretend = 0, frame = 0
+ 319              		@ frame_needed = 0, uses_anonymous_args = 0
+ 320              	.LVL31:
+ 321 0000 30402DE9 		stmfd	sp!, {r4, r5, lr}
+ 322              	.LCFI2:
+ 196:calypso/uart.c **** 	const uint8_t uart = cons_get_uart();
+ 323              		.loc 1 196 0
+ 324 0004 FEFFFFEB 		bl	cons_get_uart
+ 325              	.LVL32:
+ 197:calypso/uart.c **** 	uint8_t iir;
+ 198:calypso/uart.c **** 
+ 199:calypso/uart.c **** 	//uart_putchar_nb(uart, 'U');
+ 200:calypso/uart.c **** 
+ 201:calypso/uart.c **** 	iir = uart_reg_read(uart, IIR);
+ 326              		.loc 1 201 0
+ 327 0008 FF5000E2 		and	r5, r0, #255
+ 328 000c 0210A0E3 		mov	r1, #2
+ 329 0010 0500A0E1 		mov	r0, r5
+ 330 0014 FEFFFFEB 		bl	uart_reg_read
+ 202:calypso/uart.c **** 	if (iir & IIR_INT_PENDING)
+ 331              		.loc 1 202 0
+ 332 0018 010010E3 		tst	r0, #1
+ 203:calypso/uart.c **** 		return;
+ 204:calypso/uart.c **** 
+ 205:calypso/uart.c **** 	switch (iir & IIR_INT_TYPE) {
+ 333              		.loc 1 205 0
+ 334 001c 3E3000E2 		and	r3, r0, #62
+ 335              		.loc 1 202 0
+ 336 0020 3080BD18 		ldmnefd	sp!, {r4, r5, pc}
+ 337              		.loc 1 205 0
+ 338 0024 020053E3 		cmp	r3, #2
+ 339 0028 3080BD18 		ldmnefd	sp!, {r4, r5, pc}
+ 206:calypso/uart.c **** 	case IIR_INT_TYPE_RHR:
+ 207:calypso/uart.c **** 		break;
+ 208:calypso/uart.c **** 	case IIR_INT_TYPE_THR:
+ 209:calypso/uart.c **** 		if (cons_rb_flush() == 1) {
+ 340              		.loc 1 209 0
+ 341 002c FEFFFFEB 		bl	cons_rb_flush
+ 342 0030 0040A0E1 		mov	r4, r0
+ 343 0034 010054E3 		cmp	r4, #1
+ 344              	.LBB2:
+ 210:calypso/uart.c **** 			/* everything was flushed, disable THR IRQ */
+ 211:calypso/uart.c **** 			uint8_t ier = uart_reg_read(uart, IER);
+ 345              		.loc 1 211 0
+ 346 0038 0010A0E1 		mov	r1, r0
+ 347 003c 0500A0E1 		mov	r0, r5
+ 348              	.LBE2:
+ 349              		.loc 1 209 0
+ 350 0040 3080BD18 		ldmnefd	sp!, {r4, r5, pc}
+ 351              	.LBB3:
+ 352              		.loc 1 211 0
+ 353 0044 FEFFFFEB 		bl	uart_reg_read
+ 212:calypso/uart.c **** 			ier &= ~(1 << 1);
+ 213:calypso/uart.c **** 			uart_reg_write(uart, IER, ier);
+ 354              		.loc 1 213 0
+ 355 0048 0410A0E1 		mov	r1, r4
+ 356 004c FD2000E2 		and	r2, r0, #253
+ 357 0050 0500A0E1 		mov	r0, r5
+ 358              	.LBE3:
+ 214:calypso/uart.c **** 		}
+ 215:calypso/uart.c **** 		break;
+ 216:calypso/uart.c **** 	case IIR_INT_TYPE_MSR:
+ 217:calypso/uart.c **** 		break;
+ 218:calypso/uart.c **** 	case IIR_INT_TYPE_RX_STATUS_ERROR:
+ 219:calypso/uart.c **** 		break;
+ 220:calypso/uart.c **** 	case IIR_INT_TYPE_RX_TIMEOUT:
+ 221:calypso/uart.c **** 		break;
+ 222:calypso/uart.c **** 	case IIR_INT_TYPE_XOFF:
+ 223:calypso/uart.c **** 		break;
+ 224:calypso/uart.c **** 	}
+ 225:calypso/uart.c **** }
+ 359              		.loc 1 225 0
+ 360 0054 3040BDE8 		ldmfd	sp!, {r4, r5, lr}
+ 361              	.LBB4:
+ 362              		.loc 1 213 0
+ 363 0058 FEFFFFEA 		b	uart_reg_write
+ 364              	.LBE4:
+ 365              	.LFE44:
+ 367              		.section	.text.uart_irq_enable,"ax",%progbits
+ 368              		.align	2
+ 369              		.global	uart_irq_enable
+ 371              	uart_irq_enable:
+ 372              	.LFB48:
+ 226:calypso/uart.c **** 
+ 227:calypso/uart.c **** static void uart_irq_handler_sercomm(__unused enum irq_nr irqnr)
+ 228:calypso/uart.c **** {
+ 229:calypso/uart.c **** 	const uint8_t uart = sercomm_get_uart();
+ 230:calypso/uart.c **** 	uint8_t iir, ch;
+ 231:calypso/uart.c **** 
+ 232:calypso/uart.c **** 	//uart_putchar_nb(uart, 'U');
+ 233:calypso/uart.c **** 
+ 234:calypso/uart.c **** 	iir = uart_reg_read(uart, IIR);
+ 235:calypso/uart.c **** 	if (iir & IIR_INT_PENDING)
+ 236:calypso/uart.c **** 		return;
+ 237:calypso/uart.c **** 
+ 238:calypso/uart.c **** 	switch (iir & IIR_INT_TYPE) {
+ 239:calypso/uart.c **** 	case IIR_INT_TYPE_RX_TIMEOUT:
+ 240:calypso/uart.c **** 	case IIR_INT_TYPE_RHR:
+ 241:calypso/uart.c **** 		/* as long as we have rx data available */
+ 242:calypso/uart.c **** 		while (uart_getchar_nb(uart, &ch)) {
+ 243:calypso/uart.c **** 			if (sercomm_drv_rx_char(ch) < 0) {
+ 244:calypso/uart.c **** 				/* sercomm cannot receive more data right now */
+ 245:calypso/uart.c **** 				uart_irq_enable(uart, UART_IRQ_RX_CHAR, 0);
+ 246:calypso/uart.c **** 			}
+ 247:calypso/uart.c **** 		}
+ 248:calypso/uart.c **** 		break;
+ 249:calypso/uart.c **** 	case IIR_INT_TYPE_THR:
+ 250:calypso/uart.c **** 		/* as long as we have space in the FIFO */
+ 251:calypso/uart.c **** 		while (!uart_tx_busy(uart)) {
+ 252:calypso/uart.c **** 			/* get a byte from sercomm */
+ 253:calypso/uart.c **** 			if (!sercomm_drv_pull(&ch)) {
+ 254:calypso/uart.c **** 				/* no more bytes in sercomm, stop TX interrupts */
+ 255:calypso/uart.c **** 				uart_irq_enable(uart, UART_IRQ_TX_EMPTY, 0);
+ 256:calypso/uart.c **** 				break;
+ 257:calypso/uart.c **** 			}
+ 258:calypso/uart.c **** 			/* write the byte into the TX FIFO */
+ 259:calypso/uart.c **** 			uart_putchar_nb(uart, ch);
+ 260:calypso/uart.c **** 		}
+ 261:calypso/uart.c **** 		break;
+ 262:calypso/uart.c **** 	case IIR_INT_TYPE_MSR:
+ 263:calypso/uart.c **** 		printf("UART IRQ MSR\n");
+ 264:calypso/uart.c **** 		break;
+ 265:calypso/uart.c **** 	case IIR_INT_TYPE_RX_STATUS_ERROR:
+ 266:calypso/uart.c **** 		printf("UART IRQ RX_SE\n");
+ 267:calypso/uart.c **** 		break;
+ 268:calypso/uart.c **** 	case IIR_INT_TYPE_XOFF:
+ 269:calypso/uart.c **** 		printf("UART IRQXOFF\n");
+ 270:calypso/uart.c **** 		break;
+ 271:calypso/uart.c **** 	}
+ 272:calypso/uart.c **** }
+ 273:calypso/uart.c **** 
+ 274:calypso/uart.c **** static const uint8_t uart2irq[] = {
+ 275:calypso/uart.c **** 	[0]	= IRQ_UART_IRDA,
+ 276:calypso/uart.c **** 	[1]	= IRQ_UART_MODEM,
+ 277:calypso/uart.c **** };
+ 278:calypso/uart.c **** 
+ 279:calypso/uart.c **** void uart_init(uint8_t uart, uint8_t interrupts)
+ 280:calypso/uart.c **** {
+ 281:calypso/uart.c **** 	uint8_t irq = uart2irq[uart];
+ 282:calypso/uart.c **** 
+ 283:calypso/uart.c **** 	uart_reg_write(uart, IER, 0x00);
+ 284:calypso/uart.c **** 	if (uart == cons_get_uart()) {
+ 285:calypso/uart.c **** 		cons_init();
+ 286:calypso/uart.c **** 		if(interrupts) {
+ 287:calypso/uart.c **** 			irq_register_handler(irq, &uart_irq_handler_cons);
+ 288:calypso/uart.c **** 			irq_config(irq, 0, 0, 0xff);
+ 289:calypso/uart.c **** 			irq_enable(irq);
+ 290:calypso/uart.c **** 		}
+ 291:calypso/uart.c **** 	} else if (uart == sercomm_get_uart()) {
+ 292:calypso/uart.c **** 		sercomm_init();
+ 293:calypso/uart.c **** 		if(interrupts) {
+ 294:calypso/uart.c **** 			irq_register_handler(irq, &uart_irq_handler_sercomm);
+ 295:calypso/uart.c **** 			irq_config(irq, 0, 0, 0xff);
+ 296:calypso/uart.c **** 			irq_enable(irq);
+ 297:calypso/uart.c **** 		}
+ 298:calypso/uart.c **** 		uart_irq_enable(uart, UART_IRQ_RX_CHAR, 1);
+ 299:calypso/uart.c **** 	} else {
+ 300:calypso/uart.c **** 		return;
+ 301:calypso/uart.c **** 	}
+ 302:calypso/uart.c **** #if 0
+ 303:calypso/uart.c **** 	if (uart == 1) {
+ 304:calypso/uart.c **** 		/* assign UART to MCU and unmask interrupts*/
+ 305:calypso/uart.c **** 		writeb(UART_REG_UIR, 0x00);
+ 306:calypso/uart.c **** 	}
+ 307:calypso/uart.c **** #endif
+ 308:calypso/uart.c **** 
+ 309:calypso/uart.c **** 	/* if we don't initialize these, we get strange corruptions in the
+ 310:calypso/uart.c **** 	   received data... :-( */
+ 311:calypso/uart.c **** 	uart_reg_write(uart,  MDR1, 0x07); /* turn off UART */
+ 312:calypso/uart.c **** 	uart_reg_write(uart,  XON1, 0x00); /* Xon1/Addr Register */
+ 313:calypso/uart.c **** 	uart_reg_write(uart,  XON2, 0x00); /* Xon2/Addr Register */
+ 314:calypso/uart.c **** 	uart_reg_write(uart, XOFF1, 0x00); /* Xoff1 Register */
+ 315:calypso/uart.c **** 	uart_reg_write(uart, XOFF2, 0x00); /* Xoff2 Register */
+ 316:calypso/uart.c **** 	uart_reg_write(uart,   EFR, 0x00); /* Enhanced Features Register */
+ 317:calypso/uart.c **** 
+ 318:calypso/uart.c **** 	/* select  UART mode */
+ 319:calypso/uart.c **** 	uart_reg_write(uart, MDR1, 0);
+ 320:calypso/uart.c **** 	/* no XON/XOFF flow control, ENHANCED_EN, no auto-RTS/CTS */
+ 321:calypso/uart.c **** 	uart_reg_write(uart, EFR, (1 << 4));
+ 322:calypso/uart.c **** 	/* enable Tx/Rx FIFO, Tx trigger at 56 spaces, Rx trigger at 60 chars */
+ 323:calypso/uart.c **** 	uart_reg_write(uart, FCR, FIFO_EN | RX_FIFO_CLEAR | TX_FIFO_CLEAR |
+ 324:calypso/uart.c **** 			(3 << TX_FIFO_TRIG_SHIFT) | (3 << RX_FIFO_TRIG_SHIFT));
+ 325:calypso/uart.c **** 
+ 326:calypso/uart.c **** 	/* THR interrupt only when TX FIFO and TX shift register are empty */
+ 327:calypso/uart.c **** 	uart_reg_write(uart, SCR, (1 << 0));// | (1 << 3));
+ 328:calypso/uart.c **** 
+ 329:calypso/uart.c **** 	/* 8 bit, 1 stop bit, no parity, no break */
+ 330:calypso/uart.c **** 	uart_reg_write(uart, LCR, 0x03);
+ 331:calypso/uart.c **** 
+ 332:calypso/uart.c **** 	uart_set_lcr7bit(uart, 0);
+ 333:calypso/uart.c **** }
+ 334:calypso/uart.c **** 
+ 335:calypso/uart.c **** void uart_poll(uint8_t uart) {
+ 336:calypso/uart.c **** 	if(uart == cons_get_uart()) {
+ 337:calypso/uart.c **** 		uart_irq_handler_cons(0);
+ 338:calypso/uart.c **** 	} else {
+ 339:calypso/uart.c **** 		uart_irq_handler_sercomm(0);
+ 340:calypso/uart.c **** 	}
+ 341:calypso/uart.c **** }
+ 342:calypso/uart.c **** 
+ 343:calypso/uart.c **** void uart_irq_enable(uint8_t uart, enum uart_irq irq, int on)
+ 344:calypso/uart.c **** {
+ 373              		.loc 1 344 0
+ 374              		@ args = 0, pretend = 0, frame = 0
+ 375              		@ frame_needed = 0, uses_anonymous_args = 0
+ 376              	.LVL33:
+ 377 0000 70402DE9 		stmfd	sp!, {r4, r5, r6, lr}
+ 378              	.LCFI3:
+ 379              		.loc 1 344 0
+ 380 0004 FF6000E2 		and	r6, r0, #255
+ 381 0008 0140A0E1 		mov	r4, r1
+ 345:calypso/uart.c **** 	uint8_t ier = uart_reg_read(uart, IER);
+ 382              		.loc 1 345 0
+ 383 000c 0600A0E1 		mov	r0, r6
+ 384              	.LVL34:
+ 385 0010 0110A0E3 		mov	r1, #1
+ 386              	.LVL35:
+ 387              		.loc 1 344 0
+ 388 0014 0250A0E1 		mov	r5, r2
+ 389              		.loc 1 345 0
+ 390 0018 FEFFFFEB 		bl	uart_reg_read
+ 391              	.LVL36:
+ 346:calypso/uart.c **** 	uint8_t mask = 0;
+ 347:calypso/uart.c **** 
+ 348:calypso/uart.c **** 	switch (irq) {
+ 392              		.loc 1 348 0
+ 393 001c 000054E3 		cmp	r4, #0
+ 394 0020 0210A003 		moveq	r1, #2
+ 395              	.LVL37:
+ 396 0024 0B00000A 		beq	.L56
+ 397 0028 010054E3 		cmp	r4, #1
+ 398 002c 0110A003 		moveq	r1, #1
+ 399 0030 0010A013 		movne	r1, #0
+ 400              	.L56:
+ 401              	.LVL38:
+ 349:calypso/uart.c **** 	case UART_IRQ_TX_EMPTY:
+ 350:calypso/uart.c **** 		mask = (1 << 1);
+ 351:calypso/uart.c **** 		break;
+ 352:calypso/uart.c **** 	case UART_IRQ_RX_CHAR:
+ 353:calypso/uart.c **** 		mask = (1 << 0);
+ 354:calypso/uart.c **** 		break;
+ 355:calypso/uart.c **** 	}
+ 356:calypso/uart.c **** 
+ 357:calypso/uart.c **** 	if (on)
+ 358:calypso/uart.c **** 		ier |= mask;
+ 402              		.loc 1 358 0
+ 403 0034 013080E1 		orr	r3, r0, r1
+ 404              		.loc 1 357 0
+ 405 0038 000055E3 		cmp	r5, #0
+ 359:calypso/uart.c **** 	else
+ 360:calypso/uart.c **** 		ier &= ~mask;
+ 406              		.loc 1 360 0
+ 407 003c 0100C0E1 		bic	r0, r0, r1
+ 408              	.LVL39:
+ 409              		.loc 1 358 0
+ 410 0040 FF2003E2 		and	r2, r3, #255
+ 411              	.LVL40:
+ 361:calypso/uart.c **** 
+ 362:calypso/uart.c **** 	uart_reg_write(uart, IER, ier);
+ 412              		.loc 1 362 0
+ 413 0044 0110A0E3 		mov	r1, #1
+ 414              	.LVL41:
+ 415              		.loc 1 360 0
+ 416 0048 FF200002 		andeq	r2, r0, #255
+ 417              		.loc 1 362 0
+ 418 004c 0600A0E1 		mov	r0, r6
+ 363:calypso/uart.c **** }
+ 419              		.loc 1 363 0
+ 420 0050 7040BDE8 		ldmfd	sp!, {r4, r5, r6, lr}
+ 421              		.loc 1 362 0
+ 422 0054 FEFFFFEA 		b	uart_reg_write
+ 423              	.LVL42:
+ 424              	.LFE48:
+ 426              		.section	.text.uart_tx_busy,"ax",%progbits
+ 427              		.align	2
+ 428              		.global	uart_tx_busy
+ 430              	uart_tx_busy:
+ 431              	.LFB52:
+ 364:calypso/uart.c **** 
+ 365:calypso/uart.c **** 
+ 366:calypso/uart.c **** void uart_putchar_wait(uint8_t uart, int c)
+ 367:calypso/uart.c **** {
+ 368:calypso/uart.c **** 	/* wait while TX FIFO indicates full */
+ 369:calypso/uart.c **** 	while (readb(UART_REG(uart, SSR)) & 0x01) { }
+ 370:calypso/uart.c **** 
+ 371:calypso/uart.c **** 	/* put character in TX FIFO */
+ 372:calypso/uart.c **** 	writeb(c, UART_REG(uart, THR));
+ 373:calypso/uart.c **** }
+ 374:calypso/uart.c **** 
+ 375:calypso/uart.c **** int uart_putchar_nb(uint8_t uart, int c)
+ 376:calypso/uart.c **** {
+ 377:calypso/uart.c **** 	/* if TX FIFO indicates full, abort */
+ 378:calypso/uart.c **** 	if (readb(UART_REG(uart, SSR)) & 0x01)
+ 379:calypso/uart.c **** 		return 0;
+ 380:calypso/uart.c **** 
+ 381:calypso/uart.c **** 	writeb(c, UART_REG(uart, THR));
+ 382:calypso/uart.c **** 	return 1;
+ 383:calypso/uart.c **** }
+ 384:calypso/uart.c **** 
+ 385:calypso/uart.c **** int uart_getchar_nb(uint8_t uart, uint8_t *ch)
+ 386:calypso/uart.c **** {
+ 387:calypso/uart.c **** 	uint8_t lsr;
+ 388:calypso/uart.c **** 
+ 389:calypso/uart.c **** 	lsr = readb(UART_REG(uart, LSR));
+ 390:calypso/uart.c **** 
+ 391:calypso/uart.c **** 	/* something strange happened */
+ 392:calypso/uart.c **** 	if (lsr & 0x02)
+ 393:calypso/uart.c **** 		printf("LSR RX_OE\n");
+ 394:calypso/uart.c **** 	if (lsr & 0x04)
+ 395:calypso/uart.c **** 		printf("LSR RX_PE\n");
+ 396:calypso/uart.c **** 	if (lsr & 0x08)
+ 397:calypso/uart.c **** 		printf("LSR RX_FE\n");
+ 398:calypso/uart.c **** 	if (lsr & 0x10)
+ 399:calypso/uart.c **** 		printf("LSR RX_BI\n");
+ 400:calypso/uart.c **** 	if (lsr & 0x80)
+ 401:calypso/uart.c **** 		printf("LSR RX_FIFO_STS\n");
+ 402:calypso/uart.c **** 
+ 403:calypso/uart.c **** 	/* is the Rx FIFO empty? */
+ 404:calypso/uart.c **** 	if (!(lsr & 0x01))
+ 405:calypso/uart.c **** 		return 0;
+ 406:calypso/uart.c **** 
+ 407:calypso/uart.c **** 	*ch = readb(UART_REG(uart, RHR));
+ 408:calypso/uart.c **** 	//printf("getchar_nb(%u) = %02x\n", uart, *ch);
+ 409:calypso/uart.c **** 	return 1;
+ 410:calypso/uart.c **** }
+ 411:calypso/uart.c **** 
+ 412:calypso/uart.c **** int uart_tx_busy(uint8_t uart)
+ 413:calypso/uart.c **** {
+ 432              		.loc 1 413 0
+ 433              		@ args = 0, pretend = 0, frame = 0
+ 434              		@ frame_needed = 0, uses_anonymous_args = 0
+ 435              		@ link register save eliminated.
+ 436              	.LVL43:
+ 414:calypso/uart.c **** 	if (readb(UART_REG(uart, SSR)) & 0x01)
+ 437              		.loc 1 414 0
+ 438 0000 0C309FE5 		ldr	r3, .L63
+ 439              		.loc 1 413 0
+ 440 0004 FF0000E2 		and	r0, r0, #255
+ 441              		.loc 1 414 0
+ 442 0008 8005D3E7 		ldrb	r0, [r3, r0, asl #11]	@ zero_extendqisi2
+ 443              	.LVL44:
+ 415:calypso/uart.c **** 		return 1;
+ 416:calypso/uart.c **** 	return 0;
+ 417:calypso/uart.c **** }
+ 444              		.loc 1 417 0
+ 445 000c 010000E2 		and	r0, r0, #1
+ 446              		.loc 1 413 0
+ 447              		@ lr needed for prologue
+ 448              		.loc 1 417 0
+ 449 0010 1EFF2FE1 		bx	lr
+ 450              	.L64:
+ 451              		.align	2
+ 452              	.L63:
+ 453 0014 1150FFFF 		.word	-45039
+ 454              	.LFE52:
+ 456              		.section	.text.uart_putchar_nb,"ax",%progbits
+ 457              		.align	2
+ 458              		.global	uart_putchar_nb
+ 460              	uart_putchar_nb:
+ 461              	.LFB50:
+ 462              		.loc 1 376 0
+ 463              		@ args = 0, pretend = 0, frame = 0
+ 464              		@ frame_needed = 0, uses_anonymous_args = 0
+ 465              		@ link register save eliminated.
+ 466              	.LVL45:
+ 467              		.loc 1 378 0
+ 468 0000 28309FE5 		ldr	r3, .L70
+ 469              		.loc 1 376 0
+ 470 0004 FF0000E2 		and	r0, r0, #255
+ 471              		.loc 1 378 0
+ 472 0008 8035D3E7 		ldrb	r3, [r3, r0, asl #11]	@ zero_extendqisi2
+ 473 000c 8005A0E1 		mov	r0, r0, asl #11
+ 474              	.LVL46:
+ 475 0010 010013E3 		tst	r3, #1
+ 476              		.loc 1 381 0
+ 477 0014 FF1001E2 		and	r1, r1, #255
+ 478              	.LVL47:
+ 479              		.loc 1 378 0
+ 480 0018 0030A0E3 		mov	r3, #0
+ 481              		.loc 1 381 0
+ 482 001c 0B0A40E2 		sub	r0, r0, #45056
+ 483 0020 0130A003 		moveq	r3, #1
+ 484 0024 0010C005 		streqb	r1, [r0, #0]
+ 485              		.loc 1 383 0
+ 486 0028 0300A0E1 		mov	r0, r3
+ 487              		.loc 1 376 0
+ 488              		@ lr needed for prologue
+ 489              		.loc 1 383 0
+ 490 002c 1EFF2FE1 		bx	lr
+ 491              	.L71:
+ 492              		.align	2
+ 493              	.L70:
+ 494 0030 1150FFFF 		.word	-45039
+ 495              	.LFE50:
+ 497              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 498              		.align	2
+ 499              	.LC0:
+ 500 0000 4C535220 		.ascii	"LSR RX_OE\000"
+ 500      52585F4F 
+ 500      4500
+ 501 000a 0000     		.align	2
+ 502              	.LC1:
+ 503 000c 4C535220 		.ascii	"LSR RX_PE\000"
+ 503      52585F50 
+ 503      4500
+ 504 0016 0000     		.align	2
+ 505              	.LC2:
+ 506 0018 4C535220 		.ascii	"LSR RX_FE\000"
+ 506      52585F46 
+ 506      4500
+ 507 0022 0000     		.align	2
+ 508              	.LC3:
+ 509 0024 4C535220 		.ascii	"LSR RX_BI\000"
+ 509      52585F42 
+ 509      4900
+ 510 002e 0000     		.align	2
+ 511              	.LC4:
+ 512 0030 4C535220 		.ascii	"LSR RX_FIFO_STS\000"
+ 512      52585F46 
+ 512      49464F5F 
+ 512      53545300 
+ 513              		.section	.text.uart_getchar_nb,"ax",%progbits
+ 514              		.align	2
+ 515              		.global	uart_getchar_nb
+ 517              	uart_getchar_nb:
+ 518              	.LFB51:
+ 519              		.loc 1 386 0
+ 520              		@ args = 0, pretend = 0, frame = 0
+ 521              		@ frame_needed = 0, uses_anonymous_args = 0
+ 522              	.LVL48:
+ 523 0000 F0402DE9 		stmfd	sp!, {r4, r5, r6, r7, lr}
+ 524              	.LCFI4:
+ 525              		.loc 1 389 0
+ 526 0004 64309FE5 		ldr	r3, .L87
+ 527              		.loc 1 386 0
+ 528 0008 FF0000E2 		and	r0, r0, #255
+ 529              		.loc 1 389 0
+ 530 000c 8045D3E7 		ldrb	r4, [r3, r0, asl #11]	@ zero_extendqisi2
+ 531              		.loc 1 392 0
+ 532 0010 020014E3 		tst	r4, #2
+ 533              		.loc 1 386 0
+ 534 0014 0170A0E1 		mov	r7, r1
+ 535              		.loc 1 389 0
+ 536 0018 8065A0E1 		mov	r6, r0, asl #11
+ 537 001c FF5004E2 		and	r5, r4, #255
+ 538              	.LVL49:
+ 539              		.loc 1 392 0
+ 540              	.LVL50:
+ 541              		.loc 1 393 0
+ 542 0020 4C009F15 		ldrne	r0, .L87+4
+ 543              	.LVL51:
+ 544 0024 FEFFFF1B 		blne	puts
+ 545              	.LVL52:
+ 546              	.L73:
+ 547              		.loc 1 394 0
+ 548 0028 040014E3 		tst	r4, #4
+ 549              		.loc 1 395 0
+ 550 002c 44009F15 		ldrne	r0, .L87+8
+ 551              	.LVL53:
+ 552 0030 FEFFFF1B 		blne	puts
+ 553              	.LVL54:
+ 554              	.L75:
+ 555              		.loc 1 396 0
+ 556 0034 080014E3 		tst	r4, #8
+ 557              		.loc 1 397 0
+ 558 0038 3C009F15 		ldrne	r0, .L87+12
+ 559              	.LVL55:
+ 560 003c FEFFFF1B 		blne	puts
+ 561              	.LVL56:
+ 562              	.L77:
+ 563              		.loc 1 398 0
+ 564 0040 100014E3 		tst	r4, #16
+ 565              		.loc 1 399 0
+ 566 0044 34009F15 		ldrne	r0, .L87+16
+ 567              	.LVL57:
+ 568 0048 FEFFFF1B 		blne	puts
+ 569              	.LVL58:
+ 570              	.L79:
+ 571              		.loc 1 400 0
+ 572 004c 800015E3 		tst	r5, #128
+ 573              		.loc 1 401 0
+ 574 0050 2C009F15 		ldrne	r0, .L87+20
+ 575              	.LVL59:
+ 576 0054 FEFFFF1B 		blne	puts
+ 577              	.LVL60:
+ 578              	.L81:
+ 579              		.loc 1 404 0
+ 580 0058 010014E2 		ands	r0, r4, #1
+ 581              	.LVL61:
+ 582              		.loc 1 407 0
+ 583 005c 0B3A4612 		subne	r3, r6, #45056
+ 584 0060 0030D315 		ldrneb	r3, [r3, #0]	@ zero_extendqisi2
+ 585 0064 0100A013 		movne	r0, #1
+ 586 0068 0030C715 		strneb	r3, [r7, #0]
+ 587              		.loc 1 410 0
+ 588 006c F080BDE8 		ldmfd	sp!, {r4, r5, r6, r7, pc}
+ 589              	.L88:
+ 590              		.align	2
+ 591              	.L87:
+ 592 0070 0550FFFF 		.word	-45051
+ 593 0074 00000000 		.word	.LC0
+ 594 0078 0C000000 		.word	.LC1
+ 595 007c 18000000 		.word	.LC2
+ 596 0080 24000000 		.word	.LC3
+ 597 0084 30000000 		.word	.LC4
+ 598              	.LFE51:
+ 600              		.section	.rodata.str1.4
+ 601              		.align	2
+ 602              	.LC5:
+ 603 0040 55415254 		.ascii	"UART IRQ MSR\000"
+ 603      20495251 
+ 603      204D5352 
+ 603      00
+ 604 004d 000000   		.align	2
+ 605              	.LC6:
+ 606 0050 55415254 		.ascii	"UART IRQ RX_SE\000"
+ 606      20495251 
+ 606      2052585F 
+ 606      534500
+ 607 005f 00       		.align	2
+ 608              	.LC7:
+ 609 0060 55415254 		.ascii	"UART IRQXOFF\000"
+ 609      20495251 
+ 609      584F4646 
+ 609      00
+ 610 006d 000000   		.section	.text.uart_irq_handler_sercomm,"ax",%progbits
+ 611              		.align	2
+ 613              	uart_irq_handler_sercomm:
+ 614              	.LFB45:
+ 615              		.loc 1 228 0
+ 616              		@ args = 0, pretend = 0, frame = 4
+ 617              		@ frame_needed = 0, uses_anonymous_args = 0
+ 618              	.LVL62:
+ 619 0000 10402DE9 		stmfd	sp!, {r4, lr}
+ 620              	.LCFI5:
+ 621 0004 04D04DE2 		sub	sp, sp, #4
+ 622              	.LCFI6:
+ 623              	.LVL63:
+ 624              		.loc 1 229 0
+ 625 0008 FEFFFFEB 		bl	sercomm_get_uart
+ 626              	.LVL64:
+ 627              		.loc 1 234 0
+ 628 000c FF4000E2 		and	r4, r0, #255
+ 629 0010 0400A0E1 		mov	r0, r4
+ 630 0014 0210A0E3 		mov	r1, #2
+ 631 0018 FEFFFFEB 		bl	uart_reg_read
+ 632              		.loc 1 235 0
+ 633 001c 010010E3 		tst	r0, #1
+ 634 0020 3F00001A 		bne	.L103
+ 635              		.loc 1 238 0
+ 636 0024 3E3000E2 		and	r3, r0, #62
+ 637 0028 100053E3 		cmp	r3, #16
+ 638 002c 03F19F97 		ldrls	pc, [pc, r3, asl #2]
+ 639 0030 3F0000EA 		b	.L103
+ 640              		.p2align 2
+ 641              	.L97:
+ 642 0034 DC000000 		.word	.L92
+ 643 0038 04010000 		.word	.L103
+ 644 003c C4000000 		.word	.L112
+ 645 0040 04010000 		.word	.L103
+ 646 0044 94000000 		.word	.L115
+ 647 0048 04010000 		.word	.L103
+ 648 004c E4000000 		.word	.L95
+ 649 0050 04010000 		.word	.L103
+ 650 0054 04010000 		.word	.L103
+ 651 0058 04010000 		.word	.L103
+ 652 005c 04010000 		.word	.L103
+ 653 0060 04010000 		.word	.L103
+ 654 0064 94000000 		.word	.L115
+ 655 0068 04010000 		.word	.L103
+ 656 006c 04010000 		.word	.L103
+ 657 0070 04010000 		.word	.L103
+ 658 0074 FC000000 		.word	.L96
+ 659              	.LVL65:
+ 660              	.L98:
+ 661              		.loc 1 243 0
+ 662 0078 0300DDE5 		ldrb	r0, [sp, #3]	@ zero_extendqisi2
+ 663 007c FEFFFFEB 		bl	sercomm_drv_rx_char
+ 664              		.loc 1 245 0
+ 665 0080 0020A0E3 		mov	r2, #0
+ 666              		.loc 1 243 0
+ 667 0084 020050E1 		cmp	r0, r2
+ 668              		.loc 1 245 0
+ 669 0088 0110A0E3 		mov	r1, #1
+ 670 008c 0400A0E1 		mov	r0, r4
+ 671              		.loc 1 243 0
+ 672              		.loc 1 245 0
+ 673 0090 FEFFFFBB 		bllt	uart_irq_enable
+ 674              	.L115:
+ 675              		.loc 1 242 0
+ 676 0094 03108DE2 		add	r1, sp, #3
+ 677 0098 0400A0E1 		mov	r0, r4
+ 678 009c FEFFFFEB 		bl	uart_getchar_nb
+ 679 00a0 000050E3 		cmp	r0, #0
+ 680 00a4 1C00001A 		bne	.L98
+ 681 00a8 3F0000EA 		b	.L103
+ 682              	.L100:
+ 683              		.loc 1 253 0
+ 684 00ac FEFFFFEB 		bl	sercomm_drv_pull
+ 685 00b0 001050E2 		subs	r1, r0, #0
+ 686              		.loc 1 259 0
+ 687 00b4 0400A0E1 		mov	r0, r4
+ 688              		.loc 1 253 0
+ 689 00b8 3900000A 		beq	.L105
+ 690              		.loc 1 259 0
+ 691 00bc 0310DDE5 		ldrb	r1, [sp, #3]	@ zero_extendqisi2
+ 692 00c0 FEFFFFEB 		bl	uart_putchar_nb
+ 693              	.L112:
+ 694              		.loc 1 251 0
+ 695 00c4 0400A0E1 		mov	r0, r4
+ 696 00c8 FEFFFFEB 		bl	uart_tx_busy
+ 697 00cc 000050E3 		cmp	r0, #0
+ 698              		.loc 1 253 0
+ 699 00d0 03008DE2 		add	r0, sp, #3
+ 700              		.loc 1 251 0
+ 701 00d4 2900000A 		beq	.L100
+ 702 00d8 3F0000EA 		b	.L103
+ 703              	.LVL66:
+ 704              	.L92:
+ 705              		.loc 1 263 0
+ 706 00dc 28009FE5 		ldr	r0, .L116
+ 707 00e0 3E0000EA 		b	.L114
+ 708              	.L95:
+ 709              		.loc 1 266 0
+ 710 00e4 24009FE5 		ldr	r0, .L116+4
+ 711 00e8 3E0000EA 		b	.L114
+ 712              	.LVL67:
+ 713              	.L105:
+ 714              		.loc 1 255 0
+ 715 00ec 0400A0E1 		mov	r0, r4
+ 716 00f0 0120A0E1 		mov	r2, r1
+ 717 00f4 FEFFFFEB 		bl	uart_irq_enable
+ 718 00f8 3F0000EA 		b	.L103
+ 719              	.LVL68:
+ 720              	.L96:
+ 721              		.loc 1 269 0
+ 722 00fc 10009FE5 		ldr	r0, .L116+8
+ 723              	.L114:
+ 724 0100 FEFFFFEB 		bl	puts
+ 725              	.LVL69:
+ 726              	.L103:
+ 727              		.loc 1 272 0
+ 728 0104 04D08DE2 		add	sp, sp, #4
+ 729 0108 1080BDE8 		ldmfd	sp!, {r4, pc}
+ 730              	.L117:
+ 731              		.align	2
+ 732              	.L116:
+ 733 010c 40000000 		.word	.LC5
+ 734 0110 50000000 		.word	.LC6
+ 735 0114 60000000 		.word	.LC7
+ 736              	.LFE45:
+ 738              		.section	.text.uart_init,"ax",%progbits
+ 739              		.align	2
+ 740              		.global	uart_init
+ 742              	uart_init:
+ 743              	.LFB46:
+ 744              		.loc 1 280 0
+ 745              		@ args = 0, pretend = 0, frame = 0
+ 746              		@ frame_needed = 0, uses_anonymous_args = 0
+ 747              	.LVL70:
+ 748 0000 70402DE9 		stmfd	sp!, {r4, r5, r6, lr}
+ 749              	.LCFI7:
+ 750              		.loc 1 281 0
+ 751 0004 70319FE5 		ldr	r3, .L128
+ 752              		.loc 1 280 0
+ 753 0008 FF4000E2 		and	r4, r0, #255
+ 754 000c 01C0A0E1 		mov	ip, r1
+ 755              		.loc 1 283 0
+ 756 0010 0020A0E3 		mov	r2, #0
+ 757 0014 0110A0E3 		mov	r1, #1
+ 758              	.LVL71:
+ 759 0018 0400A0E1 		mov	r0, r4
+ 760              	.LVL72:
+ 761              		.loc 1 281 0
+ 762 001c 0450D3E7 		ldrb	r5, [r3, r4]	@ zero_extendqisi2
+ 763              	.LVL73:
+ 764              		.loc 1 280 0
+ 765 0020 FF600CE2 		and	r6, ip, #255
+ 766              		.loc 1 283 0
+ 767 0024 FEFFFFEB 		bl	uart_reg_write
+ 768              	.LVL74:
+ 769              		.loc 1 284 0
+ 770 0028 FEFFFFEB 		bl	cons_get_uart
+ 771 002c 000054E1 		cmp	r4, r0
+ 772 0030 1900001A 		bne	.L119
+ 773              		.loc 1 285 0
+ 774 0034 FEFFFFEB 		bl	cons_init
+ 775              		.loc 1 286 0
+ 776 0038 000056E3 		cmp	r6, #0
+ 777              		.loc 1 287 0
+ 778 003c 0500A0E1 		mov	r0, r5
+ 779 0040 38119FE5 		ldr	r1, .L128+4
+ 780              		.loc 1 286 0
+ 781 0044 2D00000A 		beq	.L121
+ 782              		.loc 1 287 0
+ 783 0048 FEFFFFEB 		bl	irq_register_handler
+ 784              		.loc 1 288 0
+ 785 004c 0010A0E3 		mov	r1, #0
+ 786 0050 0500A0E1 		mov	r0, r5
+ 787 0054 0120A0E1 		mov	r2, r1
+ 788 0058 0030E0E3 		mvn	r3, #0
+ 789 005c FEFFFFEB 		bl	irq_config
+ 790              		.loc 1 289 0
+ 791 0060 0500A0E1 		mov	r0, r5
+ 792 0064 FEFFFFEB 		bl	irq_enable
+ 793 0068 2D0000EA 		b	.L121
+ 794              	.L119:
+ 795              		.loc 1 291 0
+ 796 006c FEFFFFEB 		bl	sercomm_get_uart
+ 797 0070 000054E1 		cmp	r4, r0
+ 798 0074 7080BD18 		ldmnefd	sp!, {r4, r5, r6, pc}
+ 799              		.loc 1 292 0
+ 800 0078 FEFFFFEB 		bl	sercomm_init
+ 801              		.loc 1 293 0
+ 802 007c 000056E3 		cmp	r6, #0
+ 803              		.loc 1 294 0
+ 804 0080 FC109FE5 		ldr	r1, .L128+8
+ 805 0084 0500A0E1 		mov	r0, r5
+ 806              		.loc 1 293 0
+ 807 0088 2900000A 		beq	.L125
+ 808              		.loc 1 294 0
+ 809 008c FEFFFFEB 		bl	irq_register_handler
+ 810              		.loc 1 295 0
+ 811 0090 0010A0E3 		mov	r1, #0
+ 812 0094 0500A0E1 		mov	r0, r5
+ 813 0098 0030E0E3 		mvn	r3, #0
+ 814 009c 0120A0E1 		mov	r2, r1
+ 815 00a0 FEFFFFEB 		bl	irq_config
+ 816              		.loc 1 296 0
+ 817 00a4 0500A0E1 		mov	r0, r5
+ 818 00a8 FEFFFFEB 		bl	irq_enable
+ 819              	.L125:
+ 820              		.loc 1 298 0
+ 821 00ac 0110A0E3 		mov	r1, #1
+ 822 00b0 0120A0E1 		mov	r2, r1
+ 823 00b4 0400A0E1 		mov	r0, r4
+ 824 00b8 FEFFFFEB 		bl	uart_irq_enable
+ 825              	.L121:
+ 826              		.loc 1 311 0
+ 827 00bc 0400A0E1 		mov	r0, r4
+ 828 00c0 0810A0E3 		mov	r1, #8
+ 829 00c4 0720A0E3 		mov	r2, #7
+ 830 00c8 FEFFFFEB 		bl	uart_reg_write
+ 831              		.loc 1 312 0
+ 832 00cc 0400A0E1 		mov	r0, r4
+ 833 00d0 4410A0E3 		mov	r1, #68
+ 834 00d4 0020A0E3 		mov	r2, #0
+ 835 00d8 FEFFFFEB 		bl	uart_reg_write
+ 836              		.loc 1 313 0
+ 837 00dc 0400A0E1 		mov	r0, r4
+ 838 00e0 4510A0E3 		mov	r1, #69
+ 839 00e4 0020A0E3 		mov	r2, #0
+ 840 00e8 FEFFFFEB 		bl	uart_reg_write
+ 841              		.loc 1 314 0
+ 842 00ec 0400A0E1 		mov	r0, r4
+ 843 00f0 4610A0E3 		mov	r1, #70
+ 844 00f4 0020A0E3 		mov	r2, #0
+ 845 00f8 FEFFFFEB 		bl	uart_reg_write
+ 846              		.loc 1 315 0
+ 847 00fc 0400A0E1 		mov	r0, r4
+ 848 0100 4710A0E3 		mov	r1, #71
+ 849 0104 0020A0E3 		mov	r2, #0
+ 850 0108 FEFFFFEB 		bl	uart_reg_write
+ 851              		.loc 1 316 0
+ 852 010c 0400A0E1 		mov	r0, r4
+ 853 0110 4210A0E3 		mov	r1, #66
+ 854 0114 0020A0E3 		mov	r2, #0
+ 855 0118 FEFFFFEB 		bl	uart_reg_write
+ 856              		.loc 1 319 0
+ 857 011c 0400A0E1 		mov	r0, r4
+ 858 0120 0810A0E3 		mov	r1, #8
+ 859 0124 0020A0E3 		mov	r2, #0
+ 860 0128 FEFFFFEB 		bl	uart_reg_write
+ 861              		.loc 1 321 0
+ 862 012c 0400A0E1 		mov	r0, r4
+ 863 0130 4210A0E3 		mov	r1, #66
+ 864 0134 1020A0E3 		mov	r2, #16
+ 865 0138 FEFFFFEB 		bl	uart_reg_write
+ 866              		.loc 1 323 0
+ 867 013c 0400A0E1 		mov	r0, r4
+ 868 0140 0210A0E3 		mov	r1, #2
+ 869 0144 F720A0E3 		mov	r2, #247
+ 870 0148 FEFFFFEB 		bl	uart_reg_write
+ 871              		.loc 1 327 0
+ 872 014c 0400A0E1 		mov	r0, r4
+ 873 0150 1010A0E3 		mov	r1, #16
+ 874 0154 0120A0E3 		mov	r2, #1
+ 875 0158 FEFFFFEB 		bl	uart_reg_write
+ 876              		.loc 1 330 0
+ 877 015c 0310A0E3 		mov	r1, #3
+ 878 0160 0400A0E1 		mov	r0, r4
+ 879 0164 0120A0E1 		mov	r2, r1
+ 880 0168 FEFFFFEB 		bl	uart_reg_write
+ 881              		.loc 1 332 0
+ 882 016c 0400A0E1 		mov	r0, r4
+ 883 0170 0010A0E3 		mov	r1, #0
+ 884              		.loc 1 333 0
+ 885 0174 7040BDE8 		ldmfd	sp!, {r4, r5, r6, lr}
+ 886              		.loc 1 332 0
+ 887 0178 FEFFFFEA 		b	uart_set_lcr7bit
+ 888              	.L129:
+ 889              		.align	2
+ 890              	.L128:
+ 891 017c 0E000000 		.word	uart2irq
+ 892 0180 00000000 		.word	uart_irq_handler_cons
+ 893 0184 00000000 		.word	uart_irq_handler_sercomm
+ 894              	.LFE46:
+ 896              		.section	.text.uart_poll,"ax",%progbits
+ 897              		.align	2
+ 898              		.global	uart_poll
+ 900              	uart_poll:
+ 901              	.LFB47:
+ 902              		.loc 1 335 0
+ 903              		@ args = 0, pretend = 0, frame = 0
+ 904              		@ frame_needed = 0, uses_anonymous_args = 0
+ 905              	.LVL75:
+ 906 0000 10402DE9 		stmfd	sp!, {r4, lr}
+ 907              	.LCFI8:
+ 908              		.loc 1 335 0
+ 909 0004 FF4000E2 		and	r4, r0, #255
+ 910              		.loc 1 336 0
+ 911 0008 FEFFFFEB 		bl	cons_get_uart
+ 912              	.LVL76:
+ 913 000c 000054E1 		cmp	r4, r0
+ 914              		.loc 1 337 0
+ 915 0010 0000A0E3 		mov	r0, #0
+ 916              		.loc 1 336 0
+ 917 0014 0600001A 		bne	.L131
+ 918              		.loc 1 341 0
+ 919 0018 1040BDE8 		ldmfd	sp!, {r4, lr}
+ 920              		.loc 1 337 0
+ 921 001c FEFFFFEA 		b	uart_irq_handler_cons
+ 922              	.L131:
+ 923              		.loc 1 339 0
+ 924 0020 0000A0E3 		mov	r0, #0
+ 925              		.loc 1 341 0
+ 926 0024 1040BDE8 		ldmfd	sp!, {r4, lr}
+ 927              		.loc 1 339 0
+ 928 0028 FEFFFFEA 		b	uart_irq_handler_sercomm
+ 929              	.LFE47:
+ 931              		.section	.text.uart_putchar_wait,"ax",%progbits
+ 932              		.align	2
+ 933              		.global	uart_putchar_wait
+ 935              	uart_putchar_wait:
+ 936              	.LFB49:
+ 937              		.loc 1 367 0
+ 938              		@ args = 0, pretend = 0, frame = 0
+ 939              		@ frame_needed = 0, uses_anonymous_args = 0
+ 940              		@ link register save eliminated.
+ 941              	.LVL77:
+ 942 0000 FF0000E2 		and	r0, r0, #255
+ 943              		.loc 1 369 0
+ 944 0004 8005A0E1 		mov	r0, r0, asl #11
+ 945              	.LVL78:
+ 946 0008 AFCC40E2 		sub	ip, r0, #44800
+ 947              		.loc 1 367 0
+ 948              		@ lr needed for prologue
+ 949              		.loc 1 369 0
+ 950 000c EFC04CE2 		sub	ip, ip, #239
+ 951              	.L137:
+ 952 0010 0030DCE5 		ldrb	r3, [ip, #0]	@ zero_extendqisi2
+ 953 0014 010013E3 		tst	r3, #1
+ 954 0018 0200001A 		bne	.L137
+ 955              		.loc 1 372 0
+ 956 001c 0B2A40E2 		sub	r2, r0, #45056
+ 957 0020 FF3001E2 		and	r3, r1, #255
+ 958 0024 0030C2E5 		strb	r3, [r2, #0]
+ 959              		.loc 1 373 0
+ 960 0028 1EFF2FE1 		bx	lr
+ 961              	.LFE49:
+ 963              		.section	.text.uart_baudrate,"ax",%progbits
+ 964              		.align	2
+ 965              		.global	uart_baudrate
+ 967              	uart_baudrate:
+ 968              	.LFB53:
+ 418:calypso/uart.c **** 
+ 419:calypso/uart.c **** static const uint16_t divider[] = {
+ 420:calypso/uart.c **** 	[UART_38400]	= 21,	/*   38,690 */
+ 421:calypso/uart.c **** 	[UART_57600]	= 14,	/*   58,035 */
+ 422:calypso/uart.c **** 	[UART_115200]	= 7,	/*  116,071 */
+ 423:calypso/uart.c **** 	[UART_230400]	= 4,	/*  203,125! (-3% would be 223,488) */
+ 424:calypso/uart.c **** 	[UART_460800]	= 2,	/*  406,250! (-3% would be 446,976) */
+ 425:calypso/uart.c **** 	[UART_921600]	= 1,	/*  812,500! (-3% would be 893,952) */
+ 426:calypso/uart.c **** };
+ 427:calypso/uart.c **** 
+ 428:calypso/uart.c **** int uart_baudrate(uint8_t uart, enum uart_baudrate bdrt)
+ 429:calypso/uart.c **** {
+ 969              		.loc 1 429 0
+ 970              		@ args = 0, pretend = 0, frame = 0
+ 971              		@ frame_needed = 0, uses_anonymous_args = 0
+ 972              	.LVL79:
+ 973 0000 0130A0E1 		mov	r3, r1
+ 974 0004 30402DE9 		stmfd	sp!, {r4, r5, lr}
+ 975              	.LCFI9:
+ 430:calypso/uart.c **** 	uint16_t div;
+ 431:calypso/uart.c **** 
+ 432:calypso/uart.c **** 	if (bdrt >= ARRAY_SIZE(divider))
+ 976              		.loc 1 432 0
+ 977 0008 060053E3 		cmp	r3, #6
+ 978              		.loc 1 429 0
+ 979 000c FF5000E2 		and	r5, r0, #255
+ 433:calypso/uart.c **** 		return -1;
+ 434:calypso/uart.c **** 
+ 435:calypso/uart.c **** 	div = divider[bdrt];
+ 980              		.loc 1 435 0
+ 981 0010 8120A0E1 		mov	r2, r1, asl #1
+ 982              		.loc 1 432 0
+ 983 0014 0030E0E3 		mvn	r3, #0
+ 436:calypso/uart.c **** 	uart_set_lcr7bit(uart, 1);
+ 984              		.loc 1 436 0
+ 985 0018 0110A0E3 		mov	r1, #1
+ 986              	.LVL80:
+ 987 001c 0500A0E1 		mov	r0, r5
+ 988              	.LVL81:
+ 989              		.loc 1 432 0
+ 990 0020 1600008A 		bhi	.L145
+ 991              		.loc 1 435 0
+ 992 0024 3C309FE5 		ldr	r3, .L147
+ 993 0028 B34092E1 		ldrh	r4, [r2, r3]
+ 994 002c 0448A0E1 		mov	r4, r4, asl #16
+ 995              		.loc 1 436 0
+ 996 0030 FEFFFFEB 		bl	uart_set_lcr7bit
+ 997              		.loc 1 435 0
+ 998 0034 2438A0E1 		mov	r3, r4, lsr #16
+ 999              	.LVL82:
+ 437:calypso/uart.c **** 	writeb(div & 0xff, UART_REG(uart, DLL));
+ 1000              		.loc 1 437 0
+ 1001 0038 2C209FE5 		ldr	r2, .L147+4
+ 1002 003c FF3003E2 		and	r3, r3, #255
+ 1003              	.LVL83:
+ 1004 0040 8535C2E7 		strb	r3, [r2, r5, asl #11]
+ 438:calypso/uart.c **** 	writeb(div >> 8, UART_REG(uart, DLH));
+ 1005              		.loc 1 438 0
+ 1006 0044 24309FE5 		ldr	r3, .L147+8
+ 1007 0048 244CA0E1 		mov	r4, r4, lsr #24
+ 1008 004c 8545C3E7 		strb	r4, [r3, r5, asl #11]
+ 439:calypso/uart.c **** 	uart_set_lcr7bit(uart, 0);
+ 1009              		.loc 1 439 0
+ 1010 0050 0500A0E1 		mov	r0, r5
+ 1011 0054 0010A0E3 		mov	r1, #0
+ 1012 0058 FEFFFFEB 		bl	uart_set_lcr7bit
+ 1013 005c 0030A0E3 		mov	r3, #0
+ 1014              	.L145:
+ 440:calypso/uart.c **** 
+ 441:calypso/uart.c **** 	return 0;
+ 442:calypso/uart.c **** }
+ 1015              		.loc 1 442 0
+ 1016 0060 0300A0E1 		mov	r0, r3
+ 1017 0064 3080BDE8 		ldmfd	sp!, {r4, r5, pc}
+ 1018              	.L148:
+ 1019              		.align	2
+ 1020              	.L147:
+ 1021 0068 00000000 		.word	divider
+ 1022 006c 8050FFFF 		.word	-44928
+ 1023 0070 8150FFFF 		.word	-44927
+ 1024              	.LFE53:
+ 1026              		.bss
+ 1027              	old_lcr:
+ 1028 0000 00       		.space	1
+ 1274              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 uart.c
+     /tmp/ccIsnYnK.s:14     .rodata:0000000000000000 divider
+     /tmp/ccIsnYnK.s:24     .rodata:000000000000000e uart2irq
+     /tmp/ccIsnYnK.s:30     .text.uart_set_lcr7bit:0000000000000000 uart_set_lcr7bit
+     /tmp/ccIsnYnK.s:39     .text.uart_set_lcr7bit:0000000000000000 $a
+     /tmp/ccIsnYnK.s:65     .text.uart_set_lcr_bf:0000000000000000 uart_set_lcr_bf
+     /tmp/ccIsnYnK.s:73     .text.uart_set_lcr_bf:0000000000000000 $a
+     /tmp/ccIsnYnK.s:96     .text.uart_set_lcr_bf:000000000000002c $d
+     /tmp/ccIsnYnK.s:1027   .bss:0000000000000000 old_lcr
+     /tmp/ccIsnYnK.s:103    .text.uart_set_mcr6bit:0000000000000000 uart_set_mcr6bit
+     /tmp/ccIsnYnK.s:111    .text.uart_set_mcr6bit:0000000000000000 $a
+     /tmp/ccIsnYnK.s:137    .text.uart_reg_write:0000000000000000 uart_reg_write
+     /tmp/ccIsnYnK.s:144    .text.uart_reg_write:0000000000000000 $a
+     /tmp/ccIsnYnK.s:227    .text.uart_reg_read:0000000000000000 uart_reg_read
+     /tmp/ccIsnYnK.s:234    .text.uart_reg_read:0000000000000000 $a
+     /tmp/ccIsnYnK.s:315    .text.uart_irq_handler_cons:0000000000000000 uart_irq_handler_cons
+     /tmp/ccIsnYnK.s:321    .text.uart_irq_handler_cons:0000000000000000 $a
+     /tmp/ccIsnYnK.s:371    .text.uart_irq_enable:0000000000000000 uart_irq_enable
+     /tmp/ccIsnYnK.s:377    .text.uart_irq_enable:0000000000000000 $a
+     /tmp/ccIsnYnK.s:430    .text.uart_tx_busy:0000000000000000 uart_tx_busy
+     /tmp/ccIsnYnK.s:438    .text.uart_tx_busy:0000000000000000 $a
+     /tmp/ccIsnYnK.s:453    .text.uart_tx_busy:0000000000000014 $d
+     /tmp/ccIsnYnK.s:460    .text.uart_putchar_nb:0000000000000000 uart_putchar_nb
+     /tmp/ccIsnYnK.s:468    .text.uart_putchar_nb:0000000000000000 $a
+     /tmp/ccIsnYnK.s:494    .text.uart_putchar_nb:0000000000000030 $d
+     /tmp/ccIsnYnK.s:517    .text.uart_getchar_nb:0000000000000000 uart_getchar_nb
+     /tmp/ccIsnYnK.s:523    .text.uart_getchar_nb:0000000000000000 $a
+     /tmp/ccIsnYnK.s:592    .text.uart_getchar_nb:0000000000000070 $d
+     /tmp/ccIsnYnK.s:613    .text.uart_irq_handler_sercomm:0000000000000000 uart_irq_handler_sercomm
+     /tmp/ccIsnYnK.s:619    .text.uart_irq_handler_sercomm:0000000000000000 $a
+     /tmp/ccIsnYnK.s:642    .text.uart_irq_handler_sercomm:0000000000000034 $d
+     /tmp/ccIsnYnK.s:662    .text.uart_irq_handler_sercomm:0000000000000078 $a
+     /tmp/ccIsnYnK.s:733    .text.uart_irq_handler_sercomm:000000000000010c $d
+     /tmp/ccIsnYnK.s:742    .text.uart_init:0000000000000000 uart_init
+     /tmp/ccIsnYnK.s:748    .text.uart_init:0000000000000000 $a
+     /tmp/ccIsnYnK.s:891    .text.uart_init:000000000000017c $d
+     /tmp/ccIsnYnK.s:900    .text.uart_poll:0000000000000000 uart_poll
+     /tmp/ccIsnYnK.s:906    .text.uart_poll:0000000000000000 $a
+     /tmp/ccIsnYnK.s:935    .text.uart_putchar_wait:0000000000000000 uart_putchar_wait
+     /tmp/ccIsnYnK.s:942    .text.uart_putchar_wait:0000000000000000 $a
+     /tmp/ccIsnYnK.s:967    .text.uart_baudrate:0000000000000000 uart_baudrate
+     /tmp/ccIsnYnK.s:973    .text.uart_baudrate:0000000000000000 $a
+     /tmp/ccIsnYnK.s:1021   .text.uart_baudrate:0000000000000068 $d
+
+UNDEFINED SYMBOLS
+cons_get_uart
+cons_rb_flush
+puts
+sercomm_get_uart
+sercomm_drv_rx_char
+sercomm_drv_pull
+cons_init
+irq_register_handler
+irq_config
+irq_enable
+sercomm_init

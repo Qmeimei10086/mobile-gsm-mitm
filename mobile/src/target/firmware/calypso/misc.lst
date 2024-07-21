@@ -1,0 +1,341 @@
+   1              		.file	"misc.c"
+   9              	.Ltext0:
+  10              		.section	.rodata.str1.4,"aMS",%progbits,1
+  11              		.align	2
+  12              	.LC0:
+  13 000c 25303858 		.ascii	"%08X: \000"
+  13      3A2000
+  14 0013 00       		.align	2
+  15              	.LC1:
+  16 0014 2000     		.ascii	" \000"
+  17              		.subsection	-1
+  18              		.align	2
+  19              	.LC2:
+  20 0000 00       		.ascii	"\000"
+  21 0001 000000   		.align	2
+  22              	.LC3:
+  23 0004 25303858 		.ascii	"%08X %s\000"
+  23      20257300 
+  24              		.section	.text.memdump_range,"ax",%progbits
+  25              		.align	2
+  26              		.global	memdump_range
+  28              	memdump_range:
+  29              	.LFB2:
+  30              		.file 1 "calypso/misc.c"
+   1:calypso/misc.c **** 
+   2:calypso/misc.c **** #include <stdint.h>
+   3:calypso/misc.c **** #include <stdio.h>
+   4:calypso/misc.c **** #include <memory.h>
+   5:calypso/misc.c **** 
+   6:calypso/misc.c **** /* dump a memory range */
+   7:calypso/misc.c **** void memdump_range(unsigned int *ptr, unsigned int len)
+   8:calypso/misc.c **** {
+  31              		.loc 1 8 0
+  32              		@ args = 0, pretend = 0, frame = 0
+  33              		@ frame_needed = 0, uses_anonymous_args = 0
+  34              	.LVL0:
+  35 0000 70402DE9 		stmfd	sp!, {r4, r5, r6, lr}
+  36              	.LCFI0:
+   9:calypso/misc.c **** 	unsigned int *end = ptr + (len/4);
+  37              		.loc 1 9 0
+  38 0004 0310C1E3 		bic	r1, r1, #3
+  39              	.LVL1:
+  40 0008 016080E0 		add	r6, r0, r1
+  41              	.LVL2:
+  42 000c 0040A0E1 		mov	r4, r0
+  43              	.LVL3:
+  44 0010 140000EA 		b	.L2
+  45              	.LVL4:
+  46              	.L3:
+  47              	.LBB2:
+  10:calypso/misc.c **** 	unsigned int *tmp;
+  11:calypso/misc.c **** 
+  12:calypso/misc.c **** 	for (tmp = ptr; tmp < end; tmp += 8) {
+  13:calypso/misc.c **** 		int i;
+  14:calypso/misc.c **** 		printf("%08X: ", (unsigned int) tmp);
+  48              		.loc 1 14 0
+  49 0014 48009FE5 		ldr	r0, .L13
+  50              	.LVL5:
+  51 0018 0410A0E1 		mov	r1, r4
+  52 001c FEFFFFEB 		bl	printf
+  53 0020 0050A0E3 		mov	r5, #0
+  54              	.L4:
+  15:calypso/misc.c **** 
+  16:calypso/misc.c **** 		for (i = 0; i < 8; i++)
+  17:calypso/misc.c **** 			printf("%08X %s", *(tmp+i), i == 3 ? " " : "");
+  55              		.loc 1 17 0
+  56 0024 3C309FE5 		ldr	r3, .L13+4
+  57 0028 030055E3 		cmp	r5, #3
+  58 002c 38209FE5 		ldr	r2, .L13+8
+  59 0030 051194E7 		ldr	r1, [r4, r5, asl #2]
+  60 0034 0320A011 		movne	r2, r3
+  61              		.loc 1 16 0
+  62 0038 015085E2 		add	r5, r5, #1
+  63              		.loc 1 17 0
+  64 003c 2C009FE5 		ldr	r0, .L13+12
+  65 0040 FEFFFFEB 		bl	printf
+  66              		.loc 1 16 0
+  67 0044 080055E3 		cmp	r5, #8
+  68 0048 0700001A 		bne	.L4
+  18:calypso/misc.c **** 
+  19:calypso/misc.c **** 		putchar('\n');
+  69              		.loc 1 19 0
+  70 004c 0A00A0E3 		mov	r0, #10
+  71 0050 FEFFFFEB 		bl	sercomm_putchar
+  72              	.LBE2:
+  73              		.loc 1 12 0
+  74 0054 204084E2 		add	r4, r4, #32
+  75              	.LVL6:
+  76              	.L2:
+  77 0058 060054E1 		cmp	r4, r6
+  78 005c 0300003A 		bcc	.L3
+  20:calypso/misc.c **** 	}
+  21:calypso/misc.c **** }
+  79              		.loc 1 21 0
+  80 0060 7080BDE8 		ldmfd	sp!, {r4, r5, r6, pc}
+  81              	.L14:
+  82              		.align	2
+  83              	.L13:
+  84 0064 0C000000 		.word	.LC0
+  85 0068 00000000 		.word	.LC2
+  86 006c 14000000 		.word	.LC1
+  87 0070 04000000 		.word	.LC3
+  88              	.LFE2:
+  90              		.section	.rodata.str1.4
+  91 0016 0000     		.align	2
+  92              	.LC4:
+  93 0018 44756D70 		.ascii	"Dump 64kBits of internal ROM\012\000"
+  93      2036346B 
+  93      42697473 
+  93      206F6620 
+  93      696E7465 
+  94 0036 0000     		.align	2
+  95              	.LC5:
+  96 0038 44756D70 		.ascii	"Dump 8Mbits of external flash\012\000"
+  96      20384D62 
+  96      69747320 
+  96      6F662065 
+  96      78746572 
+  97 0057 00       		.align	2
+  98              	.LC6:
+  99 0058 44756D70 		.ascii	"Dump 2Mbits of internal RAM\012\000"
+  99      20324D62 
+  99      69747320 
+  99      6F662069 
+  99      6E746572 
+ 100 0075 000000   		.align	2
+ 101              	.LC7:
+ 102 0078 44756D70 		.ascii	"Dump 2Mbits of external RAM\012\000"
+ 102      20324D62 
+ 102      69747320 
+ 102      6F662065 
+ 102      78746572 
+ 103              		.section	.text.dump_mem,"ax",%progbits
+ 104              		.align	2
+ 105              		.global	dump_mem
+ 107              	dump_mem:
+ 108              	.LFB3:
+  22:calypso/misc.c **** 
+  23:calypso/misc.c **** #define KBIT 1024
+  24:calypso/misc.c **** #define	MBIT (1024*KBIT)
+  25:calypso/misc.c **** void dump_mem(void)
+  26:calypso/misc.c **** {
+ 109              		.loc 1 26 0
+ 110              		@ args = 0, pretend = 0, frame = 0
+ 111              		@ frame_needed = 0, uses_anonymous_args = 0
+ 112              	.LVL7:
+ 113 0000 04E02DE5 		str	lr, [sp, #-4]!
+ 114              	.LCFI1:
+  27:calypso/misc.c **** 	puts("Dump 64kBits of internal ROM\n");
+ 115              		.loc 1 27 0
+ 116 0004 4C009FE5 		ldr	r0, .L17
+ 117 0008 FEFFFFEB 		bl	puts
+  28:calypso/misc.c **** 	memdump_range((void *)0x03800000, 64*KBIT/8);
+ 118              		.loc 1 28 0
+ 119 000c 021AA0E3 		mov	r1, #8192
+ 120 0010 0E05A0E3 		mov	r0, #58720256
+ 121 0014 FEFFFFEB 		bl	memdump_range
+  29:calypso/misc.c **** 
+  30:calypso/misc.c **** 	puts("Dump 8Mbits of external flash\n");
+ 122              		.loc 1 30 0
+ 123 0018 3C009FE5 		ldr	r0, .L17+4
+ 124 001c FEFFFFEB 		bl	puts
+  31:calypso/misc.c **** 	memdump_range((void *)0x00000000, 8*MBIT/8);
+ 125              		.loc 1 31 0
+ 126 0020 0116A0E3 		mov	r1, #1048576
+ 127 0024 0000A0E3 		mov	r0, #0
+ 128 0028 FEFFFFEB 		bl	memdump_range
+  32:calypso/misc.c **** 
+  33:calypso/misc.c **** 	puts("Dump 2Mbits of internal RAM\n");
+ 129              		.loc 1 33 0
+ 130 002c 2C009FE5 		ldr	r0, .L17+8
+ 131 0030 FEFFFFEB 		bl	puts
+  34:calypso/misc.c **** 	memdump_range((void *)0x00800000, 2*MBIT/8);
+ 132              		.loc 1 34 0
+ 133 0034 0117A0E3 		mov	r1, #262144
+ 134 0038 0205A0E3 		mov	r0, #8388608
+ 135 003c FEFFFFEB 		bl	memdump_range
+  35:calypso/misc.c **** 
+  36:calypso/misc.c **** 	puts("Dump 2Mbits of external RAM\n");
+ 136              		.loc 1 36 0
+ 137 0040 1C009FE5 		ldr	r0, .L17+12
+ 138 0044 FEFFFFEB 		bl	puts
+  37:calypso/misc.c **** 	memdump_range((void *)0x01000000, 2*MBIT/8);
+ 139              		.loc 1 37 0
+ 140 0048 0104A0E3 		mov	r0, #16777216
+ 141 004c 0117A0E3 		mov	r1, #262144
+  38:calypso/misc.c **** }
+ 142              		.loc 1 38 0
+ 143 0050 04E09DE4 		ldr	lr, [sp], #4
+ 144              		.loc 1 37 0
+ 145 0054 FEFFFFEA 		b	memdump_range
+ 146              	.L18:
+ 147              		.align	2
+ 148              	.L17:
+ 149 0058 18000000 		.word	.LC4
+ 150 005c 38000000 		.word	.LC5
+ 151 0060 58000000 		.word	.LC6
+ 152 0064 78000000 		.word	.LC7
+ 153              	.LFE3:
+ 155              		.section	.rodata.str1.4
+ 156 0095 000000   		.align	2
+ 157              	.LC8:
+ 158 0098 44657669 		.ascii	"Device ID code: 0x%04x\012\000"
+ 158      63652049 
+ 158      4420636F 
+ 158      64653A20 
+ 158      30782530 
+ 159              		.align	2
+ 160              	.LC9:
+ 161 00b0 44657669 		.ascii	"Device Version code: 0x%04x\012\000"
+ 161      63652056 
+ 161      65727369 
+ 161      6F6E2063 
+ 161      6F64653A 
+ 162 00cd 000000   		.align	2
+ 163              	.LC10:
+ 164 00d0 41524D20 		.ascii	"ARM ID code: 0x%04x\012\000"
+ 164      49442063 
+ 164      6F64653A 
+ 164      20307825 
+ 164      3034780A 
+ 165 00e5 000000   		.align	2
+ 166              	.LC11:
+ 167 00e8 63445350 		.ascii	"cDSP ID code: 0x%04x\012\000"
+ 167      20494420 
+ 167      636F6465 
+ 167      3A203078 
+ 167      25303478 
+ 168 00fe 0000     		.align	2
+ 169              	.LC12:
+ 170 0100 44696520 		.ascii	"Die ID code: \000"
+ 170      49442063 
+ 170      6F64653A 
+ 170      2000
+ 171 010e 0000     		.align	2
+ 172              	.LC13:
+ 173 0110 25303878 		.ascii	"%08x\000"
+ 173      00
+ 174 0115 000000   		.section	.text.dump_dev_id,"ax",%progbits
+ 175              		.align	2
+ 176              		.global	dump_dev_id
+ 178              	dump_dev_id:
+ 179              	.LFB4:
+  39:calypso/misc.c **** 
+  40:calypso/misc.c **** #define REG_DEV_ID_CODE 	0xfffef000
+  41:calypso/misc.c **** #define REG_DEV_VER_CODE	0xfffef002
+  42:calypso/misc.c **** #define REG_DEV_ARMVER_CODE	0xfffffe00
+  43:calypso/misc.c **** #define REG_cDSP_ID_CODE	0xfffffe02
+  44:calypso/misc.c **** #define REG_DIE_ID_CODE		0xfffef010
+  45:calypso/misc.c **** 
+  46:calypso/misc.c **** void dump_dev_id(void)
+  47:calypso/misc.c **** {
+ 180              		.loc 1 47 0
+ 181              		@ args = 0, pretend = 0, frame = 0
+ 182              		@ frame_needed = 0, uses_anonymous_args = 0
+ 183              	.LVL8:
+ 184 0000 10402DE9 		stmfd	sp!, {r4, lr}
+ 185              	.LCFI2:
+  48:calypso/misc.c **** 	int i;
+  49:calypso/misc.c **** 
+  50:calypso/misc.c **** 	printf("Device ID code: 0x%04x\n", readw(REG_DEV_ID_CODE));
+ 186              		.loc 1 50 0
+ 187 0004 68309FE5 		ldr	r3, .L25
+ 188 0008 68009FE5 		ldr	r0, .L25+4
+ 189 000c B010D3E1 		ldrh	r1, [r3, #0]
+ 190 0010 FEFFFFEB 		bl	printf
+  51:calypso/misc.c **** 	printf("Device Version code: 0x%04x\n", readw(REG_DEV_VER_CODE));
+ 191              		.loc 1 51 0
+ 192 0014 60309FE5 		ldr	r3, .L25+8
+ 193 0018 60009FE5 		ldr	r0, .L25+12
+ 194 001c B010D3E1 		ldrh	r1, [r3, #0]
+ 195 0020 FEFFFFEB 		bl	printf
+  52:calypso/misc.c **** 	printf("ARM ID code: 0x%04x\n", readw(REG_DEV_ARMVER_CODE));
+ 196              		.loc 1 52 0
+ 197 0024 58309FE5 		ldr	r3, .L25+16
+ 198 0028 58009FE5 		ldr	r0, .L25+20
+ 199 002c B010D3E1 		ldrh	r1, [r3, #0]
+ 200 0030 FEFFFFEB 		bl	printf
+  53:calypso/misc.c **** 	printf("cDSP ID code: 0x%04x\n", readw(REG_cDSP_ID_CODE));
+ 201              		.loc 1 53 0
+ 202 0034 50309FE5 		ldr	r3, .L25+24
+ 203 0038 50009FE5 		ldr	r0, .L25+28
+ 204 003c B010D3E1 		ldrh	r1, [r3, #0]
+ 205 0040 FEFFFFEB 		bl	printf
+  54:calypso/misc.c **** 	puts("Die ID code: ");
+ 206              		.loc 1 54 0
+ 207 0044 48009FE5 		ldr	r0, .L25+32
+ 208 0048 FEFFFFEB 		bl	puts
+ 209 004c 44409FE5 		ldr	r4, .L25+36
+ 210              	.L20:
+  55:calypso/misc.c **** 	for (i = 0; i < 64/8; i += 4)
+  56:calypso/misc.c **** 		printf("%08x", readl(REG_DIE_ID_CODE+i));
+ 211              		.loc 1 56 0
+ 212 0050 041094E4 		ldr	r1, [r4], #4
+ 213 0054 40009FE5 		ldr	r0, .L25+40
+ 214 0058 FEFFFFEB 		bl	printf
+ 215              		.loc 1 55 0
+ 216 005c 3C309FE5 		ldr	r3, .L25+44
+ 217 0060 030054E1 		cmp	r4, r3
+ 218 0064 1200001A 		bne	.L20
+  57:calypso/misc.c **** 	putchar('\n');
+ 219              		.loc 1 57 0
+ 220 0068 0A00A0E3 		mov	r0, #10
+  58:calypso/misc.c **** }
+ 221              		.loc 1 58 0
+ 222 006c 1040BDE8 		ldmfd	sp!, {r4, lr}
+ 223              		.loc 1 57 0
+ 224 0070 FEFFFFEA 		b	sercomm_putchar
+ 225              	.L26:
+ 226              		.align	2
+ 227              	.L25:
+ 228 0074 00F0FEFF 		.word	-69632
+ 229 0078 98000000 		.word	.LC8
+ 230 007c 02F0FEFF 		.word	-69630
+ 231 0080 B0000000 		.word	.LC9
+ 232 0084 00FEFFFF 		.word	-512
+ 233 0088 D0000000 		.word	.LC10
+ 234 008c 02FEFFFF 		.word	-510
+ 235 0090 E8000000 		.word	.LC11
+ 236 0094 00010000 		.word	.LC12
+ 237 0098 10F0FEFF 		.word	-69616
+ 238 009c 10010000 		.word	.LC13
+ 239 00a0 18F0FEFF 		.word	-69608
+ 240              	.LFE4:
+ 308              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 misc.c
+     /tmp/ccGhJ6pG.s:28     .text.memdump_range:0000000000000000 memdump_range
+     /tmp/ccGhJ6pG.s:35     .text.memdump_range:0000000000000000 $a
+     /tmp/ccGhJ6pG.s:84     .text.memdump_range:0000000000000064 $d
+     /tmp/ccGhJ6pG.s:107    .text.dump_mem:0000000000000000 dump_mem
+     /tmp/ccGhJ6pG.s:113    .text.dump_mem:0000000000000000 $a
+     /tmp/ccGhJ6pG.s:149    .text.dump_mem:0000000000000058 $d
+     /tmp/ccGhJ6pG.s:178    .text.dump_dev_id:0000000000000000 dump_dev_id
+     /tmp/ccGhJ6pG.s:184    .text.dump_dev_id:0000000000000000 $a
+     /tmp/ccGhJ6pG.s:228    .text.dump_dev_id:0000000000000074 $d
+
+UNDEFINED SYMBOLS
+printf
+sercomm_putchar
+puts

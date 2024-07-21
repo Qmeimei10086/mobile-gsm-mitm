@@ -1,0 +1,155 @@
+   1              		.file	"symbols.c"
+   9              	.Ltext0:
+  10              		.global	font_symbols
+  11              		.section	.rodata
+  12              		.align	2
+  15              	font_symbols:
+  16 0000 08       		.byte	8
+  17 0001 08       		.byte	8
+  18 0002 40       		.byte	64
+  19 0003 48       		.byte	72
+  20 0004 22000000 		.word	font_symbols_data
+  21 0008 10000000 		.word	font_symbols_offsets
+  22 000c 00000000 		.space	4
+  23              		.align	1
+  26              	font_symbols_offsets:
+  27 0010 0000     		.short	0
+  28 0012 0D00     		.short	13
+  29 0014 1A00     		.short	26
+  30 0016 2700     		.short	39
+  31 0018 3400     		.short	52
+  32 001a 4100     		.short	65
+  33 001c 4E00     		.short	78
+  34 001e 5B00     		.short	91
+  35 0020 6800     		.short	104
+  38              	font_symbols_data:
+  39 0022 03       		.byte	3
+  40 0023 03       		.byte	3
+  41 0024 08       		.byte	8
+  42 0025 00       		.byte	0
+  43 0026 00       		.byte	0
+  44 0027 60       		.byte	96
+  45 0028 40       		.byte	64
+  46 0029 40       		.byte	64
+  47 002a 40       		.byte	64
+  48 002b 40       		.byte	64
+  49 002c 40       		.byte	64
+  50 002d 40       		.byte	64
+  51 002e 60       		.byte	96
+  52 002f 03       		.byte	3
+  53 0030 03       		.byte	3
+  54 0031 08       		.byte	8
+  55 0032 00       		.byte	0
+  56 0033 00       		.byte	0
+  57 0034 E0       		.byte	-32
+  58 0035 00       		.byte	0
+  59 0036 00       		.byte	0
+  60 0037 00       		.byte	0
+  61 0038 00       		.byte	0
+  62 0039 00       		.byte	0
+  63 003a 00       		.byte	0
+  64 003b E0       		.byte	-32
+  65 003c 03       		.byte	3
+  66 003d 03       		.byte	3
+  67 003e 08       		.byte	8
+  68 003f 00       		.byte	0
+  69 0040 00       		.byte	0
+  70 0041 E0       		.byte	-32
+  71 0042 00       		.byte	0
+  72 0043 C0       		.byte	-64
+  73 0044 C0       		.byte	-64
+  74 0045 C0       		.byte	-64
+  75 0046 C0       		.byte	-64
+  76 0047 00       		.byte	0
+  77 0048 E0       		.byte	-32
+  78 0049 03       		.byte	3
+  79 004a 03       		.byte	3
+  80 004b 08       		.byte	8
+  81 004c 00       		.byte	0
+  82 004d 00       		.byte	0
+  83 004e 80       		.byte	-128
+  84 004f 80       		.byte	-128
+  85 0050 C0       		.byte	-64
+  86 0051 C0       		.byte	-64
+  87 0052 C0       		.byte	-64
+  88 0053 C0       		.byte	-64
+  89 0054 80       		.byte	-128
+  90 0055 80       		.byte	-128
+  91 0056 03       		.byte	3
+  92 0057 03       		.byte	3
+  93 0058 08       		.byte	8
+  94 0059 00       		.byte	0
+  95 005a 00       		.byte	0
+  96 005b 20       		.byte	32
+  97 005c 40       		.byte	64
+  98 005d 20       		.byte	32
+  99 005e 00       		.byte	0
+ 100 005f 00       		.byte	0
+ 101 0060 00       		.byte	0
+ 102 0061 00       		.byte	0
+ 103 0062 00       		.byte	0
+ 104 0063 05       		.byte	5
+ 105 0064 05       		.byte	5
+ 106 0065 08       		.byte	8
+ 107 0066 00       		.byte	0
+ 108 0067 00       		.byte	0
+ 109 0068 20       		.byte	32
+ 110 0069 50       		.byte	80
+ 111 006a 20       		.byte	32
+ 112 006b 20       		.byte	32
+ 113 006c 50       		.byte	80
+ 114 006d 50       		.byte	80
+ 115 006e 88       		.byte	-120
+ 116 006f F8       		.byte	-8
+ 117 0070 03       		.byte	3
+ 118 0071 03       		.byte	3
+ 119 0072 08       		.byte	8
+ 120 0073 00       		.byte	0
+ 121 0074 00       		.byte	0
+ 122 0075 80       		.byte	-128
+ 123 0076 40       		.byte	64
+ 124 0077 80       		.byte	-128
+ 125 0078 00       		.byte	0
+ 126 0079 00       		.byte	0
+ 127 007a 00       		.byte	0
+ 128 007b 00       		.byte	0
+ 129 007c 00       		.byte	0
+ 130 007d 03       		.byte	3
+ 131 007e 03       		.byte	3
+ 132 007f 08       		.byte	8
+ 133 0080 00       		.byte	0
+ 134 0081 00       		.byte	0
+ 135 0082 00       		.byte	0
+ 136 0083 00       		.byte	0
+ 137 0084 00       		.byte	0
+ 138 0085 00       		.byte	0
+ 139 0086 00       		.byte	0
+ 140 0087 00       		.byte	0
+ 141 0088 00       		.byte	0
+ 142 0089 00       		.byte	0
+ 143 008a 03       		.byte	3
+ 144 008b 03       		.byte	3
+ 145 008c 08       		.byte	8
+ 146 008d 00       		.byte	0
+ 147 008e 00       		.byte	0
+ 148 008f E0       		.byte	-32
+ 149 0090 00       		.byte	0
+ 150 0091 E0       		.byte	-32
+ 151 0092 E0       		.byte	-32
+ 152 0093 E0       		.byte	-32
+ 153 0094 E0       		.byte	-32
+ 154 0095 00       		.byte	0
+ 155 0096 E0       		.byte	-32
+ 156              		.file 1 "fb/symbols.c"
+ 157              		.file 2 "/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h"
+ 158              		.file 3 "include/fb/font.h"
+ 159 0097 00       		.text
+ 160              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 symbols.c
+     /tmp/cctA3BzR.s:15     .rodata:0000000000000000 font_symbols
+     /tmp/cctA3BzR.s:20     .rodata:0000000000000004 $d
+     /tmp/cctA3BzR.s:38     .rodata:0000000000000022 font_symbols_data
+     /tmp/cctA3BzR.s:26     .rodata:0000000000000010 font_symbols_offsets
+
+NO UNDEFINED SYMBOLS

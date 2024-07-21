@@ -1,0 +1,11 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: Osmocom GSM Core Library
+Description: GSM Core Library
+Version: UNKNOWN
+Libs: -L${libdir} -losmogsm
+Cflags: -I${includedir}/
+

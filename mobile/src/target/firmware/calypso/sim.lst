@@ -1,0 +1,2382 @@
+   1              		.file	"sim.c"
+   9              	.Ltext0:
+  10              		.bss
+  11              		.align	2
+  12              	rxDoneFlag:
+  13 0000 00000000 		.space	4
+  14              		.align	2
+  15              	sim_rx_character_count:
+  16 0004 00000000 		.space	4
+  17              	sim_ignore_waiting_char:
+  18 0008 00       		.space	1
+  19 0009 000000   		.align	2
+  20              	txDoneFlag:
+  21 000c 00000000 		.space	4
+  22              		.align	1
+  23              	sim_len:
+  24 0010 0000     		.space	2
+  25              	sim_state:
+  26 0012 00       		.space	1
+  27 0013 00       		.align	2
+  28              	sim_rx_max_character_count:
+  29 0014 00000000 		.space	4
+  30              		.align	2
+  31              	rx_buffer:
+  32 0018 00000000 		.space	4
+  33              		.align	2
+  34              	tx_buffer:
+  35 001c 00000000 		.space	4
+  36              		.align	2
+  37              	sim_tx_character_length:
+  38 0020 00000000 		.space	4
+  39              		.align	2
+  40              	sim_tx_character_count:
+  41 0024 00000000 		.space	4
+  42              		.section	.text.msgb_tailroom,"ax",%progbits
+  43              		.align	2
+  45              	msgb_tailroom:
+  46              	.LFB19:
+  47              		.file 1 "../../shared/libosmocore/include/osmocom/core/msgb.h"
+   1:../../shared/libosmocore/include/osmocom/core/msgb.h **** #ifndef _MSGB_H
+   2:../../shared/libosmocore/include/osmocom/core/msgb.h **** #define _MSGB_H
+   3:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+   4:../../shared/libosmocore/include/osmocom/core/msgb.h **** /* (C) 2008 by Harald Welte <laforge@gnumonks.org>
+   5:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * All Rights Reserved
+   6:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+   7:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This program is free software; you can redistribute it and/or modify
+   8:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * it under the terms of the GNU General Public License as published by
+   9:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * the Free Software Foundation; either version 2 of the License, or
+  10:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * (at your option) any later version.
+  11:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+  12:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This program is distributed in the hope that it will be useful,
+  13:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  14:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  15:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * GNU General Public License for more details.
+  16:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+  17:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * You should have received a copy of the GNU General Public License along
+  18:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  19:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  20:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+  21:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+  22:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  23:../../shared/libosmocore/include/osmocom/core/msgb.h **** #include <stdint.h>
+  24:../../shared/libosmocore/include/osmocom/core/msgb.h **** #include <osmocom/core/linuxlist.h>
+  25:../../shared/libosmocore/include/osmocom/core/msgb.h **** #include <osmocom/core/utils.h>
+  26:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  27:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \defgroup msgb Message buffers
+  28:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  @{
+  29:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+  30:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  31:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \file msgb.h
+  32:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \brief Osmocom message buffers
+  33:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * The Osmocom message buffers are modelled after the 'struct skb'
+  34:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * inside the Linux kernel network stack.  As they exist in userspace,
+  35:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * they are much simplified.  However, terminology such as headroom,
+  36:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * tailroom, push/pull/put etc. remains the same.
+  37:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+  38:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  39:../../shared/libosmocore/include/osmocom/core/msgb.h **** #define MSGB_DEBUG
+  40:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  41:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief Osmocom message buffer */
+  42:../../shared/libosmocore/include/osmocom/core/msgb.h **** struct msgb {
+  43:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	struct llist_head list; /*!< \brief linked list header */
+  44:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  45:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  46:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	/* Part of which TRX logical channel we were received / transmitted */
+  47:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	/* FIXME: move them into the control buffer */
+  48:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	union {
+  49:../../shared/libosmocore/include/osmocom/core/msgb.h **** 		void *dst; /*!< \brief reference of origin/destination */
+  50:../../shared/libosmocore/include/osmocom/core/msgb.h **** 		struct gsm_bts_trx *trx;
+  51:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	};
+  52:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	struct gsm_lchan *lchan; /*!< \brief logical channel */
+  53:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  54:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned char *l1h; /*!< \brief pointer to Layer1 header (if any) */
+  55:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned char *l2h; /*!< \brief pointer to A-bis layer 2 header: OML, RSL(RLL), NS */
+  56:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned char *l3h; /*!< \brief pointer to Layer 3 header. For OML: FOM; RSL: 04.08; GPRS: BSSGP *
+  57:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned char *l4h; /*!< \brief pointer to layer 4 header */
+  58:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  59:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned long cb[5]; /*!< \brief control buffer */
+  60:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  61:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint16_t data_len;   /*!< \brief length of underlying data array */
+  62:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint16_t len;	     /*!< \brief length of bytes used in msgb */
+  63:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  64:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned char *head;	/*!< \brief start of underlying memory buffer */
+  65:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned char *tail;	/*!< \brief end of message in buffer */
+  66:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned char *data;	/*!< \brief start of message in buffer */
+  67:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned char _data[0]; /*!< \brief optional immediate data array */
+  68:../../shared/libosmocore/include/osmocom/core/msgb.h **** };
+  69:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  70:../../shared/libosmocore/include/osmocom/core/msgb.h **** extern struct msgb *msgb_alloc(uint16_t size, const char *name);
+  71:../../shared/libosmocore/include/osmocom/core/msgb.h **** extern void msgb_free(struct msgb *m);
+  72:../../shared/libosmocore/include/osmocom/core/msgb.h **** extern void msgb_enqueue(struct llist_head *queue, struct msgb *msg);
+  73:../../shared/libosmocore/include/osmocom/core/msgb.h **** extern struct msgb *msgb_dequeue(struct llist_head *queue);
+  74:../../shared/libosmocore/include/osmocom/core/msgb.h **** extern void msgb_reset(struct msgb *m);
+  75:../../shared/libosmocore/include/osmocom/core/msgb.h **** uint16_t msgb_length(const struct msgb *msg);
+  76:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  77:../../shared/libosmocore/include/osmocom/core/msgb.h **** #ifdef MSGB_DEBUG
+  78:../../shared/libosmocore/include/osmocom/core/msgb.h **** #include <osmocom/core/panic.h>
+  79:../../shared/libosmocore/include/osmocom/core/msgb.h **** #define MSGB_ABORT(msg, fmt, args ...) do {		\
+  80:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	osmo_panic("msgb(%p): " fmt, msg, ## args);	\
+  81:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	} while(0)
+  82:../../shared/libosmocore/include/osmocom/core/msgb.h **** #else
+  83:../../shared/libosmocore/include/osmocom/core/msgb.h **** #define MSGB_ABORT(msg, fmt, args ...)
+  84:../../shared/libosmocore/include/osmocom/core/msgb.h **** #endif
+  85:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  86:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief obtain L1 header of msgb */
+  87:../../shared/libosmocore/include/osmocom/core/msgb.h **** #define msgb_l1(m)	((void *)(m->l1h))
+  88:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief obtain L2 header of msgb */
+  89:../../shared/libosmocore/include/osmocom/core/msgb.h **** #define msgb_l2(m)	((void *)(m->l2h))
+  90:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief obtain L3 header of msgb */
+  91:../../shared/libosmocore/include/osmocom/core/msgb.h **** #define msgb_l3(m)	((void *)(m->l3h))
+  92:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief obtain SMS header of msgb */
+  93:../../shared/libosmocore/include/osmocom/core/msgb.h **** #define msgb_sms(m)	((void *)(m->l4h))
+  94:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+  95:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief determine length of L1 message
+  96:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+  97:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns size of L1 message in bytes
+  98:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+  99:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function computes the number of bytes between the tail of the
+ 100:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * message and the layer 1 header.
+ 101:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 102:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline unsigned int msgb_l1len(const struct msgb *msgb)
+ 103:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 104:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return msgb->tail - (uint8_t *)msgb_l1(msgb);
+ 105:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 106:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 107:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief determine length of L2 message
+ 108:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 109:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns size of L2 message in bytes
+ 110:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 111:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function computes the number of bytes between the tail of the
+ 112:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * message and the layer 2 header.
+ 113:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 114:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline unsigned int msgb_l2len(const struct msgb *msgb)
+ 115:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 116:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return msgb->tail - (uint8_t *)msgb_l2(msgb);
+ 117:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 118:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 119:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief determine length of L3 message
+ 120:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 121:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns size of L3 message in bytes
+ 122:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 123:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function computes the number of bytes between the tail of the
+ 124:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * message and the layer 3 header.
+ 125:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 126:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline unsigned int msgb_l3len(const struct msgb *msgb)
+ 127:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 128:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return msgb->tail - (uint8_t *)msgb_l3(msgb);
+ 129:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 130:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 131:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief determine the length of the header
+ 132:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 133:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns number of bytes between start of buffer and start of msg
+ 134:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 135:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function computes the length difference between the underlying
+ 136:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * data buffer and the used section of the \a msgb.
+ 137:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 138:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline unsigned int msgb_headlen(const struct msgb *msgb)
+ 139:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 140:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return msgb->len - msgb->data_len;
+ 141:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 142:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 143:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief determine how much tail room is left in msgb
+ 144:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 145:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns number of bytes remaining at end of msgb
+ 146:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 147:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function computes the amount of octets left in the underlying
+ 148:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * data buffer after the end of the message.
+ 149:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 150:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline int msgb_tailroom(const struct msgb *msgb)
+ 151:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+  48              		.loc 1 151 0
+  49              		@ args = 0, pretend = 0, frame = 0
+  50              		@ frame_needed = 0, uses_anonymous_args = 0
+  51              		@ link register save eliminated.
+  52              	.LVL0:
+  53 0000 B423D0E1 		ldrh	r2, [r0, #52]
+  54 0004 383090E5 		ldr	r3, [r0, #56]
+  55 0008 3C0090E5 		ldr	r0, [r0, #60]
+  56              	.LVL1:
+  57 000c 023083E0 		add	r3, r3, r2
+ 152:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return (msgb->head + msgb->data_len) - msgb->tail;
+ 153:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+  58              		.loc 1 153 0
+  59 0010 030060E0 		rsb	r0, r0, r3
+  60              		.loc 1 151 0
+  61              		@ lr needed for prologue
+  62              		.loc 1 153 0
+  63 0014 1EFF2FE1 		bx	lr
+  64              	.LFE19:
+  66              		.section	.text.msgb_pull,"ax",%progbits
+  67              		.align	2
+  69              	msgb_pull:
+  70              	.LFB30:
+ 154:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 155:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief determine the amount of headroom in msgb
+ 156:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 157:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns number of bytes left ahead of message start in msgb
+ 158:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 159:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function computes the amount of bytes left in the underlying
+ 160:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * data buffer before the start of the actual message.
+ 161:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 162:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline int msgb_headroom(const struct msgb *msgb)
+ 163:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 164:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return (msgb->data - msgb->head);
+ 165:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 166:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 167:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief append data to end of message buffer
+ 168:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 169:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] len number of bytes to append to message
+ 170:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns pointer to start of newly-appended data
+ 171:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 172:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function will move the \a tail pointer of the message buffer \a
+ 173:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * len bytes further, thus enlarging the message by \a len bytes.
+ 174:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 175:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * The return value is a pointer to start of the newly added section at
+ 176:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * the end of the message and can be used for actually filling/copying
+ 177:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * data into it.
+ 178:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 179:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline unsigned char *msgb_put(struct msgb *msgb, unsigned int len)
+ 180:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 181:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned char *tmp = msgb->tail;
+ 182:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	if (msgb_tailroom(msgb) < (int) len)
+ 183:../../shared/libosmocore/include/osmocom/core/msgb.h **** 		MSGB_ABORT(msgb, "Not enough tailroom msgb_push (%u < %u)\n",
+ 184:../../shared/libosmocore/include/osmocom/core/msgb.h **** 			   msgb_tailroom(msgb), len);
+ 185:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msgb->tail += len;
+ 186:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msgb->len += len;
+ 187:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return tmp;
+ 188:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 189:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 190:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief append a uint8 value to the end of the message
+ 191:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 192:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] word unsigned 8bit byte to be appended
+ 193:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 194:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline void msgb_put_u8(struct msgb *msgb, uint8_t word)
+ 195:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 196:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint8_t *space = msgb_put(msgb, 1);
+ 197:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	space[0] = word & 0xFF;
+ 198:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 199:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 200:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief append a uint16 value to the end of the message
+ 201:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 202:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] word unsigned 16bit byte to be appended
+ 203:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 204:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline void msgb_put_u16(struct msgb *msgb, uint16_t word)
+ 205:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 206:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint8_t *space = msgb_put(msgb, 2);
+ 207:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	space[0] = word >> 8 & 0xFF;
+ 208:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	space[1] = word & 0xFF;
+ 209:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 210:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 211:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief append a uint32 value to the end of the message
+ 212:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 213:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] word unsigned 32bit byte to be appended
+ 214:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 215:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline void msgb_put_u32(struct msgb *msgb, uint32_t word)
+ 216:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 217:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint8_t *space = msgb_put(msgb, 4);
+ 218:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	space[0] = word >> 24 & 0xFF;
+ 219:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	space[1] = word >> 16 & 0xFF;
+ 220:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	space[2] = word >> 8 & 0xFF;
+ 221:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	space[3] = word & 0xFF;
+ 222:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 223:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 224:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief remove data from end of message
+ 225:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 226:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] len number of bytes to remove from end
+ 227:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 228:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline unsigned char *msgb_get(struct msgb *msgb, unsigned int len)
+ 229:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 230:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	unsigned char *tmp = msgb->data - len;
+ 231:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	if (msgb_length(msgb) < len)
+ 232:../../shared/libosmocore/include/osmocom/core/msgb.h **** 		MSGB_ABORT(msgb, "msgb too small to get %u (len %u)\n",
+ 233:../../shared/libosmocore/include/osmocom/core/msgb.h **** 			   len, msgb_length(msgb));
+ 234:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msgb->tail -= len;
+ 235:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msgb->len -= len;
+ 236:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return tmp;
+ 237:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 238:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief remove uint8 from end of message
+ 239:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 240:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns 8bit value taken from end of msgb
+ 241:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 242:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline uint8_t msgb_get_u8(struct msgb *msgb)
+ 243:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 244:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint8_t *space = msgb_get(msgb, 1);
+ 245:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return space[0];
+ 246:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 247:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief remove uint16 from end of message
+ 248:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 249:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns 16bit value taken from end of msgb
+ 250:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 251:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline uint16_t msgb_get_u16(struct msgb *msgb)
+ 252:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 253:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint8_t *space = msgb_get(msgb, 2);
+ 254:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return space[0] << 8 | space[1];
+ 255:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 256:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief remove uint32 from end of message
+ 257:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 258:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns 32bit value taken from end of msgb
+ 259:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 260:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline uint32_t msgb_get_u32(struct msgb *msgb)
+ 261:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 262:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint8_t *space = msgb_get(msgb, 4);
+ 263:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return space[0] << 24 | space[1] << 16 | space[2] << 8 | space[3];
+ 264:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 265:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 266:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief prepend (push) some data to start of message
+ 267:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 268:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] len number of bytes to pre-pend
+ 269:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns pointer to newly added portion at start of \a msgb
+ 270:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 271:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function moves the \a data pointer of the \ref msgb further
+ 272:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * to the front (by \a len bytes), thereby enlarging the message by \a
+ 273:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * len bytes.
+ 274:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 275:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * The return value is a pointer to the newly added section in the
+ 276:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * beginning of the message.  It can be used to fill/copy data into it.
+ 277:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 278:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline unsigned char *msgb_push(struct msgb *msgb, unsigned int len)
+ 279:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 280:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	if (msgb_headroom(msgb) < (int) len)
+ 281:../../shared/libosmocore/include/osmocom/core/msgb.h **** 		MSGB_ABORT(msgb, "Not enough headroom msgb_push (%u < %u)\n",
+ 282:../../shared/libosmocore/include/osmocom/core/msgb.h **** 			   msgb_headroom(msgb), len);
+ 283:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msgb->data -= len;
+ 284:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msgb->len += len;
+ 285:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return msgb->data;
+ 286:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 287:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief remove (pull) a header from the front of the message buffer
+ 288:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 289:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] len number of octets to be pulled
+ 290:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns pointer to new start of msgb
+ 291:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 292:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function moves the \a data pointer of the \ref msgb further back
+ 293:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * in the message, thereby shrinking the size of the message by \a len
+ 294:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * bytes.
+ 295:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 296:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline unsigned char *msgb_pull(struct msgb *msgb, unsigned int len)
+ 297:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+  71              		.loc 1 297 0
+  72              		@ args = 0, pretend = 0, frame = 0
+  73              		@ frame_needed = 0, uses_anonymous_args = 0
+  74              		@ link register save eliminated.
+  75              	.LVL2:
+  76 0000 0020A0E1 		mov	r2, r0
+ 298:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msgb->len -= len;
+  77              		.loc 1 298 0
+  78 0004 B633D0E1 		ldrh	r3, [r0, #54]
+ 299:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return msgb->data += len;
+  79              		.loc 1 299 0
+  80 0008 400090E5 		ldr	r0, [r0, #64]
+  81              	.LVL3:
+  82              		.loc 1 298 0
+  83 000c 033061E0 		rsb	r3, r1, r3
+  84              		.loc 1 299 0
+  85 0010 010080E0 		add	r0, r0, r1
+  86              		.loc 1 297 0
+  87              		@ lr needed for prologue
+  88              		.loc 1 298 0
+  89 0014 B633C2E1 		strh	r3, [r2, #54]	@ movhi
+  90              		.loc 1 299 0
+  91 0018 400082E5 		str	r0, [r2, #64]
+ 300:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+  92              		.loc 1 300 0
+  93 001c 1EFF2FE1 		bx	lr
+  94              	.LFE30:
+  96              		.section	.text.calypso_sim_regdump,"ax",%progbits
+  97              		.align	2
+  98              		.global	calypso_sim_regdump
+ 100              	calypso_sim_regdump:
+ 101              	.LFB38:
+ 102              		.file 2 "calypso/sim.c"
+   1:calypso/sim.c **** /* Driver for Simcard Controller inside TI Calypso/Iota */
+   2:calypso/sim.c **** 
+   3:calypso/sim.c **** /* (C) 2010 by Philipp Fabian Benedikt Maier <philipp-maier@runningserver.com>
+   4:calypso/sim.c ****  * (C) 2011 by Andreas Eversberg <jolly@eversberg.eu>
+   5:calypso/sim.c ****  *
+   6:calypso/sim.c ****  * All Rights Reserved
+   7:calypso/sim.c ****  *
+   8:calypso/sim.c ****  * This program is free software; you can redistribute it and/or modify
+   9:calypso/sim.c ****  * it under the terms of the GNU General Public License as published by
+  10:calypso/sim.c ****  * the Free Software Foundation; either version 2 of the License, or
+  11:calypso/sim.c ****  * (at your option) any later version.
+  12:calypso/sim.c ****  *
+  13:calypso/sim.c ****  * This program is distributed in the hope that it will be useful,
+  14:calypso/sim.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  15:calypso/sim.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  16:calypso/sim.c ****  * GNU General Public License for more details.
+  17:calypso/sim.c ****  *
+  18:calypso/sim.c ****  * You should have received a copy of the GNU General Public License along
+  19:calypso/sim.c ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  20:calypso/sim.c ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  21:calypso/sim.c ****  *
+  22:calypso/sim.c ****  */
+  23:calypso/sim.c **** 
+  24:calypso/sim.c **** /* Uncomment to debug sim */
+  25:calypso/sim.c **** /* #define DEBUG */
+  26:calypso/sim.c **** 
+  27:calypso/sim.c **** #include <stdint.h>
+  28:calypso/sim.c **** #include <stdio.h>
+  29:calypso/sim.c **** 
+  30:calypso/sim.c **** #include <debug.h>
+  31:calypso/sim.c **** #include <memory.h>
+  32:calypso/sim.c **** #include <string.h>
+  33:calypso/sim.c **** #include <delay.h>
+  34:calypso/sim.c **** #include <osmocom/core/msgb.h>
+  35:calypso/sim.c **** #include <layer1/l23_api.h>
+  36:calypso/sim.c **** #include <abb/twl3025.h>
+  37:calypso/sim.c **** #include <calypso/sim.h>
+  38:calypso/sim.c **** #include <calypso/irq.h>
+  39:calypso/sim.c **** 
+  40:calypso/sim.c **** #include <l1ctl_proto.h>
+  41:calypso/sim.c **** 
+  42:calypso/sim.c **** #define SIM_CLASS		0xA0
+  43:calypso/sim.c **** 	/* Class that contains the following instructions */
+  44:calypso/sim.c **** #define SIM_GET_RESPONSE	0xC0
+  45:calypso/sim.c **** 	/* Get the response of a command from the card */
+  46:calypso/sim.c **** #define SIM_READ_BINARY		0xB0	/* Read file in binary mode */
+  47:calypso/sim.c **** #define SIM_READ_RECORD		0xB2	/* Read record in binary mode */
+  48:calypso/sim.c **** 
+  49:calypso/sim.c **** enum {
+  50:calypso/sim.c **** 	SIM_STATE_IDLE,
+  51:calypso/sim.c **** 	SIM_STATE_TX_HEADER,
+  52:calypso/sim.c **** 	SIM_STATE_RX_STATUS,
+  53:calypso/sim.c **** 	SIM_STATE_RX_ACK,
+  54:calypso/sim.c **** 	SIM_STATE_RX_ACK_DATA,
+  55:calypso/sim.c **** 	SIM_STATE_TX_DATA,
+  56:calypso/sim.c **** };
+  57:calypso/sim.c **** 
+  58:calypso/sim.c **** #define L3_MSG_HEAD 4
+  59:calypso/sim.c **** 
+  60:calypso/sim.c **** static uint8_t sim_data[256]; /* buffer for SIM command */
+  61:calypso/sim.c **** static volatile uint16_t sim_len = 0; /* length of data in sim_data[] */
+  62:calypso/sim.c **** static volatile uint8_t sim_state = SIM_STATE_IDLE;
+  63:calypso/sim.c **** 	/* current state of SIM process */
+  64:calypso/sim.c **** static volatile uint8_t sim_ignore_waiting_char = 0;
+  65:calypso/sim.c **** 	/* signal ignoring of NULL procedure byte */
+  66:calypso/sim.c **** static volatile int sim_rx_character_count = 0;
+  67:calypso/sim.c **** 	/* How many bytes have been received by calypso_sim_receive() */
+  68:calypso/sim.c **** static volatile int sim_rx_max_character_count = 0;
+  69:calypso/sim.c **** 	/* How many bytes have been received by calypso_sim_receive() */
+  70:calypso/sim.c **** static volatile int sim_tx_character_count = 0;
+  71:calypso/sim.c **** 	/* How many bytes have been transmitted by calypso_sim_transmit() */
+  72:calypso/sim.c **** static volatile int sim_tx_character_length = 0;
+  73:calypso/sim.c **** 	/* How many bytes have to be transmitted by calypso_sim_transmit() */
+  74:calypso/sim.c **** static uint8_t *rx_buffer = 0;
+  75:calypso/sim.c **** 	/* RX-Buffer that is issued by calypso_sim_receive() */
+  76:calypso/sim.c **** static uint8_t *tx_buffer = 0;
+  77:calypso/sim.c **** 	/* TX-Buffer that is issued by calypso_sim_transmit() */
+  78:calypso/sim.c **** static volatile int rxDoneFlag = 0;
+  79:calypso/sim.c **** 	/* Used for rx synchronization instead of a semaphore in calypso_sim_receive() */
+  80:calypso/sim.c **** static volatile int txDoneFlag = 0;
+  81:calypso/sim.c **** 	/* Used for rx synchronization instead of a semaphore in calypso_sim_transmit() */
+  82:calypso/sim.c **** 
+  83:calypso/sim.c **** /* Display Register dump */
+  84:calypso/sim.c **** void calypso_sim_regdump(void)
+  85:calypso/sim.c **** {
+ 103              		.loc 2 85 0
+ 104              		@ args = 0, pretend = 0, frame = 0
+ 105              		@ frame_needed = 0, uses_anonymous_args = 0
+ 106              		@ link register save eliminated.
+ 107              	.LVL4:
+ 108              		@ lr needed for prologue
+  86:calypso/sim.c **** #ifdef DEBUG
+  87:calypso/sim.c **** 	unsigned int regVal;
+  88:calypso/sim.c **** 
+  89:calypso/sim.c **** #define SIM_DEBUG_OUTPUTDELAY 200
+  90:calypso/sim.c **** 
+  91:calypso/sim.c **** 	puts("\n\n\n");
+  92:calypso/sim.c **** 	puts("====================== CALYPSO SIM REGISTER DUMP =====================\n");
+  93:calypso/sim.c **** 	puts("Reg_sim_cmd register (R/W) - FFFE:0000\n");
+  94:calypso/sim.c **** 
+  95:calypso/sim.c **** 	regVal = readw(REG_SIM_CMD);
+  96:calypso/sim.c **** 	printf("  |-REG_SIM_CMD = %04x\n", readw(REG_SIM_CMD));
+  97:calypso/sim.c **** 
+  98:calypso/sim.c **** 	if(regVal & REG_SIM_CMD_CMDCARDRST)
+  99:calypso/sim.c **** 		puts("  |  |-REG_SIM_CMD_CMDCARDRST = 1 ==> SIM card reset sequence enabled.\n");
+ 100:calypso/sim.c **** 	else
+ 101:calypso/sim.c **** 		puts("  |  |-REG_SIM_CMD_CMDCARDRST = 0 ==> SIM card reset sequence disabled.\n");
+ 102:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 103:calypso/sim.c **** 
+ 104:calypso/sim.c **** 	if(regVal & REG_SIM_CMD_CMDIFRST)
+ 105:calypso/sim.c **** 		puts("  |  |-REG_SIM_CMD_CMDIFRST = 1\n");
+ 106:calypso/sim.c **** 	else
+ 107:calypso/sim.c **** 		puts("  |  |-REG_SIM_CMD_CMDIFRST = 0\n");
+ 108:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 109:calypso/sim.c **** 
+ 110:calypso/sim.c **** 	if(regVal & REG_SIM_CMD_CMDSTOP)
+ 111:calypso/sim.c **** 		puts("  |  |-REG_SIM_CMD_CMDSTOP = 1\n");
+ 112:calypso/sim.c **** 	else
+ 113:calypso/sim.c **** 		puts("  |  |-REG_SIM_CMD_CMDSTOP = 0\n");
+ 114:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 115:calypso/sim.c **** 
+ 116:calypso/sim.c **** 	if(regVal & REG_SIM_CMD_CMDSTART)
+ 117:calypso/sim.c **** 		puts("  |  |-REG_SIM_CMD_CMDSTART = 1 ==> SIM card start procedure active.\n");
+ 118:calypso/sim.c **** 	else
+ 119:calypso/sim.c **** 		puts("  |  |-REG_SIM_CMD_CMDSTART = 0\n");
+ 120:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 121:calypso/sim.c **** 
+ 122:calypso/sim.c **** 	if(regVal & REG_SIM_CMD_CMDSTART)
+ 123:calypso/sim.c **** 		puts("  |  |-REG_SIM_CMD_MODULE_CLK_EN = 1 ==> Clock of the module enabled.\n");
+ 124:calypso/sim.c **** 	else
+ 125:calypso/sim.c **** 		puts("  |  |-REG_SIM_CMD_MODULE_CLK_EN = 0 ==> Clock of the module disabled.\n");
+ 126:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 127:calypso/sim.c **** 
+ 128:calypso/sim.c **** 	regVal = readw(REG_SIM_STAT);
+ 129:calypso/sim.c **** 	printf("  |-REG_SIM_STAT = %04x\n", regVal);
+ 130:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 131:calypso/sim.c **** 
+ 132:calypso/sim.c **** 	if(regVal & REG_SIM_STAT_STATNOCARD)
+ 133:calypso/sim.c **** 		puts("  |  |-REG_SIM_STAT_STATNOCARD = 1 ==> No card!\n");
+ 134:calypso/sim.c **** 	else
+ 135:calypso/sim.c **** 		puts("  |  |-REG_SIM_STAT_STATNOCARD = 0 ==> Card detected!\n");
+ 136:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 137:calypso/sim.c **** 
+ 138:calypso/sim.c **** 	if(regVal & REG_SIM_STAT_STATTXPAR)
+ 139:calypso/sim.c **** 		puts("  |  |-REG_SIM_STAT_STATTXPAR = 1 ==> Parity ok!\n");
+ 140:calypso/sim.c **** 	else
+ 141:calypso/sim.c **** 		puts("  |  |-REG_SIM_STAT_STATTXPAR = 0 ==> Parity error!\n");
+ 142:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 143:calypso/sim.c **** 
+ 144:calypso/sim.c **** 	if(regVal & REG_SIM_STAT_STATFIFOFULL)
+ 145:calypso/sim.c **** 		puts("  |  |-REG_SIM_STAT_STATFIFOFULL = 1 ==> Fifo full!\n");
+ 146:calypso/sim.c **** 	else
+ 147:calypso/sim.c **** 		puts("  |  |-REG_SIM_STAT_STATFIFOFULL = 0\n");
+ 148:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 149:calypso/sim.c **** 
+ 150:calypso/sim.c **** 	if(regVal & REG_SIM_STAT_STATFIFOEMPTY)
+ 151:calypso/sim.c **** 		puts("  |  |-REG_SIM_STAT_STATFIFOEMPTY = 1 ==> Fifo empty!\n");
+ 152:calypso/sim.c **** 	else
+ 153:calypso/sim.c **** 		puts("  |  |-REG_SIM_STAT_STATFIFOEMPTY = 0\n");
+ 154:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 155:calypso/sim.c **** 
+ 156:calypso/sim.c **** 	regVal = readw(REG_SIM_CONF1);
+ 157:calypso/sim.c **** 	printf("  |-REG_SIM_CONF1 = %04x\n", regVal);
+ 158:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 159:calypso/sim.c **** 
+ 160:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFCHKPAR)
+ 161:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFCHKPAR = 1 ==> Parity check on reception enabled.\n");
+ 162:calypso/sim.c **** 	else
+ 163:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFCHKPAR = 0 ==> Parity check on reception disabled.\n");
+ 164:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 165:calypso/sim.c **** 
+ 166:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFCODCONV)
+ 167:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFCODCONV = 1 ==> Coding convention is inverse.\n");
+ 168:calypso/sim.c **** 	else
+ 169:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFCODCONV = 0 ==> Coding convention is direct (normal).\n");
+ 170:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 171:calypso/sim.c **** 
+ 172:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFTXRX)
+ 173:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFTXRX = 1 ==> SIO line direction is in transmit mode.\n");
+ 174:calypso/sim.c **** 	else
+ 175:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFTXRX = 0 ==> SIO line direction is in receive mode.\n");
+ 176:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 177:calypso/sim.c **** 
+ 178:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFSCLKEN)
+ 179:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSCLKEN = 1 ==> SIM clock in normal mode.\n");
+ 180:calypso/sim.c **** 	else
+ 181:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSCLKEN = 0 ==> SIM clock in standby mode.\n");
+ 182:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 183:calypso/sim.c **** 
+ 184:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_reserved)
+ 185:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_reserved = 1 ==> ETU period is 4*1/Fsclk.\n");
+ 186:calypso/sim.c **** 	else
+ 187:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_reserved = 0 ==> ETU period is CONFETUPERIOD.\n");
+ 188:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 189:calypso/sim.c **** 
+ 190:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFSCLKDIV)
+ 191:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSCLKDIV = 1 ==> SIM clock frequency is 13/8 Mhz.\n");
+ 192:calypso/sim.c **** 	else
+ 193:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSCLKDIV = 0 ==> SIM clock frequency is 13/4 Mhz.\n");
+ 194:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 195:calypso/sim.c **** 
+ 196:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFSCLKLEV)
+ 197:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSCLKLEV = 1 ==> SIM clock idle level is high.\n");
+ 198:calypso/sim.c **** 	else
+ 199:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSCLKLEV = 0 ==> SIM clock idle level is low.\n");
+ 200:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 201:calypso/sim.c **** 
+ 202:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFETUPERIOD)
+ 203:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFETUPERIOD = 1 ==> ETU period is 512/8*1/Fsclk.\n");
+ 204:calypso/sim.c **** 	else
+ 205:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFETUPERIOD = 0 ==> ETU period is 372/8*1/Fsclk.\n");
+ 206:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 207:calypso/sim.c **** 
+ 208:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFBYPASS)
+ 209:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFBYPASS = 1 ==> Hardware timers and start and stop sequences are by
+ 210:calypso/sim.c **** 	else
+ 211:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFBYPASS = 0 ==> Hardware timers and start and stop sequences are no
+ 212:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 213:calypso/sim.c **** 
+ 214:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFSVCCLEV)
+ 215:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSVCCLEV = 1 ==> SVCC Level is high (Only valid when CONFBYPASS = 1
+ 216:calypso/sim.c **** 	else
+ 217:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSVCCLEV = 0 ==> SVCC Level is low (Only valid when CONFBYPASS = 1)
+ 218:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 219:calypso/sim.c **** 
+ 220:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFSRSTLEV)
+ 221:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSRSTLEV = 1 ==> SRST Level is high (Only valid when CONFBYPASS = 1
+ 222:calypso/sim.c **** 	else
+ 223:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSRSTLEV = 0 ==> SRST Level is low (Only valid when CONFBYPASS = 1)
+ 224:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 225:calypso/sim.c **** 
+ 226:calypso/sim.c ****  	printf("  |  |-REG_SIM_CONF1_CONFTRIG = 0x%x (FIFO trigger level)\n",(regVal >> REG_SIM_CONF1_CON
+ 227:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 228:calypso/sim.c **** 
+ 229:calypso/sim.c **** 	if(regVal & REG_SIM_CONF1_CONFSIOLOW)
+ 230:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSIOLOW = 1 ==> I/O is forced to low.\n");
+ 231:calypso/sim.c **** 	else
+ 232:calypso/sim.c **** 		puts("  |  |-REG_SIM_CONF1_CONFSIOLOW = 0\n");
+ 233:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 234:calypso/sim.c **** 
+ 235:calypso/sim.c **** 	regVal = readw(REG_SIM_CONF2);
+ 236:calypso/sim.c **** 	printf("  |-REG_SIM_CONF2 = %04x\n", regVal);
+ 237:calypso/sim.c ****  	printf("  |  |-REG_SIM_CONF2_CONFTFSIM = 0x%x (time delay for filtering of SIM_CD)\n",(regVal >> 
+ 238:calypso/sim.c ****  	printf("  |  |-REG_SIM_CONF2_CONFTDSIM = 0x%x (time delay for contact activation/deactivation)\n"
+ 239:calypso/sim.c ****  	printf("  |  |-REG_SIM_CONF2_CONFWAITI = 0x%x (CONFWAITI overflow wait time between two received 
+ 240:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 241:calypso/sim.c **** 
+ 242:calypso/sim.c **** 	regVal = readw(REG_SIM_IT);
+ 243:calypso/sim.c **** 	printf("  |-REG_SIM_IT = %04x\n", regVal);
+ 244:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 245:calypso/sim.c **** 
+ 246:calypso/sim.c **** 	if(regVal & REG_SIM_IT_SIM_NATR)
+ 247:calypso/sim.c **** 		puts("  |  |-REG_SIM_IT_SIM_NATR = 1 ==> No answer to reset!\n");
+ 248:calypso/sim.c **** 	else
+ 249:calypso/sim.c **** 		puts("  |  |-REG_SIM_IT_SIM_NATR = 0 ==> On read access to REG_SIM_IT.\n");
+ 250:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 251:calypso/sim.c **** 
+ 252:calypso/sim.c **** 	if(regVal & REG_SIM_IT_SIM_WT)
+ 253:calypso/sim.c **** 		puts("  |  |-REG_SIM_IT_SIM_WT = 1 ==> Character underflow!\n");
+ 254:calypso/sim.c **** 	else
+ 255:calypso/sim.c **** 		puts("  |  |-REG_SIM_IT_SIM_WT = 0 ==> On read access to REG_SIM_IT.\n");
+ 256:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 257:calypso/sim.c **** 
+ 258:calypso/sim.c **** 	if(regVal & REG_SIM_IT_SIM_OV)
+ 259:calypso/sim.c **** 		puts("  |  |-REG_SIM_IT_SIM_OV = 1 ==> Receive overflow!\n");
+ 260:calypso/sim.c **** 	else
+ 261:calypso/sim.c **** 		puts("  |  |-REG_SIM_IT_SIM_OV = 0 ==> On read access to REG_SIM_IT.\n");
+ 262:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 263:calypso/sim.c **** 
+ 264:calypso/sim.c **** 	if(regVal & REG_SIM_IT_SIM_TX)
+ 265:calypso/sim.c **** 		puts("  |  |-REG_SIM_IT_SIM_TX = 1 ==> Waiting for character to transmit...\n");
+ 266:calypso/sim.c **** 	else
+ 267:calypso/sim.c **** 	{
+ 268:calypso/sim.c **** 		puts("  |  |-REG_SIM_IT_SIM_TX = 0 ==> On write access to REG_SIM_DTX or on switching\n");
+ 269:calypso/sim.c **** 		puts("  |  |                           from transmit to receive mode (CONFTXRX bit)\n");
+ 270:calypso/sim.c **** 	}
+ 271:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 272:calypso/sim.c **** 
+ 273:calypso/sim.c **** 	if(regVal & REG_SIM_IT_SIM_RX)
+ 274:calypso/sim.c **** 		puts("  |  |-REG_SIM_IT_SIM_RX = 1 ==> Waiting characters to be read...\n");
+ 275:calypso/sim.c **** 	else
+ 276:calypso/sim.c **** 		puts("  |  |-REG_SIM_IT_SIM_RX = 0 ==> On read access to REG_SIM_DRX.\n");
+ 277:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 278:calypso/sim.c **** 
+ 279:calypso/sim.c **** 	regVal = readw(REG_SIM_DRX);
+ 280:calypso/sim.c **** 	printf("  |-REG_SIM_DRX = %04x\n", regVal);
+ 281:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 282:calypso/sim.c **** 
+ 283:calypso/sim.c ****  	printf("  |  |-REG_SIM_DRX_SIM_DRX = 0x%x (next data byte in FIFO available for reading)\n",(regV
+ 284:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 285:calypso/sim.c **** 
+ 286:calypso/sim.c **** 	if(regVal & REG_SIM_DRX_STATRXPAR)
+ 287:calypso/sim.c **** 		puts("  |  |-REG_SIM_DRX_STATRXPAR = 1 ==> Parity Ok.\n");
+ 288:calypso/sim.c **** 	else
+ 289:calypso/sim.c **** 		puts("  |  |-REG_SIM_DRX_STATRXPAR = 0 ==> Parity error!\n");
+ 290:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 291:calypso/sim.c **** 
+ 292:calypso/sim.c **** 	regVal = readw(REG_SIM_DTX);
+ 293:calypso/sim.c **** 	printf("  |-REG_SIM_DTX = %02x (next data byte to be transmitted)\n", regVal);
+ 294:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 295:calypso/sim.c **** 
+ 296:calypso/sim.c **** 	regVal = readw(REG_SIM_MASKIT);
+ 297:calypso/sim.c **** 	printf("  |-REG_SIM_MASKIT = %04x\n", regVal);
+ 298:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 299:calypso/sim.c **** 
+ 300:calypso/sim.c **** 	if(regVal & REG_SIM_MASKIT_MASK_SIM_NATR)
+ 301:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_NATR = 1 ==> No-answer-to-reset interrupt is masked.\n");
+ 302:calypso/sim.c **** 	else
+ 303:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_NATR = 0 ==> No-answer-to-reset interrupt is unmasked.\n");
+ 304:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 305:calypso/sim.c **** 
+ 306:calypso/sim.c **** 	if(regVal & REG_SIM_MASKIT_MASK_SIM_WT)
+ 307:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_WT = 1 ==> Character wait-time overflow interrupt is masked.
+ 308:calypso/sim.c **** 	else
+ 309:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_WT = 0 ==> Character wait-time overflow interrupt is unmaske
+ 310:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 311:calypso/sim.c **** 
+ 312:calypso/sim.c **** 	if(regVal & REG_SIM_MASKIT_MASK_SIM_OV)
+ 313:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_OV = 1 ==> Receive overflow interrupt is masked.\n");
+ 314:calypso/sim.c **** 	else
+ 315:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_OV = 0 ==> Receive overflow interrupt is unmasked.\n");
+ 316:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 317:calypso/sim.c **** 
+ 318:calypso/sim.c **** 	if(regVal & REG_SIM_MASKIT_MASK_SIM_TX)
+ 319:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_TX = 1 ==> Waiting characters to be transmit interrupt is ma
+ 320:calypso/sim.c **** 	else
+ 321:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_TX = 0 ==> Waiting characters to be transmit interrupt is un
+ 322:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 323:calypso/sim.c **** 
+ 324:calypso/sim.c **** 	if(regVal & REG_SIM_MASKIT_MASK_SIM_RX)
+ 325:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_RX = 1 ==> Waiting characters to be read interrupt is masked
+ 326:calypso/sim.c **** 	else
+ 327:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_RX = 0 ==> Waiting characters to be read interrupt is unmask
+ 328:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 329:calypso/sim.c **** 
+ 330:calypso/sim.c **** 	if(regVal & REG_SIM_MASKIT_MASK_SIM_CD)
+ 331:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_CD = 1 ==> SIM card insertion/extraction interrupt is masked
+ 332:calypso/sim.c **** 	else
+ 333:calypso/sim.c **** 		puts("  |  |-REG_SIM_MASKIT_MASK_SIM_CD = 0 ==> SIM card insertion/extraction interrupt is unmask
+ 334:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 335:calypso/sim.c **** 
+ 336:calypso/sim.c **** 	regVal = REG_SIM_IT_CD;
+ 337:calypso/sim.c **** 	printf("  |-REG_SIM_IT_CD = %04x\n", regVal);
+ 338:calypso/sim.c **** 	if(regVal & REG_SIM_IT_CD_IT_CD)
+ 339:calypso/sim.c **** 		puts("     |-REG_SIM_IT_CD_IT_CD = 1 ==> SIM card insertion/extraction interrupt is masked.\n");
+ 340:calypso/sim.c **** 	else
+ 341:calypso/sim.c **** 		puts("     |-REG_SIM_IT_CD_IT_CD = 0 ==> SIM card insertion/extraction interrupt is unmasked.\n")
+ 342:calypso/sim.c **** 	delay_ms(SIM_DEBUG_OUTPUTDELAY);
+ 343:calypso/sim.c **** #endif
+ 344:calypso/sim.c **** 	return;
+ 345:calypso/sim.c **** }
+ 109              		.loc 2 345 0
+ 110 0000 1EFF2FE1 		bx	lr
+ 111              	.LFE38:
+ 113              		.section	.text.calypso_sim_receive,"ax",%progbits
+ 114              		.align	2
+ 115              		.global	calypso_sim_receive
+ 117              	calypso_sim_receive:
+ 118              	.LFB39:
+ 346:calypso/sim.c **** 
+ 347:calypso/sim.c **** /* Receive raw data through the sim interface */
+ 348:calypso/sim.c **** int calypso_sim_receive(uint8_t *data, uint8_t len)
+ 349:calypso/sim.c **** {
+ 119              		.loc 2 349 0
+ 120              		@ args = 0, pretend = 0, frame = 0
+ 121              		@ frame_needed = 0, uses_anonymous_args = 0
+ 122              		@ link register save eliminated.
+ 123              	.LVL5:
+ 350:calypso/sim.c **** 	printd("Triggering SIM reception\n");
+ 351:calypso/sim.c **** 
+ 352:calypso/sim.c **** 	/* Prepare buffers and flags */
+ 353:calypso/sim.c **** 	rx_buffer = data;
+ 354:calypso/sim.c **** 	sim_rx_character_count = 0;
+ 124              		.loc 2 354 0
+ 125 0000 48309FE5 		ldr	r3, .L9
+ 126 0004 00C0A0E3 		mov	ip, #0
+ 127 0008 00C083E5 		str	ip, [r3, #0]
+ 355:calypso/sim.c **** 	rxDoneFlag = 0;
+ 128              		.loc 2 355 0
+ 129 000c 40309FE5 		ldr	r3, .L9+4
+ 130 0010 00C083E5 		str	ip, [r3, #0]
+ 356:calypso/sim.c **** 	sim_rx_max_character_count = len;
+ 131              		.loc 2 356 0
+ 132 0014 3C309FE5 		ldr	r3, .L9+8
+ 133              		.loc 2 349 0
+ 134 0018 FF1001E2 		and	r1, r1, #255
+ 135              		.loc 2 356 0
+ 136 001c 001083E5 		str	r1, [r3, #0]
+ 357:calypso/sim.c **** 
+ 358:calypso/sim.c **** 	/* Switch I/O direction to input */
+ 359:calypso/sim.c **** 	writew(readw(REG_SIM_CONF1) & ~REG_SIM_CONF1_CONFTXRX, REG_SIM_CONF1);
+ 137              		.loc 2 359 0
+ 138 0020 34109FE5 		ldr	r1, .L9+12
+ 139              	.LVL6:
+ 140 0024 34209FE5 		ldr	r2, .L9+16
+ 141 0028 B030D1E1 		ldrh	r3, [r1, #0]
+ 142 002c 022003E0 		and	r2, r3, r2
+ 143              		.loc 2 353 0
+ 144 0030 2C309FE5 		ldr	r3, .L9+20
+ 145 0034 000083E5 		str	r0, [r3, #0]
+ 360:calypso/sim.c **** 
+ 361:calypso/sim.c **** 	/* Unmask the interrupts that are needed to perform this action */
+ 362:calypso/sim.c **** 	writew(~(REG_SIM_MASKIT_MASK_SIM_RX | REG_SIM_MASKIT_MASK_SIM_WT),
+ 146              		.loc 2 362 0
+ 147 0038 28309FE5 		ldr	r3, .L9+24
+ 148              		.loc 2 359 0
+ 149 003c B020C1E1 		strh	r2, [r1, #0]	@ movhi
+ 363:calypso/sim.c **** 		REG_SIM_MASKIT);
+ 364:calypso/sim.c **** 
+ 365:calypso/sim.c **** 	return 0;
+ 366:calypso/sim.c **** }
+ 150              		.loc 2 366 0
+ 151 0040 0C00A0E1 		mov	r0, ip
+ 152              	.LVL7:
+ 153              		.loc 2 362 0
+ 154 0044 1220E0E3 		mvn	r2, #18	@ movhi
+ 155              		.loc 2 349 0
+ 156              		@ lr needed for prologue
+ 157              		.loc 2 362 0
+ 158 0048 B020C3E1 		strh	r2, [r3, #0]	@ movhi
+ 159              		.loc 2 366 0
+ 160 004c 1EFF2FE1 		bx	lr
+ 161              	.L10:
+ 162              		.align	2
+ 163              	.L9:
+ 164 0050 04000000 		.word	sim_rx_character_count
+ 165 0054 00000000 		.word	rxDoneFlag
+ 166 0058 14000000 		.word	sim_rx_max_character_count
+ 167 005c 0400FEFF 		.word	-131068
+ 168 0060 FBFF0000 		.word	65531
+ 169 0064 18000000 		.word	rx_buffer
+ 170 0068 0E00FEFF 		.word	-131058
+ 171              	.LFE39:
+ 173              		.section	.text.calypso_sim_transmit,"ax",%progbits
+ 174              		.align	2
+ 175              		.global	calypso_sim_transmit
+ 177              	calypso_sim_transmit:
+ 178              	.LFB40:
+ 367:calypso/sim.c **** 
+ 368:calypso/sim.c **** /* Transmit raw data through the sim interface */
+ 369:calypso/sim.c **** int calypso_sim_transmit(uint8_t *data, int length)
+ 370:calypso/sim.c **** {
+ 179              		.loc 2 370 0
+ 180              		@ args = 0, pretend = 0, frame = 0
+ 181              		@ frame_needed = 0, uses_anonymous_args = 0
+ 182              	.LVL8:
+ 183 0000 04E02DE5 		str	lr, [sp, #-4]!
+ 184              	.LCFI0:
+ 371:calypso/sim.c **** 	printd("Triggering SIM transmission\n");
+ 372:calypso/sim.c **** 
+ 373:calypso/sim.c **** 	/* Prepare buffers and flags */
+ 374:calypso/sim.c **** 	tx_buffer = data;
+ 375:calypso/sim.c **** 	sim_tx_character_count = 0;
+ 376:calypso/sim.c **** 	txDoneFlag = 0;
+ 185              		.loc 2 376 0
+ 186 0004 5C309FE5 		ldr	r3, .L13
+ 187              		.loc 2 375 0
+ 188 0008 5CE09FE5 		ldr	lr, .L13+4
+ 189 000c 00C0A0E3 		mov	ip, #0
+ 190 0010 00C08EE5 		str	ip, [lr, #0]
+ 191              		.loc 2 376 0
+ 192 0014 00C083E5 		str	ip, [r3, #0]
+ 377:calypso/sim.c **** 	sim_tx_character_length = length;
+ 193              		.loc 2 377 0
+ 194 0018 50309FE5 		ldr	r3, .L13+8
+ 378:calypso/sim.c **** 
+ 379:calypso/sim.c **** 	/* Switch I/O direction to output */
+ 380:calypso/sim.c **** 	writew(readw(REG_SIM_CONF1) | REG_SIM_CONF1_CONFTXRX, REG_SIM_CONF1);
+ 195              		.loc 2 380 0
+ 196 001c 50209FE5 		ldr	r2, .L13+12
+ 197              		.loc 2 377 0
+ 198 0020 001083E5 		str	r1, [r3, #0]
+ 199              		.loc 2 380 0
+ 200 0024 B030D2E1 		ldrh	r3, [r2, #0]
+ 201 0028 043083E3 		orr	r3, r3, #4
+ 202 002c B030C2E1 		strh	r3, [r2, #0]	@ movhi
+ 203              		.loc 2 374 0
+ 204 0030 40109FE5 		ldr	r1, .L13+16
+ 205              	.LVL9:
+ 381:calypso/sim.c **** 
+ 382:calypso/sim.c **** 	/* Unmask the interrupts that are needed to perform this action */
+ 383:calypso/sim.c **** 	writew(~(REG_SIM_MASKIT_MASK_SIM_TX), REG_SIM_MASKIT);
+ 206              		.loc 2 383 0
+ 207 0034 40309FE5 		ldr	r3, .L13+20
+ 208 0038 0820E0E3 		mvn	r2, #8	@ movhi
+ 209 003c B020C3E1 		strh	r2, [r3, #0]	@ movhi
+ 210              		.loc 2 374 0
+ 211 0040 000081E5 		str	r0, [r1, #0]
+ 384:calypso/sim.c **** 
+ 385:calypso/sim.c **** 	/* Transmit the first byte manually to start the interrupt cascade */
+ 386:calypso/sim.c **** 	writew(*tx_buffer,REG_SIM_DTX);
+ 212              		.loc 2 386 0
+ 213 0044 0120D0E4 		ldrb	r2, [r0], #1	@ zero_extendqisi2
+ 214 0048 023043E2 		sub	r3, r3, #2
+ 215 004c B020C3E1 		strh	r2, [r3, #0]	@ movhi
+ 387:calypso/sim.c **** 	tx_buffer++;
+ 388:calypso/sim.c **** 	sim_tx_character_count++;
+ 216              		.loc 2 388 0
+ 217 0050 00309EE5 		ldr	r3, [lr, #0]
+ 218              		.loc 2 387 0
+ 219 0054 000081E5 		str	r0, [r1, #0]
+ 220              		.loc 2 388 0
+ 221 0058 013083E2 		add	r3, r3, #1
+ 389:calypso/sim.c **** 
+ 390:calypso/sim.c **** 	return 0;
+ 391:calypso/sim.c **** }
+ 222              		.loc 2 391 0
+ 223 005c 0C00A0E1 		mov	r0, ip
+ 224              	.LVL10:
+ 225              		.loc 2 388 0
+ 226 0060 00308EE5 		str	r3, [lr, #0]
+ 227              		.loc 2 391 0
+ 228 0064 04F09DE4 		ldr	pc, [sp], #4
+ 229              	.L14:
+ 230              		.align	2
+ 231              	.L13:
+ 232 0068 0C000000 		.word	txDoneFlag
+ 233 006c 24000000 		.word	sim_tx_character_count
+ 234 0070 20000000 		.word	sim_tx_character_length
+ 235 0074 0400FEFF 		.word	-131068
+ 236 0078 1C000000 		.word	tx_buffer
+ 237 007c 0E00FEFF 		.word	-131058
+ 238              	.LFE40:
+ 240              		.section	.text.sim_irq_handler,"ax",%progbits
+ 241              		.align	2
+ 242              		.global	sim_irq_handler
+ 244              	sim_irq_handler:
+ 245              	.LFB41:
+ 392:calypso/sim.c **** 
+ 393:calypso/sim.c **** 
+ 394:calypso/sim.c **** /* IRQ-Handler for simcard interface */
+ 395:calypso/sim.c **** void sim_irq_handler(enum irq_nr irq)
+ 396:calypso/sim.c **** {
+ 246              		.loc 2 396 0
+ 247              		@ args = 0, pretend = 0, frame = 0
+ 248              		@ frame_needed = 0, uses_anonymous_args = 0
+ 249              	.LVL11:
+ 250 0000 10402DE9 		stmfd	sp!, {r4, lr}
+ 251              	.LCFI1:
+ 397:calypso/sim.c **** 	int regVal = readw(REG_SIM_IT);
+ 252              		.loc 2 397 0
+ 253 0004 FC309FE5 		ldr	r3, .L30
+ 254 0008 B030D3E1 		ldrh	r3, [r3, #0]
+ 398:calypso/sim.c **** 
+ 399:calypso/sim.c **** 
+ 400:calypso/sim.c **** 	/* Display interrupt information */
+ 401:calypso/sim.c **** 	printd("SIM-ISR: ");
+ 402:calypso/sim.c **** 
+ 403:calypso/sim.c **** 	if(regVal & REG_SIM_IT_SIM_NATR) {
+ 404:calypso/sim.c **** 		printd(" No answer to reset!\n");
+ 405:calypso/sim.c **** 	}
+ 406:calypso/sim.c **** 
+ 407:calypso/sim.c **** 	/* Used by: calypso_sim_receive() to determine when the transmission
+ 408:calypso/sim.c **** 	 * is over
+ 409:calypso/sim.c **** 	 */
+ 410:calypso/sim.c **** 	if(regVal & REG_SIM_IT_SIM_WT) {
+ 255              		.loc 2 410 0
+ 256 000c 020013E3 		tst	r3, #2
+ 257              		.loc 2 397 0
+ 258 0010 03E0A0E1 		mov	lr, r3
+ 411:calypso/sim.c **** 		printd(" Character underflow!\n");
+ 412:calypso/sim.c **** 		rxDoneFlag = 1;
+ 259              		.loc 2 412 0
+ 260 0014 F0309F15 		ldrne	r3, .L30+4
+ 261 0018 0120A013 		movne	r2, #1
+ 262 001c 00208315 		strne	r2, [r3, #0]
+ 413:calypso/sim.c **** 
+ 414:calypso/sim.c **** 	}
+ 415:calypso/sim.c **** 
+ 416:calypso/sim.c **** 	if(regVal & REG_SIM_IT_SIM_OV) {
+ 417:calypso/sim.c **** 		printd(" Receive overflow!\n");
+ 418:calypso/sim.c **** 	}
+ 419:calypso/sim.c **** 
+ 420:calypso/sim.c **** 	/* Used by: calypso_sim_transmit() to transmit the data */
+ 421:calypso/sim.c **** 	if(regVal & REG_SIM_IT_SIM_TX) {
+ 263              		.loc 2 421 0
+ 264 0020 08001EE3 		tst	lr, #8
+ 265 0024 2200000A 		beq	.L18
+ 422:calypso/sim.c **** 		printd(" Waiting for transmit...\n");
+ 423:calypso/sim.c **** 		if(sim_tx_character_count >= sim_tx_character_length) {
+ 266              		.loc 2 423 0
+ 267 0028 E0C09FE5 		ldr	ip, .L30+8
+ 268 002c E0409FE5 		ldr	r4, .L30+12
+ 269 0030 00209CE5 		ldr	r2, [ip, #0]
+ 270 0034 003094E5 		ldr	r3, [r4, #0]
+ 271 0038 030052E1 		cmp	r2, r3
+ 424:calypso/sim.c **** 			txDoneFlag = 1;
+ 272              		.loc 2 424 0
+ 273 003c D4309FA5 		ldrge	r3, .L30+16
+ 274 0040 0120A0A3 		movge	r2, #1
+ 275 0044 002083A5 		strge	r2, [r3, #0]
+ 276 0048 220000AA 		bge	.L18
+ 277              	.L20:
+ 425:calypso/sim.c **** 		} else {
+ 426:calypso/sim.c **** 			writew(*tx_buffer,REG_SIM_DTX);
+ 278              		.loc 2 426 0
+ 279 004c C8009FE5 		ldr	r0, .L30+20
+ 280              	.LVL12:
+ 281 0050 001090E5 		ldr	r1, [r0, #0]
+ 282 0054 C4309FE5 		ldr	r3, .L30+24
+ 283 0058 0120D1E4 		ldrb	r2, [r1], #1	@ zero_extendqisi2
+ 284 005c B020C3E1 		strh	r2, [r3, #0]	@ movhi
+ 427:calypso/sim.c **** 			tx_buffer++;
+ 428:calypso/sim.c **** 			sim_tx_character_count++;
+ 285              		.loc 2 428 0
+ 286 0060 00309CE5 		ldr	r3, [ip, #0]
+ 287 0064 013083E2 		add	r3, r3, #1
+ 288 0068 00308CE5 		str	r3, [ip, #0]
+ 429:calypso/sim.c **** 
+ 430:calypso/sim.c **** 			/* its essential to immediately switch to RX after TX
+ 431:calypso/sim.c **** 			 * is done
+ 432:calypso/sim.c **** 			 */
+ 433:calypso/sim.c **** 			if(sim_tx_character_count >= sim_tx_character_length) {
+ 289              		.loc 2 433 0
+ 290 006c 00209CE5 		ldr	r2, [ip, #0]
+ 291 0070 003094E5 		ldr	r3, [r4, #0]
+ 292 0074 030052E1 		cmp	r2, r3
+ 434:calypso/sim.c **** 				/* TODO: set a proper delay here, 4 is to
+ 435:calypso/sim.c **** 				   long if not debugging and no delay is too
+ 436:calypso/sim.c **** 				   short */
+ 437:calypso/sim.c **** //				delay_ms(1);
+ 438:calypso/sim.c **** 				/* Switch I/O direction to input */
+ 439:calypso/sim.c **** 				writew(readw(REG_SIM_CONF1) &
+ 293              		.loc 2 439 0
+ 294 0078 A4309FA5 		ldrge	r3, .L30+28
+ 295 007c A4209FA5 		ldrge	r2, .L30+32
+ 296              		.loc 2 427 0
+ 297 0080 001080E5 		str	r1, [r0, #0]
+ 298              		.loc 2 439 0
+ 299 0084 B010D3A1 		ldrgeh	r1, [r3, #0]
+ 300 0088 022001A0 		andge	r2, r1, r2
+ 301 008c B020C3A1 		strgeh	r2, [r3, #0]	@ movhi
+ 302              	.LVL13:
+ 303              	.L18:
+ 440:calypso/sim.c **** 					~REG_SIM_CONF1_CONFTXRX, REG_SIM_CONF1);
+ 441:calypso/sim.c **** 			}
+ 442:calypso/sim.c **** 		}
+ 443:calypso/sim.c **** 	}
+ 444:calypso/sim.c **** 
+ 445:calypso/sim.c **** 	/* Used by: calypso_sim_receive() to receive the incoming data */
+ 446:calypso/sim.c **** 	if(regVal & REG_SIM_IT_SIM_RX) {
+ 304              		.loc 2 446 0
+ 305 0090 10001EE3 		tst	lr, #16
+ 306 0094 1080BD08 		ldmeqfd	sp!, {r4, pc}
+ 307              	.LBB2:
+ 447:calypso/sim.c **** 		uint8_t ch = (uint8_t) (readw(REG_SIM_DRX) & 0xFF);
+ 308              		.loc 2 447 0
+ 309 0098 8C309FE5 		ldr	r3, .L30+36
+ 310 009c B030D3E1 		ldrh	r3, [r3, #0]
+ 311 00a0 FFC003E2 		and	ip, r3, #255
+ 312              	.LVL14:
+ 448:calypso/sim.c **** 
+ 449:calypso/sim.c **** 		/* ignore NULL procedure byte */
+ 450:calypso/sim.c **** 		if(ch == 0x60 && sim_ignore_waiting_char) {
+ 313              		.loc 2 450 0
+ 314 00a4 60005CE3 		cmp	ip, #96
+ 315 00a8 2D00001A 		bne	.L25
+ 316 00ac 7C309FE5 		ldr	r3, .L30+40
+ 317 00b0 0030D3E5 		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 318 00b4 000053E3 		cmp	r3, #0
+ 319 00b8 1080BD18 		ldmnefd	sp!, {r4, pc}
+ 320              	.L25:
+ 451:calypso/sim.c **** 			printd(" 0x60 received...\n");
+ 452:calypso/sim.c **** 			return;
+ 453:calypso/sim.c **** 		}
+ 454:calypso/sim.c **** 
+ 455:calypso/sim.c **** 		printd(" Waiting for read (%02X)...\n", ch);
+ 456:calypso/sim.c **** 
+ 457:calypso/sim.c **** 		/* Increment character count - this is what
+ 458:calypso/sim.c **** 		 * calypso_sim_receive() hands back
+ 459:calypso/sim.c **** 		 */
+ 460:calypso/sim.c **** 		sim_rx_character_count++;
+ 321              		.loc 2 460 0
+ 322 00bc 70009FE5 		ldr	r0, .L30+44
+ 323              	.LVL15:
+ 461:calypso/sim.c **** 
+ 462:calypso/sim.c **** 		/* Read byte from rx-fifo and write it to the issued buffer */
+ 463:calypso/sim.c **** 		*rx_buffer = ch;
+ 324              		.loc 2 463 0
+ 325 00c0 70109FE5 		ldr	r1, .L30+48
+ 326              		.loc 2 460 0
+ 327 00c4 003090E5 		ldr	r3, [r0, #0]
+ 328              		.loc 2 463 0
+ 329 00c8 002091E5 		ldr	r2, [r1, #0]
+ 330              		.loc 2 460 0
+ 331 00cc 013083E2 		add	r3, r3, #1
+ 332 00d0 003080E5 		str	r3, [r0, #0]
+ 333              		.loc 2 463 0
+ 334 00d4 01C0C2E4 		strb	ip, [r2], #1
+ 464:calypso/sim.c **** 		rx_buffer++;
+ 465:calypso/sim.c **** 
+ 466:calypso/sim.c **** 		/* to maximise SIM access speed, stop waiting after
+ 467:calypso/sim.c **** 		   all the expected characters have been received. */
+ 468:calypso/sim.c **** 		if (sim_rx_max_character_count
+ 335              		.loc 2 468 0
+ 336 00d8 5CC09FE5 		ldr	ip, .L30+52
+ 337              	.LVL16:
+ 338 00dc 00309CE5 		ldr	r3, [ip, #0]
+ 339 00e0 000053E3 		cmp	r3, #0
+ 340              		.loc 2 464 0
+ 341 00e4 002081E5 		str	r2, [r1, #0]
+ 342              		.loc 2 468 0
+ 343 00e8 1080BD08 		ldmeqfd	sp!, {r4, pc}
+ 344 00ec 002090E5 		ldr	r2, [r0, #0]
+ 345 00f0 00309CE5 		ldr	r3, [ip, #0]
+ 346 00f4 030052E1 		cmp	r2, r3
+ 469:calypso/sim.c **** 		 && sim_rx_character_count >= sim_rx_max_character_count) {
+ 470:calypso/sim.c **** 			printd(" Max characters received!\n");
+ 471:calypso/sim.c **** 			rxDoneFlag = 1;
+ 347              		.loc 2 471 0
+ 348 00f8 0C309FA5 		ldrge	r3, .L30+4
+ 349 00fc 0120A0A3 		movge	r2, #1
+ 350 0100 002083A5 		strge	r2, [r3, #0]
+ 351 0104 1080BDE8 		ldmfd	sp!, {r4, pc}
+ 352              	.L31:
+ 353              		.align	2
+ 354              	.L30:
+ 355 0108 0800FEFF 		.word	-131064
+ 356 010c 00000000 		.word	rxDoneFlag
+ 357 0110 24000000 		.word	sim_tx_character_count
+ 358 0114 20000000 		.word	sim_tx_character_length
+ 359 0118 0C000000 		.word	txDoneFlag
+ 360 011c 1C000000 		.word	tx_buffer
+ 361 0120 0C00FEFF 		.word	-131060
+ 362 0124 0400FEFF 		.word	-131068
+ 363 0128 FBFF0000 		.word	65531
+ 364 012c 0A00FEFF 		.word	-131062
+ 365 0130 08000000 		.word	sim_ignore_waiting_char
+ 366 0134 04000000 		.word	sim_rx_character_count
+ 367 0138 18000000 		.word	rx_buffer
+ 368 013c 14000000 		.word	sim_rx_max_character_count
+ 369              	.LBE2:
+ 370              	.LFE41:
+ 372              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 373              		.align	2
+ 374              	.LC0:
+ 375 0000 53696D20 		.ascii	"Sim reader currently busy...\012\000"
+ 375      72656164 
+ 375      65722063 
+ 375      75727265 
+ 375      6E746C79 
+ 376              		.section	.text.sim_apdu,"ax",%progbits
+ 377              		.align	2
+ 378              		.global	sim_apdu
+ 380              	sim_apdu:
+ 381              	.LFB42:
+ 472:calypso/sim.c **** 		}
+ 473:calypso/sim.c **** 	}
+ 474:calypso/sim.c **** }
+ 475:calypso/sim.c **** 
+ 476:calypso/sim.c **** /* simm command from layer 23 */
+ 477:calypso/sim.c **** void sim_apdu(uint16_t len, uint8_t *data)
+ 478:calypso/sim.c **** {
+ 382              		.loc 2 478 0
+ 383              		@ args = 0, pretend = 0, frame = 0
+ 384              		@ frame_needed = 0, uses_anonymous_args = 0
+ 385              	.LVL17:
+ 386 0000 10402DE9 		stmfd	sp!, {r4, lr}
+ 387              	.LCFI2:
+ 479:calypso/sim.c **** 	if (sim_state != SIM_STATE_IDLE) {
+ 388              		.loc 2 479 0
+ 389 0004 34309FE5 		ldr	r3, .L37
+ 390 0008 0030D3E5 		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 391 000c 000053E3 		cmp	r3, #0
+ 392              		.loc 2 478 0
+ 393 0010 0038A0E1 		mov	r3, r0, asl #16
+ 394 0014 2348A0E1 		mov	r4, r3, lsr #16
+ 480:calypso/sim.c **** 		puts("Sim reader currently busy...\n");
+ 395              		.loc 2 480 0
+ 396 0018 24009FE5 		ldr	r0, .L37+4
+ 397              	.LVL18:
+ 481:calypso/sim.c **** 		return;
+ 482:calypso/sim.c **** 	}
+ 483:calypso/sim.c **** 	memcpy(sim_data, data, len);
+ 398              		.loc 2 483 0
+ 399 001c 0420A0E1 		mov	r2, r4
+ 400              		.loc 2 479 0
+ 401 0020 0900000A 		beq	.L33
+ 402              	.LVL19:
+ 484:calypso/sim.c **** 	sim_len = len;
+ 485:calypso/sim.c **** }
+ 403              		.loc 2 485 0
+ 404 0024 1040BDE8 		ldmfd	sp!, {r4, lr}
+ 405              		.loc 2 480 0
+ 406 0028 FEFFFFEA 		b	puts
+ 407              	.LVL20:
+ 408              	.L33:
+ 409              		.loc 2 483 0
+ 410 002c 14009FE5 		ldr	r0, .L37+8
+ 411 0030 FEFFFFEB 		bl	memcpy
+ 412              	.LVL21:
+ 413              		.loc 2 484 0
+ 414 0034 10309FE5 		ldr	r3, .L37+12
+ 415 0038 B040C3E1 		strh	r4, [r3, #0]	@ movhi
+ 416              		.loc 2 485 0
+ 417 003c 1080BDE8 		ldmfd	sp!, {r4, pc}
+ 418              	.L38:
+ 419              		.align	2
+ 420              	.L37:
+ 421 0040 12000000 		.word	sim_state
+ 422 0044 00000000 		.word	.LC0
+ 423 0048 38000000 		.word	sim_data
+ 424 004c 10000000 		.word	sim_len
+ 425              	.LFE42:
+ 427              		.section	.text.calypso_sim_init,"ax",%progbits
+ 428              		.align	2
+ 429              		.global	calypso_sim_init
+ 431              	calypso_sim_init:
+ 432              	.LFB44:
+ 486:calypso/sim.c **** 
+ 487:calypso/sim.c **** /* handling sim events */
+ 488:calypso/sim.c **** void sim_handler(void)
+ 489:calypso/sim.c **** {
+ 490:calypso/sim.c **** 	static struct msgb *msg;
+ 491:calypso/sim.c **** 	struct l1ctl_hdr *l1h;
+ 492:calypso/sim.c **** 	static uint8_t mode;
+ 493:calypso/sim.c **** 	static uint8_t *response;
+ 494:calypso/sim.c **** 	static uint16_t length;
+ 495:calypso/sim.c **** 
+ 496:calypso/sim.c **** 	switch (sim_state) {
+ 497:calypso/sim.c **** 	case SIM_STATE_IDLE:
+ 498:calypso/sim.c **** 		if (!sim_len)
+ 499:calypso/sim.c **** 			break; /* wait for SIM command */
+ 500:calypso/sim.c **** 		/* check if instructions expects a response */
+ 501:calypso/sim.c **** 		if (/* GET RESPONSE needs SIM_APDU_GET */
+ 502:calypso/sim.c **** 		    (sim_len == 5 && sim_data[0] == SIM_CLASS &&
+ 503:calypso/sim.c **** 		     sim_data[1] == SIM_GET_RESPONSE && sim_data[2] == 0x00 &&
+ 504:calypso/sim.c **** 		     sim_data[3] == 0x00) ||
+ 505:calypso/sim.c **** 		    /* READ BINARY/RECORD needs SIM_APDU_GET */
+ 506:calypso/sim.c **** 		     (sim_len >= 5 && sim_data[0] == SIM_CLASS &&
+ 507:calypso/sim.c **** 		      (sim_data[1] == SIM_READ_BINARY ||
+ 508:calypso/sim.c **** 		       sim_data[1] == SIM_READ_RECORD)))
+ 509:calypso/sim.c **** 			mode = SIM_APDU_GET;
+ 510:calypso/sim.c **** 		else
+ 511:calypso/sim.c **** 			mode = SIM_APDU_PUT;
+ 512:calypso/sim.c **** 
+ 513:calypso/sim.c **** 		length = sim_data[4];
+ 514:calypso/sim.c **** 
+ 515:calypso/sim.c **** 		/* allocate space for expected response */
+ 516:calypso/sim.c **** 		msg = msgb_alloc_headroom(256, L3_MSG_HEAD
+ 517:calypso/sim.c **** 					+ sizeof(struct l1ctl_hdr), "l1ctl1");
+ 518:calypso/sim.c **** 		response = msgb_put(msg, length + 2 + 1);
+ 519:calypso/sim.c **** 
+ 520:calypso/sim.c **** 		sim_state = SIM_STATE_TX_HEADER;
+ 521:calypso/sim.c **** 
+ 522:calypso/sim.c **** 		/* send APDU header */
+ 523:calypso/sim.c **** 		calypso_sim_transmit(sim_data, 5);
+ 524:calypso/sim.c **** 		break;
+ 525:calypso/sim.c **** 	case SIM_STATE_TX_HEADER:
+ 526:calypso/sim.c **** 		if (!txDoneFlag)
+ 527:calypso/sim.c **** 			break; /* wait until header is transmitted */
+ 528:calypso/sim.c **** 		/* Disable all interrupt driven functions */
+ 529:calypso/sim.c **** 		writew(0xFF, REG_SIM_MASKIT);
+ 530:calypso/sim.c **** 		/* Case 1: No input, No Output */
+ 531:calypso/sim.c **** 		if (length == 0) {
+ 532:calypso/sim.c **** 			sim_state = SIM_STATE_RX_STATUS;
+ 533:calypso/sim.c **** 			calypso_sim_receive(response + 1, 2);
+ 534:calypso/sim.c **** 			break;
+ 535:calypso/sim.c **** 		}
+ 536:calypso/sim.c **** 		/* Case 2: No input / Output of known length */
+ 537:calypso/sim.c **** 		if (mode == SIM_APDU_PUT) {
+ 538:calypso/sim.c **** 			sim_state = SIM_STATE_RX_ACK;
+ 539:calypso/sim.c **** 			calypso_sim_receive(response, 1);
+ 540:calypso/sim.c **** 			break;
+ 541:calypso/sim.c **** 		/* Case 4: Input / No output */
+ 542:calypso/sim.c **** 		} else {
+ 543:calypso/sim.c **** 			sim_state = SIM_STATE_RX_ACK_DATA;
+ 544:calypso/sim.c **** 			calypso_sim_receive(response, length + 1 + 2);
+ 545:calypso/sim.c **** 		}
+ 546:calypso/sim.c **** 		break;
+ 547:calypso/sim.c **** 	case SIM_STATE_RX_STATUS:
+ 548:calypso/sim.c **** 		if (!rxDoneFlag)
+ 549:calypso/sim.c **** 			break; /* wait until data is received */
+ 550:calypso/sim.c **** 		/* Disable all interrupt driven functions */
+ 551:calypso/sim.c **** 		writew(0xFF, REG_SIM_MASKIT);
+ 552:calypso/sim.c **** 		/* disable special ignore case */
+ 553:calypso/sim.c **** 		sim_ignore_waiting_char = 0;
+ 554:calypso/sim.c **** 		/* wrong number of bytes received */
+ 555:calypso/sim.c **** 		if (sim_rx_character_count != 2) {
+ 556:calypso/sim.c **** 			puts("SIM: Failed to read status\n");
+ 557:calypso/sim.c **** 			goto error;
+ 558:calypso/sim.c **** 		}
+ 559:calypso/sim.c **** 		msgb_pull(msg, length + 1); /* pull up to status info */
+ 560:calypso/sim.c **** 		goto queue;
+ 561:calypso/sim.c **** 	case SIM_STATE_RX_ACK:
+ 562:calypso/sim.c **** 		if (!rxDoneFlag)
+ 563:calypso/sim.c **** 			break; /* wait until data is received */
+ 564:calypso/sim.c **** 		/* Disable all interrupt driven functions */
+ 565:calypso/sim.c **** 		writew(0xFF, REG_SIM_MASKIT);
+ 566:calypso/sim.c **** 		/* error received */
+ 567:calypso/sim.c **** 		if (sim_rx_character_count == 2) {
+ 568:calypso/sim.c **** 			puts("SIM: command failed\n");
+ 569:calypso/sim.c **** 			msgb_pull(msg, msg->len - 2);
+ 570:calypso/sim.c **** 			msg->data[0] = response[0];
+ 571:calypso/sim.c **** 			msg->data[1] = response[1];
+ 572:calypso/sim.c **** 			goto queue;
+ 573:calypso/sim.c **** 		}
+ 574:calypso/sim.c **** 		/* wrong number of bytes received */
+ 575:calypso/sim.c **** 		if (sim_rx_character_count != 1) {
+ 576:calypso/sim.c **** 			puts("SIM: ACK read failed\n");
+ 577:calypso/sim.c **** 			goto error;
+ 578:calypso/sim.c **** 		}
+ 579:calypso/sim.c **** 		if (response[0] != sim_data[1]) {
+ 580:calypso/sim.c **** 			puts("SIM: ACK does not match request\n");
+ 581:calypso/sim.c **** 			goto error;
+ 582:calypso/sim.c **** 		}
+ 583:calypso/sim.c **** 		sim_state = SIM_STATE_TX_DATA;
+ 584:calypso/sim.c **** 		calypso_sim_transmit(sim_data + 5, length);
+ 585:calypso/sim.c **** 		break;
+ 586:calypso/sim.c **** 	case SIM_STATE_TX_DATA:
+ 587:calypso/sim.c **** 		if (!txDoneFlag)
+ 588:calypso/sim.c **** 			break; /* wait until data is transmitted */
+ 589:calypso/sim.c **** 		/* Disable all interrupt driven functions */
+ 590:calypso/sim.c **** 		writew(0xFF, REG_SIM_MASKIT);
+ 591:calypso/sim.c **** 		/* Ignore waiting char for RUN GSM ALGORITHM */
+ 592:calypso/sim.c **** 		/* TODO: implement proper handling of the "Procedure Bytes"
+ 593:calypso/sim.c **** 		   than this is no longer needed */
+ 594:calypso/sim.c **** 		if(sim_data[1] == 0x88)
+ 595:calypso/sim.c **** 			sim_ignore_waiting_char = 1;
+ 596:calypso/sim.c **** 		sim_state = SIM_STATE_RX_STATUS;
+ 597:calypso/sim.c **** 		calypso_sim_receive(response + length + 1, 2);
+ 598:calypso/sim.c **** 		break;
+ 599:calypso/sim.c **** 	case SIM_STATE_RX_ACK_DATA:
+ 600:calypso/sim.c **** 		if (!rxDoneFlag)
+ 601:calypso/sim.c **** 			break; /* wait until data is received */
+ 602:calypso/sim.c **** 		/* Disable all interrupt driven functions */
+ 603:calypso/sim.c **** 		writew(0xFF, REG_SIM_MASKIT);
+ 604:calypso/sim.c **** 		/* error received */
+ 605:calypso/sim.c **** 		if (sim_rx_character_count == 2) {
+ 606:calypso/sim.c **** 			puts("SIM: command failed\n");
+ 607:calypso/sim.c **** 			msgb_pull(msg, msg->len - 2);
+ 608:calypso/sim.c **** 			msg->data[0] = response[0];
+ 609:calypso/sim.c **** 			msg->data[1] = response[1];
+ 610:calypso/sim.c **** 			goto queue;
+ 611:calypso/sim.c **** 		}
+ 612:calypso/sim.c **** 		/* wrong number of bytes received */
+ 613:calypso/sim.c **** 		if (sim_rx_character_count != length + 1 + 2) {
+ 614:calypso/sim.c **** 			puts("SIM: Failed to read data\n");
+ 615:calypso/sim.c **** 			goto error;
+ 616:calypso/sim.c **** 		}
+ 617:calypso/sim.c **** 		msgb_pull(msg, 1); /* pull ACK byte */
+ 618:calypso/sim.c **** 		goto queue;
+ 619:calypso/sim.c **** 	}
+ 620:calypso/sim.c **** 
+ 621:calypso/sim.c **** 	return;
+ 622:calypso/sim.c **** 
+ 623:calypso/sim.c **** error:
+ 624:calypso/sim.c **** 	msgb_pull(msg, msg->len - 2);
+ 625:calypso/sim.c **** 	msg->data[0] = 0;
+ 626:calypso/sim.c **** 	msg->data[1] = 0;
+ 627:calypso/sim.c **** queue:
+ 628:calypso/sim.c **** 	printf("SIM Response (%d): %s\n", msg->len,
+ 629:calypso/sim.c **** 		osmo_hexdump(msg->data, msg->len));
+ 630:calypso/sim.c **** 	l1h = (struct l1ctl_hdr *) msgb_push(msg, sizeof(*l1h));
+ 631:calypso/sim.c **** 	l1h->msg_type = L1CTL_SIM_CONF;
+ 632:calypso/sim.c **** 	l1h->flags = 0;
+ 633:calypso/sim.c **** 	msg->l1h = (uint8_t *)l1h;
+ 634:calypso/sim.c **** 	l1_queue_for_l2(msg);
+ 635:calypso/sim.c **** 	/* go IDLE */
+ 636:calypso/sim.c **** 	sim_state = SIM_STATE_IDLE;
+ 637:calypso/sim.c **** 	sim_len = 0;
+ 638:calypso/sim.c **** 
+ 639:calypso/sim.c **** 	return;
+ 640:calypso/sim.c **** }
+ 641:calypso/sim.c **** 
+ 642:calypso/sim.c **** /* Initialize simcard interface */
+ 643:calypso/sim.c **** void calypso_sim_init(void)
+ 644:calypso/sim.c **** {
+ 433              		.loc 2 644 0
+ 434              		@ args = 0, pretend = 0, frame = 0
+ 435              		@ frame_needed = 0, uses_anonymous_args = 0
+ 436              	.LVL22:
+ 437 0000 04E02DE5 		str	lr, [sp, #-4]!
+ 438              	.LCFI3:
+ 645:calypso/sim.c **** 	/* Register IRQ handler and turn interrupts on */
+ 646:calypso/sim.c **** 	printd("SIM: Registering interrupt handler for simcard-interface\n");
+ 647:calypso/sim.c **** 
+ 648:calypso/sim.c **** 	irq_register_handler(IRQ_SIMCARD, &sim_irq_handler);
+ 439              		.loc 2 648 0
+ 440 0004 0600A0E3 		mov	r0, #6
+ 441 0008 20109FE5 		ldr	r1, .L41
+ 442 000c FEFFFFEB 		bl	irq_register_handler
+ 649:calypso/sim.c **** 
+ 650:calypso/sim.c **** #if 1
+ 651:calypso/sim.c **** 	irq_config(IRQ_SIMCARD, 0, 0, 0xff);
+ 443              		.loc 2 651 0
+ 444 0010 0010A0E3 		mov	r1, #0
+ 445 0014 0600A0E3 		mov	r0, #6
+ 446 0018 0120A0E1 		mov	r2, r1
+ 447 001c 0030E0E3 		mvn	r3, #0
+ 448 0020 FEFFFFEB 		bl	irq_config
+ 652:calypso/sim.c **** #else
+ 653:calypso/sim.c **** 	irq_config(IRQ_SIMCARD, 0, 0, 1);
+ 654:calypso/sim.c **** #endif
+ 655:calypso/sim.c **** 
+ 656:calypso/sim.c **** 	irq_enable(IRQ_SIMCARD);
+ 449              		.loc 2 656 0
+ 450 0024 0600A0E3 		mov	r0, #6
+ 657:calypso/sim.c **** }
+ 451              		.loc 2 657 0
+ 452 0028 04E09DE4 		ldr	lr, [sp], #4
+ 453              		.loc 2 656 0
+ 454 002c FEFFFFEA 		b	irq_enable
+ 455              	.L42:
+ 456              		.align	2
+ 457              	.L41:
+ 458 0030 00000000 		.word	sim_irq_handler
+ 459              	.LFE44:
+ 461              		.section	.text.calypso_sim_powerup,"ax",%progbits
+ 462              		.align	2
+ 463              		.global	calypso_sim_powerup
+ 465              	calypso_sim_powerup:
+ 466              	.LFB45:
+ 658:calypso/sim.c **** 
+ 659:calypso/sim.c **** /* Apply power to the simcard (use nullpointer to ignore atr) */
+ 660:calypso/sim.c **** int calypso_sim_powerup(uint8_t *atr)
+ 661:calypso/sim.c **** {
+ 467              		.loc 2 661 0
+ 468              		@ args = 0, pretend = 0, frame = 0
+ 469              		@ frame_needed = 0, uses_anonymous_args = 0
+ 470              	.LVL23:
+ 471 0000 10402DE9 		stmfd	sp!, {r4, lr}
+ 472              	.LCFI4:
+ 662:calypso/sim.c **** 	/* Enable level shifters and voltage regulator */
+ 663:calypso/sim.c **** #if 1  // 2.9V
+ 664:calypso/sim.c **** 	twl3025_reg_write(VRPCSIM, VRPCSIM_SIMLEN | VRPCSIM_RSIMEN
+ 473              		.loc 2 664 0
+ 474 0004 0B10A0E3 		mov	r1, #11
+ 475              		.loc 2 661 0
+ 476 0008 0040A0E1 		mov	r4, r0
+ 477              		.loc 2 664 0
+ 478 000c 9700A0E3 		mov	r0, #151
+ 479              	.LVL24:
+ 480 0010 FEFFFFEB 		bl	twl3025_reg_write
+ 665:calypso/sim.c **** 					| VRPCSIM_SIMSEL);
+ 666:calypso/sim.c **** #else // 1.8V
+ 667:calypso/sim.c **** 	twl3025_reg_write(VRPCSIM, VRPCSIM_SIMLEN | VRPCSIM_RSIMEN);
+ 668:calypso/sim.c **** #endif
+ 669:calypso/sim.c **** 	printd(" * Power enabled!\n");
+ 670:calypso/sim.c **** 	delay_ms(SIM_OPERATION_DELAY);
+ 481              		.loc 2 670 0
+ 482 0014 6400A0E3 		mov	r0, #100
+ 483 0018 FEFFFFEB 		bl	delay_ms
+ 671:calypso/sim.c **** 
+ 672:calypso/sim.c **** 	/* Enable clock */
+ 673:calypso/sim.c **** 	writew(REG_SIM_CMD_MODULE_CLK_EN | REG_SIM_CMD_CMDSTART, REG_SIM_CMD);
+ 484              		.loc 2 673 0
+ 485 001c 48309FE5 		ldr	r3, .L49
+ 486 0020 1820A0E3 		mov	r2, #24	@ movhi
+ 487 0024 B020C3E1 		strh	r2, [r3, #0]	@ movhi
+ 674:calypso/sim.c **** 	printd(" * Clock enabled!\n");
+ 675:calypso/sim.c **** 	delay_ms(SIM_OPERATION_DELAY);
+ 488              		.loc 2 675 0
+ 489 0028 6400A0E3 		mov	r0, #100
+ 490 002c FEFFFFEB 		bl	delay_ms
+ 676:calypso/sim.c **** 
+ 677:calypso/sim.c **** 	/* Release reset */
+ 678:calypso/sim.c **** 	writew(readw(REG_SIM_CONF1) | REG_SIM_CONF1_CONFBYPASS
+ 491              		.loc 2 678 0
+ 492 0030 38209FE5 		ldr	r2, .L49+4
+ 493 0034 B030D2E1 		ldrh	r3, [r2, #0]
+ 679:calypso/sim.c **** 				| REG_SIM_CONF1_CONFSRSTLEV
+ 680:calypso/sim.c **** 				| REG_SIM_CONF1_CONFSVCCLEV, REG_SIM_CONF1);
+ 681:calypso/sim.c **** 	printd(" * Reset released!\n");
+ 682:calypso/sim.c **** 
+ 683:calypso/sim.c **** 	/* Catch ATR */
+ 684:calypso/sim.c **** 	if(atr != 0) {
+ 494              		.loc 2 684 0
+ 495 0038 000054E3 		cmp	r4, #0
+ 496              		.loc 2 678 0
+ 497 003c 073C83E3 		orr	r3, r3, #1792
+ 498 0040 B030C2E1 		strh	r3, [r2, #0]	@ movhi
+ 499              		.loc 2 684 0
+ 500 0044 1700000A 		beq	.L44
+ 685:calypso/sim.c **** 		calypso_sim_receive(atr, 0);
+ 501              		.loc 2 685 0
+ 502 0048 0400A0E1 		mov	r0, r4
+ 503 004c 0010A0E3 		mov	r1, #0
+ 504 0050 FEFFFFEB 		bl	calypso_sim_receive
+ 505              	.L46:
+ 686:calypso/sim.c **** 		while (!rxDoneFlag)
+ 506              		.loc 2 686 0
+ 507 0054 18309FE5 		ldr	r3, .L49+8
+ 508 0058 003093E5 		ldr	r3, [r3, #0]
+ 509 005c 000053E3 		cmp	r3, #0
+ 510 0060 1300000A 		beq	.L46
+ 511              	.L44:
+ 687:calypso/sim.c **** 			;
+ 688:calypso/sim.c **** 	}
+ 689:calypso/sim.c **** 
+ 690:calypso/sim.c **** 	return 0;
+ 691:calypso/sim.c **** }
+ 512              		.loc 2 691 0
+ 513 0064 0000A0E3 		mov	r0, #0
+ 514 0068 1080BDE8 		ldmfd	sp!, {r4, pc}
+ 515              	.L50:
+ 516              		.align	2
+ 517              	.L49:
+ 518 006c 0000FEFF 		.word	-131072
+ 519 0070 0400FEFF 		.word	-131068
+ 520 0074 00000000 		.word	rxDoneFlag
+ 521              	.LFE45:
+ 523              		.section	.text.calypso_sim_powerdown,"ax",%progbits
+ 524              		.align	2
+ 525              		.global	calypso_sim_powerdown
+ 527              	calypso_sim_powerdown:
+ 528              	.LFB46:
+ 692:calypso/sim.c **** 
+ 693:calypso/sim.c **** 
+ 694:calypso/sim.c **** /* Powerdown simcard */
+ 695:calypso/sim.c **** void calypso_sim_powerdown(void)
+ 696:calypso/sim.c **** {
+ 529              		.loc 2 696 0
+ 530              		@ args = 0, pretend = 0, frame = 0
+ 531              		@ frame_needed = 0, uses_anonymous_args = 0
+ 532              	.LVL25:
+ 533 0000 30402DE9 		stmfd	sp!, {r4, r5, lr}
+ 534              	.LCFI5:
+ 697:calypso/sim.c **** 	writew(readw(REG_SIM_CONF1) & ~REG_SIM_CONF1_CONFBYPASS, REG_SIM_CONF1);
+ 535              		.loc 2 697 0
+ 536 0004 50109FE5 		ldr	r1, .L53
+ 537 0008 50209FE5 		ldr	r2, .L53+4
+ 538 000c B030D1E1 		ldrh	r3, [r1, #0]
+ 539 0010 022003E0 		and	r2, r3, r2
+ 540 0014 B020C1E1 		strh	r2, [r1, #0]	@ movhi
+ 698:calypso/sim.c **** 	printd(" * Reset pulled down!\n");
+ 699:calypso/sim.c **** 	delay_ms(SIM_OPERATION_DELAY);
+ 700:calypso/sim.c **** 
+ 701:calypso/sim.c **** 	writew(REG_SIM_CMD_MODULE_CLK_EN | REG_SIM_CMD_CMDSTOP, REG_SIM_CMD);
+ 541              		.loc 2 701 0
+ 542 0018 44509FE5 		ldr	r5, .L53+8
+ 543              		.loc 2 699 0
+ 544 001c 6400A0E3 		mov	r0, #100
+ 545 0020 FEFFFFEB 		bl	delay_ms
+ 546              		.loc 2 701 0
+ 547 0024 1430A0E3 		mov	r3, #20	@ movhi
+ 548 0028 B030C5E1 		strh	r3, [r5, #0]	@ movhi
+ 702:calypso/sim.c **** 	printd(" * Clock disabled!\n");
+ 703:calypso/sim.c **** 	delay_ms(SIM_OPERATION_DELAY);
+ 704:calypso/sim.c **** 
+ 705:calypso/sim.c **** 	writew(0, REG_SIM_CMD);
+ 549              		.loc 2 705 0
+ 550 002c 0040A0E3 		mov	r4, #0
+ 551              		.loc 2 703 0
+ 552 0030 6400A0E3 		mov	r0, #100
+ 553 0034 FEFFFFEB 		bl	delay_ms
+ 706:calypso/sim.c **** 	printd(" * Module disabled!\n");
+ 707:calypso/sim.c **** 	delay_ms(SIM_OPERATION_DELAY);
+ 554              		.loc 2 707 0
+ 555 0038 6400A0E3 		mov	r0, #100
+ 556              		.loc 2 705 0
+ 557 003c B040C5E1 		strh	r4, [r5, #0]	@ movhi
+ 558              		.loc 2 707 0
+ 559 0040 FEFFFFEB 		bl	delay_ms
+ 708:calypso/sim.c **** 
+ 709:calypso/sim.c **** 	/* Disable level shifters and voltage regulator */
+ 710:calypso/sim.c **** 	twl3025_reg_write(VRPCSIM, 0);
+ 560              		.loc 2 710 0
+ 561 0044 0410A0E1 		mov	r1, r4
+ 562 0048 9700A0E3 		mov	r0, #151
+ 563 004c FEFFFFEB 		bl	twl3025_reg_write
+ 711:calypso/sim.c **** 	printd(" * Power disabled!\n");
+ 712:calypso/sim.c **** 	delay_ms(SIM_OPERATION_DELAY);
+ 564              		.loc 2 712 0
+ 565 0050 6400A0E3 		mov	r0, #100
+ 713:calypso/sim.c **** 
+ 714:calypso/sim.c **** 	return;
+ 715:calypso/sim.c **** }
+ 566              		.loc 2 715 0
+ 567 0054 3040BDE8 		ldmfd	sp!, {r4, r5, lr}
+ 568              		.loc 2 712 0
+ 569 0058 FEFFFFEA 		b	delay_ms
+ 570              	.L54:
+ 571              		.align	2
+ 572              	.L53:
+ 573 005c 0400FEFF 		.word	-131068
+ 574 0060 FFFE0000 		.word	65279
+ 575 0064 0000FEFF 		.word	-131072
+ 576              	.LFE46:
+ 578              		.section	.text.calypso_sim_reset,"ax",%progbits
+ 579              		.align	2
+ 580              		.global	calypso_sim_reset
+ 582              	calypso_sim_reset:
+ 583              	.LFB47:
+ 716:calypso/sim.c **** 
+ 717:calypso/sim.c **** /* reset the simcard (see note 1) */
+ 718:calypso/sim.c **** int calypso_sim_reset(uint8_t *atr)
+ 719:calypso/sim.c **** {
+ 584              		.loc 2 719 0
+ 585              		@ args = 0, pretend = 0, frame = 0
+ 586              		@ frame_needed = 0, uses_anonymous_args = 0
+ 587              	.LVL26:
+ 588 0000 30402DE9 		stmfd	sp!, {r4, r5, lr}
+ 589              	.LCFI6:
+ 720:calypso/sim.c **** 
+ 721:calypso/sim.c **** 	/* Pull reset down */
+ 722:calypso/sim.c **** 	writew(readw(REG_SIM_CONF1) & ~REG_SIM_CONF1_CONFSRSTLEV,
+ 590              		.loc 2 722 0
+ 591 0004 50409FE5 		ldr	r4, .L61
+ 592 0008 50209FE5 		ldr	r2, .L61+4
+ 593 000c B030D4E1 		ldrh	r3, [r4, #0]
+ 594 0010 022003E0 		and	r2, r3, r2
+ 595              		.loc 2 719 0
+ 596 0014 0050A0E1 		mov	r5, r0
+ 597              		.loc 2 722 0
+ 598 0018 B020C4E1 		strh	r2, [r4, #0]	@ movhi
+ 723:calypso/sim.c **** 		REG_SIM_CONF1);
+ 724:calypso/sim.c **** 	printd(" * Reset pulled down!\n");
+ 725:calypso/sim.c **** 
+ 726:calypso/sim.c **** 	delay_ms(SIM_OPERATION_DELAY);
+ 599              		.loc 2 726 0
+ 600 001c 6400A0E3 		mov	r0, #100
+ 601              	.LVL27:
+ 602 0020 FEFFFFEB 		bl	delay_ms
+ 727:calypso/sim.c **** 
+ 728:calypso/sim.c **** 	/* Pull reset down */
+ 729:calypso/sim.c **** 	writew(readw(REG_SIM_CONF1) | REG_SIM_CONF1_CONFSRSTLEV, REG_SIM_CONF1);
+ 603              		.loc 2 729 0
+ 604 0024 B030D4E1 		ldrh	r3, [r4, #0]
+ 730:calypso/sim.c **** 	printd(" * Reset released!\n");
+ 731:calypso/sim.c **** 
+ 732:calypso/sim.c **** 	/* Catch ATR */
+ 733:calypso/sim.c **** 	if(atr != 0) {
+ 605              		.loc 2 733 0
+ 606 0028 000055E3 		cmp	r5, #0
+ 607              		.loc 2 729 0
+ 608 002c 013B83E3 		orr	r3, r3, #1024
+ 609 0030 B030C4E1 		strh	r3, [r4, #0]	@ movhi
+ 610              		.loc 2 733 0
+ 611 0034 1300000A 		beq	.L56
+ 734:calypso/sim.c **** 		calypso_sim_receive(atr, 0);
+ 612              		.loc 2 734 0
+ 613 0038 0500A0E1 		mov	r0, r5
+ 614 003c 0010A0E3 		mov	r1, #0
+ 615 0040 FEFFFFEB 		bl	calypso_sim_receive
+ 616              	.L58:
+ 735:calypso/sim.c **** 		while (!rxDoneFlag)
+ 617              		.loc 2 735 0
+ 618 0044 18309FE5 		ldr	r3, .L61+8
+ 619 0048 003093E5 		ldr	r3, [r3, #0]
+ 620 004c 000053E3 		cmp	r3, #0
+ 621 0050 0F00000A 		beq	.L58
+ 622              	.L56:
+ 736:calypso/sim.c **** 			;
+ 737:calypso/sim.c **** 	}
+ 738:calypso/sim.c **** 
+ 739:calypso/sim.c **** 	return 0;
+ 740:calypso/sim.c **** }
+ 623              		.loc 2 740 0
+ 624 0054 0000A0E3 		mov	r0, #0
+ 625 0058 3080BDE8 		ldmfd	sp!, {r4, r5, pc}
+ 626              	.L62:
+ 627              		.align	2
+ 628              	.L61:
+ 629 005c 0400FEFF 		.word	-131068
+ 630 0060 FFFB0000 		.word	64511
+ 631 0064 00000000 		.word	rxDoneFlag
+ 632              	.LFE47:
+ 634              		.bss
+ 635              		.align	1
+ 636              	length.2231:
+ 637 0028 0000     		.space	2
+ 638 002a 0000     		.align	2
+ 639              	response.2230:
+ 640 002c 00000000 		.space	4
+ 641              	mode.2229:
+ 642 0030 00       		.space	1
+ 643 0031 000000   		.align	2
+ 644              	msg.2227:
+ 645 0034 00000000 		.space	4
+ 646              		.section	.rodata.str1.4
+ 647 001e 0000     		.align	2
+ 648              	.LC1:
+ 649 0020 6C316374 		.ascii	"l1ctl1\000"
+ 649      6C3100
+ 650 0027 00       		.align	2
+ 651              	.LC2:
+ 652 0028 6D736762 		.ascii	"msgb(%p): Not enough tailroom msgb_push (%u < %u)\012"
+ 652      28257029 
+ 652      3A204E6F 
+ 652      7420656E 
+ 652      6F756768 
+ 653 005a 00       		.ascii	"\000"
+ 654 005b 00       		.align	2
+ 655              	.LC3:
+ 656 005c 53494D3A 		.ascii	"SIM: Failed to read status\012\000"
+ 656      20466169 
+ 656      6C656420 
+ 656      746F2072 
+ 656      65616420 
+ 657              		.align	2
+ 658              	.LC4:
+ 659 0078 53494D3A 		.ascii	"SIM: command failed\012\000"
+ 659      20636F6D 
+ 659      6D616E64 
+ 659      20666169 
+ 659      6C65640A 
+ 660 008d 000000   		.align	2
+ 661              	.LC5:
+ 662 0090 53494D3A 		.ascii	"SIM: ACK read failed\012\000"
+ 662      2041434B 
+ 662      20726561 
+ 662      64206661 
+ 662      696C6564 
+ 663 00a6 0000     		.align	2
+ 664              	.LC6:
+ 665 00a8 53494D3A 		.ascii	"SIM: ACK does not match request\012\000"
+ 665      2041434B 
+ 665      20646F65 
+ 665      73206E6F 
+ 665      74206D61 
+ 666 00c9 000000   		.align	2
+ 667              	.LC7:
+ 668 00cc 53494D3A 		.ascii	"SIM: Failed to read data\012\000"
+ 668      20466169 
+ 668      6C656420 
+ 668      746F2072 
+ 668      65616420 
+ 669 00e6 0000     		.align	2
+ 670              	.LC8:
+ 671 00e8 53494D20 		.ascii	"SIM Response (%d): %s\012\000"
+ 671      52657370 
+ 671      6F6E7365 
+ 671      20282564 
+ 671      293A2025 
+ 672 00ff 00       		.align	2
+ 673              	.LC9:
+ 674 0100 6D736762 		.ascii	"msgb(%p): Not enough headroom msgb_push (%u < %u)\012"
+ 674      28257029 
+ 674      3A204E6F 
+ 674      7420656E 
+ 674      6F756768 
+ 675 0132 00       		.ascii	"\000"
+ 676 0133 00       		.section	.text.sim_handler,"ax",%progbits
+ 677              		.align	2
+ 678              		.global	sim_handler
+ 680              	sim_handler:
+ 681              	.LFB43:
+ 682              		.loc 2 489 0
+ 683              		@ args = 0, pretend = 0, frame = 0
+ 684              		@ frame_needed = 0, uses_anonymous_args = 0
+ 685              	.LVL28:
+ 686 0000 F0402DE9 		stmfd	sp!, {r4, r5, r6, r7, lr}
+ 687              	.LCFI7:
+ 688              		.loc 2 496 0
+ 689 0004 60349FE5 		ldr	r3, .L123
+ 690 0008 0030D3E5 		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 691 000c 050053E3 		cmp	r3, #5
+ 692 0010 03F19F97 		ldrls	pc, [pc, r3, asl #2]
+ 693 0014 180100EA 		b	.L114
+ 694              		.p2align 2
+ 695              	.L71:
+ 696 0018 30000000 		.word	.L65
+ 697 001c 60010000 		.word	.L66
+ 698 0020 D8010000 		.word	.L67
+ 699 0024 2C020000 		.word	.L68
+ 700 0028 08030000 		.word	.L69
+ 701 002c A8020000 		.word	.L70
+ 702              	.L65:
+ 703              		.loc 2 498 0
+ 704 0030 38249FE5 		ldr	r2, .L123+4
+ 705 0034 B030D2E1 		ldrh	r3, [r2, #0]
+ 706 0038 000053E3 		cmp	r3, #0
+ 707 003c F080BD08 		ldmeqfd	sp!, {r4, r5, r6, r7, pc}
+ 708              		.loc 2 501 0
+ 709 0040 B030D2E1 		ldrh	r3, [r2, #0]
+ 710 0044 050053E3 		cmp	r3, #5
+ 711 0048 1E00001A 		bne	.L73
+ 712 004c 20249FE5 		ldr	r2, .L123+8
+ 713 0050 0030D2E5 		ldrb	r3, [r2, #0]	@ zero_extendqisi2
+ 714 0054 A00053E3 		cmp	r3, #160
+ 715 0058 1E00001A 		bne	.L73
+ 716 005c 0130D2E5 		ldrb	r3, [r2, #1]	@ zero_extendqisi2
+ 717 0060 C00053E3 		cmp	r3, #192
+ 718 0064 1E00001A 		bne	.L73
+ 719 0068 0230D2E5 		ldrb	r3, [r2, #2]	@ zero_extendqisi2
+ 720 006c 000053E3 		cmp	r3, #0
+ 721 0070 1E00001A 		bne	.L73
+ 722 0074 0330D2E5 		ldrb	r3, [r2, #3]	@ zero_extendqisi2
+ 723 0078 000053E3 		cmp	r3, #0
+ 724 007c 2A00000A 		beq	.L78
+ 725              	.L73:
+ 726 0080 E8339FE5 		ldr	r3, .L123+4
+ 727 0084 B030D3E1 		ldrh	r3, [r3, #0]
+ 728 0088 040053E3 		cmp	r3, #4
+ 729 008c 2C00009A 		bls	.L79
+ 730 0090 DC239FE5 		ldr	r2, .L123+8
+ 731 0094 0030D2E5 		ldrb	r3, [r2, #0]	@ zero_extendqisi2
+ 732 0098 A00053E3 		cmp	r3, #160
+ 733 009c 2C00001A 		bne	.L79
+ 734 00a0 0130D2E5 		ldrb	r3, [r2, #1]	@ zero_extendqisi2
+ 735 00a4 B20053E3 		cmp	r3, #178
+ 736 00a8 B0005313 		cmpne	r3, #176
+ 737 00ac 2C00001A 		bne	.L79
+ 738              	.L78:
+ 739              		.loc 2 509 0
+ 740 00b0 0120A0E3 		mov	r2, #1
+ 741 00b4 2D0000EA 		b	.L115
+ 742              	.L79:
+ 743              		.loc 2 511 0
+ 744 00b8 0020A0E3 		mov	r2, #0
+ 745              	.L115:
+ 746 00bc B4339FE5 		ldr	r3, .L123+12
+ 747              		.loc 2 513 0
+ 748 00c0 AC739FE5 		ldr	r7, .L123+8
+ 749              		.loc 2 511 0
+ 750 00c4 0020C3E5 		strb	r2, [r3, #0]
+ 751              		.loc 2 513 0
+ 752 00c8 AC539FE5 		ldr	r5, .L123+16
+ 753 00cc 0430D7E5 		ldrb	r3, [r7, #4]	@ zero_extendqisi2
+ 754              	.LBB3:
+ 755              	.LBB4:
+ 301:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 302:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief remove uint8 from front of message
+ 303:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 304:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns 8bit value taken from end of msgb
+ 305:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 306:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline uint8_t msgb_pull_u8(struct msgb *msgb)
+ 307:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 308:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint8_t *space = msgb_pull(msgb, 1) - 1;
+ 309:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return space[0];
+ 310:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 311:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief remove uint16 from front of message
+ 312:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 313:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns 16bit value taken from end of msgb
+ 314:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 315:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline uint16_t msgb_pull_u16(struct msgb *msgb)
+ 316:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 317:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint8_t *space = msgb_pull(msgb, 2) - 2;
+ 318:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return space[0] << 8 | space[1];
+ 319:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 320:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief remove uint32 from front of message
+ 321:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msgb message buffer
+ 322:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns 32bit value taken from end of msgb
+ 323:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 324:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline uint32_t msgb_pull_u32(struct msgb *msgb)
+ 325:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 326:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	uint8_t *space = msgb_pull(msgb, 4) - 4;
+ 327:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return space[0] << 24 | space[1] << 16 | space[2] << 8 | space[3];
+ 328:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 329:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 330:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief Increase headroom of empty msgb, reducing the tailroom
+ 331:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msg message buffer
+ 332:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] len amount of extra octets to be reserved as headroom
+ 333:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 334:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function reserves some memory at the beginning of the underlying
+ 335:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * data buffer.  The idea is to reserve space in case further headers
+ 336:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * have to be pushed to the \ref msgb during further processing.
+ 337:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 338:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * Calling this function leads to undefined reusults if it is called on
+ 339:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * a non-empty \ref msgb.
+ 340:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 341:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline void msgb_reserve(struct msgb *msg, int len)
+ 342:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 343:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msg->data += len;
+ 344:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msg->tail += len;
+ 345:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 346:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 347:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief Trim the msgb to a given absolute length
+ 348:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] msg message buffer
+ 349:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] len new total length of buffer
+ 350:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns 0 in case of success, negative in case of error
+ 351:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 352:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline int msgb_trim(struct msgb *msg, int len)
+ 353:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 354:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	if (len > msg->data_len)
+ 355:../../shared/libosmocore/include/osmocom/core/msgb.h **** 		return -1;
+ 356:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 357:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msg->len = len;
+ 358:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	msg->tail = msg->data + len;
+ 359:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 360:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return 0;
+ 361:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 362:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 363:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief Trim the msgb to a given layer3 length
+ 364:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \pram[in] msg message buffer
+ 365:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] l3len new layer3 length
+ 366:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns 0 in case of success, negative in case of error
+ 367:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 368:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline int msgb_l3trim(struct msgb *msg, int l3len)
+ 369:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 370:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	return msgb_trim(msg, (msg->l3h - msg->data) + l3len);
+ 371:../../shared/libosmocore/include/osmocom/core/msgb.h **** }
+ 372:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 373:../../shared/libosmocore/include/osmocom/core/msgb.h **** /*! \brief Allocate message buffer with specified headroom
+ 374:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] size size in bytes, including headroom
+ 375:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] headroom headroom in bytes
+ 376:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \param[in] name human-readable name
+ 377:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *  \returns allocated message buffer with specified headroom
+ 378:../../shared/libosmocore/include/osmocom/core/msgb.h ****  *
+ 379:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * This function is a convenience wrapper around \ref msgb_alloc
+ 380:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * followed by \ref msgb_reserve in order to create a new \ref msgb with
+ 381:../../shared/libosmocore/include/osmocom/core/msgb.h ****  * user-specified amount of headroom.
+ 382:../../shared/libosmocore/include/osmocom/core/msgb.h ****  */
+ 383:../../shared/libosmocore/include/osmocom/core/msgb.h **** static inline struct msgb *msgb_alloc_headroom(int size, int headroom,
+ 384:../../shared/libosmocore/include/osmocom/core/msgb.h **** 						const char *name)
+ 385:../../shared/libosmocore/include/osmocom/core/msgb.h **** {
+ 386:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	osmo_static_assert(size > headroom, headroom_bigger);
+ 387:../../shared/libosmocore/include/osmocom/core/msgb.h **** 
+ 388:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	struct msgb *msg = msgb_alloc(size, name);
+ 756              		.loc 1 388 0
+ 757 00d0 010CA0E3 		mov	r0, #256
+ 758 00d4 A4139FE5 		ldr	r1, .L123+20
+ 759              	.LBE4:
+ 760              	.LBE3:
+ 761              		.loc 2 513 0
+ 762 00d8 B030C5E1 		strh	r3, [r5, #0]	@ movhi
+ 763              	.LBB5:
+ 764              	.LBB6:
+ 765              		.loc 1 388 0
+ 766 00dc FEFFFFEB 		bl	msgb_alloc
+ 389:../../shared/libosmocore/include/osmocom/core/msgb.h **** 	if (msg)
+ 767              		.loc 1 389 0
+ 768 00e0 004050E2 		subs	r4, r0, #0
+ 769              	.LVL29:
+ 770 00e4 3E00000A 		beq	.L83
+ 771              	.LBB7:
+ 772              	.LBB8:
+ 773              		.loc 1 343 0
+ 774 00e8 3C2084E2 		add	r2, r4, #60
+ 775 00ec 0C0092E8 		ldmia	r2, {r2, r3}	@ phole ldm
+ 776 00f0 083083E2 		add	r3, r3, #8
+ 777              		.loc 1 344 0
+ 778 00f4 082082E2 		add	r2, r2, #8
+ 779              		.loc 1 343 0
+ 780 00f8 403084E5 		str	r3, [r4, #64]
+ 781              		.loc 1 344 0
+ 782 00fc 3C2084E5 		str	r2, [r4, #60]
+ 783              	.L83:
+ 784              	.LBE8:
+ 785              	.LBE7:
+ 786              	.LBE6:
+ 787              	.LBE5:
+ 788              		.loc 2 516 0
+ 789 0100 7C339FE5 		ldr	r3, .L123+24
+ 790              		.loc 2 518 0
+ 791 0104 B020D5E1 		ldrh	r2, [r5, #0]
+ 792              		.loc 2 516 0
+ 793 0108 004083E5 		str	r4, [r3, #0]
+ 794              		.loc 2 518 0
+ 795 010c 035082E2 		add	r5, r2, #3
+ 796              	.LVL30:
+ 797              	.LBB9:
+ 798              	.LBB10:
+ 799              		.loc 1 182 0
+ 800 0110 FEFFFFEB 		bl	msgb_tailroom
+ 801 0114 050050E1 		cmp	r0, r5
+ 802              		.loc 1 181 0
+ 803 0118 3C6094E5 		ldr	r6, [r4, #60]
+ 804              	.LVL31:
+ 805              		.loc 1 182 0
+ 806              		.loc 1 183 0
+ 807 011c 0020A0B1 		movlt	r2, r0
+ 808 0120 0410A0B1 		movlt	r1, r4
+ 809 0124 5C039FB5 		ldrlt	r0, .L123+28
+ 810 0128 0530A0B1 		movlt	r3, r5
+ 811 012c FEFFFFBB 		bllt	osmo_panic
+ 812              	.L85:
+ 813              		.loc 1 186 0
+ 814 0130 B633D4E1 		ldrh	r3, [r4, #54]
+ 815              		.loc 1 185 0
+ 816 0134 3C2094E5 		ldr	r2, [r4, #60]
+ 817              		.loc 1 186 0
+ 818 0138 053083E0 		add	r3, r3, r5
+ 819              		.loc 1 185 0
+ 820 013c 052082E0 		add	r2, r2, r5
+ 821              		.loc 1 186 0
+ 822 0140 B633C4E1 		strh	r3, [r4, #54]	@ movhi
+ 823              	.LBE10:
+ 824              	.LBE9:
+ 825              		.loc 2 518 0
+ 826 0144 40339FE5 		ldr	r3, .L123+32
+ 827              	.LBB11:
+ 828              	.LBB12:
+ 829              		.loc 1 185 0
+ 830 0148 3C2084E5 		str	r2, [r4, #60]
+ 831              	.LBE12:
+ 832              	.LBE11:
+ 833              		.loc 2 523 0
+ 834 014c 0700A0E1 		mov	r0, r7
+ 835 0150 0510A0E3 		mov	r1, #5
+ 836              		.loc 2 520 0
+ 837 0154 0120A0E3 		mov	r2, #1
+ 838              		.loc 2 518 0
+ 839 0158 006083E5 		str	r6, [r3, #0]
+ 840 015c A40000EA 		b	.L119
+ 841              	.LVL32:
+ 842              	.L66:
+ 843              		.loc 2 526 0
+ 844 0160 28339FE5 		ldr	r3, .L123+36
+ 845 0164 003093E5 		ldr	r3, [r3, #0]
+ 846 0168 000053E3 		cmp	r3, #0
+ 847 016c F080BD08 		ldmeqfd	sp!, {r4, r5, r6, r7, pc}
+ 848              		.loc 2 531 0
+ 849 0170 04339FE5 		ldr	r3, .L123+16
+ 850 0174 B010D3E1 		ldrh	r1, [r3, #0]
+ 851              		.loc 2 529 0
+ 852 0178 14339FE5 		ldr	r3, .L123+40
+ 853              		.loc 2 531 0
+ 854 017c 000051E3 		cmp	r1, #0
+ 855              		.loc 2 529 0
+ 856 0180 FF20A0E3 		mov	r2, #255	@ movhi
+ 857 0184 B020C3E1 		strh	r2, [r3, #0]	@ movhi
+ 858              		.loc 2 533 0
+ 859 0188 FC329F05 		ldreq	r3, .L123+32
+ 860 018c 00009305 		ldreq	r0, [r3, #0]
+ 861              		.loc 2 531 0
+ 862 0190 BA00000A 		beq	.L121
+ 863              		.loc 2 537 0
+ 864 0194 DC329FE5 		ldr	r3, .L123+12
+ 865 0198 0030D3E5 		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 866 019c 000053E3 		cmp	r3, #0
+ 867 01a0 C4229FE5 		ldr	r2, .L123
+ 868 01a4 E0029FE5 		ldr	r0, .L123+32
+ 869 01a8 6F00001A 		bne	.L90
+ 870              		.loc 2 539 0
+ 871 01ac 000090E5 		ldr	r0, [r0, #0]
+ 872 01b0 0110A0E3 		mov	r1, #1
+ 873              		.loc 2 538 0
+ 874 01b4 033083E2 		add	r3, r3, #3
+ 875              	.L122:
+ 876 01b8 0030C2E5 		strb	r3, [r2, #0]
+ 877              	.L120:
+ 878              		.loc 2 640 0
+ 879 01bc F040BDE8 		ldmfd	sp!, {r4, r5, r6, r7, lr}
+ 880              		.loc 2 539 0
+ 881 01c0 FEFFFFEA 		b	calypso_sim_receive
+ 882              	.L90:
+ 883              		.loc 2 544 0
+ 884 01c4 031081E2 		add	r1, r1, #3
+ 885 01c8 000090E5 		ldr	r0, [r0, #0]
+ 886 01cc FF1001E2 		and	r1, r1, #255
+ 887              		.loc 2 543 0
+ 888 01d0 0430A0E3 		mov	r3, #4
+ 889 01d4 6C0000EA 		b	.L122
+ 890              	.L67:
+ 891              		.loc 2 548 0
+ 892 01d8 B8329FE5 		ldr	r3, .L123+44
+ 893 01dc 003093E5 		ldr	r3, [r3, #0]
+ 894 01e0 000053E3 		cmp	r3, #0
+ 895 01e4 F080BD08 		ldmeqfd	sp!, {r4, r5, r6, r7, pc}
+ 896              		.loc 2 551 0
+ 897 01e8 A4329FE5 		ldr	r3, .L123+40
+ 898 01ec FF10A0E3 		mov	r1, #255	@ movhi
+ 899 01f0 B010C3E1 		strh	r1, [r3, #0]	@ movhi
+ 900              		.loc 2 553 0
+ 901 01f4 A0329FE5 		ldr	r3, .L123+48
+ 902 01f8 0020A0E3 		mov	r2, #0
+ 903 01fc 0020C3E5 		strb	r2, [r3, #0]
+ 904              		.loc 2 555 0
+ 905 0200 98329FE5 		ldr	r3, .L123+52
+ 906 0204 003093E5 		ldr	r3, [r3, #0]
+ 907 0208 020053E3 		cmp	r3, #2
+ 908              		.loc 2 556 0
+ 909 020c 90029F15 		ldrne	r0, .L123+56
+ 910              		.loc 2 555 0
+ 911 0210 E800001A 		bne	.L116
+ 912              		.loc 2 559 0
+ 913 0214 60329FE5 		ldr	r3, .L123+16
+ 914 0218 B010D3E1 		ldrh	r1, [r3, #0]
+ 915 021c 60329FE5 		ldr	r3, .L123+24
+ 916 0220 000093E5 		ldr	r0, [r3, #0]
+ 917 0224 011081E2 		add	r1, r1, #1
+ 918 0228 E60000EA 		b	.L117
+ 919              	.L68:
+ 920              		.loc 2 562 0
+ 921 022c 64329FE5 		ldr	r3, .L123+44
+ 922 0230 003093E5 		ldr	r3, [r3, #0]
+ 923 0234 000053E3 		cmp	r3, #0
+ 924 0238 F080BD08 		ldmeqfd	sp!, {r4, r5, r6, r7, pc}
+ 925              		.loc 2 565 0
+ 926 023c 50329FE5 		ldr	r3, .L123+40
+ 927 0240 FF10A0E3 		mov	r1, #255	@ movhi
+ 928              		.loc 2 567 0
+ 929 0244 54229FE5 		ldr	r2, .L123+52
+ 930              		.loc 2 565 0
+ 931 0248 B010C3E1 		strh	r1, [r3, #0]	@ movhi
+ 932              		.loc 2 567 0
+ 933 024c 003092E5 		ldr	r3, [r2, #0]
+ 934 0250 020053E3 		cmp	r3, #2
+ 935 0254 CB00000A 		beq	.L118
+ 936              		.loc 2 575 0
+ 937 0258 003092E5 		ldr	r3, [r2, #0]
+ 938 025c 010053E3 		cmp	r3, #1
+ 939              		.loc 2 576 0
+ 940 0260 40029F15 		ldrne	r0, .L123+60
+ 941              		.loc 2 575 0
+ 942 0264 E800001A 		bne	.L116
+ 943              		.loc 2 579 0
+ 944 0268 1C329FE5 		ldr	r3, .L123+32
+ 945 026c 00029FE5 		ldr	r0, .L123+8
+ 946 0270 003093E5 		ldr	r3, [r3, #0]
+ 947 0274 0020D3E5 		ldrb	r2, [r3, #0]	@ zero_extendqisi2
+ 948 0278 0130D0E5 		ldrb	r3, [r0, #1]	@ zero_extendqisi2
+ 949 027c 030052E1 		cmp	r2, r3
+ 950              		.loc 2 580 0
+ 951 0280 24029F15 		ldrne	r0, .L123+64
+ 952              		.loc 2 579 0
+ 953 0284 E800001A 		bne	.L116
+ 954              		.loc 2 584 0
+ 955 0288 EC319FE5 		ldr	r3, .L123+16
+ 956 028c B010D3E1 		ldrh	r1, [r3, #0]
+ 957 0290 050080E2 		add	r0, r0, #5
+ 958              		.loc 2 583 0
+ 959 0294 0520A0E3 		mov	r2, #5
+ 960              	.LVL33:
+ 961              	.L119:
+ 962 0298 CC319FE5 		ldr	r3, .L123
+ 963 029c 0020C3E5 		strb	r2, [r3, #0]
+ 964              		.loc 2 640 0
+ 965 02a0 F040BDE8 		ldmfd	sp!, {r4, r5, r6, r7, lr}
+ 966              		.loc 2 584 0
+ 967 02a4 FEFFFFEA 		b	calypso_sim_transmit
+ 968              	.LVL34:
+ 969              	.L70:
+ 970              		.loc 2 587 0
+ 971 02a8 E0319FE5 		ldr	r3, .L123+36
+ 972 02ac 003093E5 		ldr	r3, [r3, #0]
+ 973 02b0 000053E3 		cmp	r3, #0
+ 974 02b4 F080BD08 		ldmeqfd	sp!, {r4, r5, r6, r7, pc}
+ 975              		.loc 2 594 0
+ 976 02b8 B4319FE5 		ldr	r3, .L123+8
+ 977 02bc 0130D3E5 		ldrb	r3, [r3, #1]	@ zero_extendqisi2
+ 978 02c0 880053E3 		cmp	r3, #136
+ 979              		.loc 2 590 0
+ 980 02c4 C8319FE5 		ldr	r3, .L123+40
+ 981 02c8 FF20A0E3 		mov	r2, #255	@ movhi
+ 982 02cc B020C3E1 		strh	r2, [r3, #0]	@ movhi
+ 983              		.loc 2 595 0
+ 984 02d0 C4319F05 		ldreq	r3, .L123+48
+ 985 02d4 0120A003 		moveq	r2, #1
+ 986 02d8 0020C305 		streqb	r2, [r3, #0]
+ 987              		.loc 2 597 0
+ 988 02dc A8319FE5 		ldr	r3, .L123+32
+ 989 02e0 000093E5 		ldr	r0, [r3, #0]
+ 990 02e4 90319FE5 		ldr	r3, .L123+16
+ 991 02e8 B030D3E1 		ldrh	r3, [r3, #0]
+ 992 02ec 030080E0 		add	r0, r0, r3
+ 993              	.L121:
+ 994              		.loc 2 596 0
+ 995 02f0 0220A0E3 		mov	r2, #2
+ 996 02f4 70319FE5 		ldr	r3, .L123
+ 997              		.loc 2 597 0
+ 998 02f8 010080E2 		add	r0, r0, #1
+ 999 02fc 0210A0E1 		mov	r1, r2
+ 1000              		.loc 2 596 0
+ 1001 0300 0020C3E5 		strb	r2, [r3, #0]
+ 1002 0304 6D0000EA 		b	.L120
+ 1003              	.L69:
+ 1004              		.loc 2 600 0
+ 1005 0308 88319FE5 		ldr	r3, .L123+44
+ 1006 030c 003093E5 		ldr	r3, [r3, #0]
+ 1007 0310 000053E3 		cmp	r3, #0
+ 1008 0314 F080BD08 		ldmeqfd	sp!, {r4, r5, r6, r7, pc}
+ 1009              		.loc 2 603 0
+ 1010 0318 74319FE5 		ldr	r3, .L123+40
+ 1011 031c FF10A0E3 		mov	r1, #255	@ movhi
+ 1012              		.loc 2 605 0
+ 1013 0320 78219FE5 		ldr	r2, .L123+52
+ 1014              		.loc 2 603 0
+ 1015 0324 B010C3E1 		strh	r1, [r3, #0]	@ movhi
+ 1016              		.loc 2 605 0
+ 1017 0328 003092E5 		ldr	r3, [r2, #0]
+ 1018 032c 020053E3 		cmp	r3, #2
+ 1019 0330 DC00001A 		bne	.L108
+ 1020              	.L118:
+ 1021              		.loc 2 607 0
+ 1022 0334 48419FE5 		ldr	r4, .L123+24
+ 1023              		.loc 2 606 0
+ 1024 0338 70019FE5 		ldr	r0, .L123+68
+ 1025 033c FEFFFFEB 		bl	puts
+ 1026              		.loc 2 607 0
+ 1027 0340 000094E5 		ldr	r0, [r4, #0]
+ 1028 0344 B613D0E1 		ldrh	r1, [r0, #54]
+ 1029 0348 021041E2 		sub	r1, r1, #2
+ 1030 034c FEFFFFEB 		bl	msgb_pull
+ 1031              		.loc 2 608 0
+ 1032 0350 34319FE5 		ldr	r3, .L123+32
+ 1033 0354 000094E5 		ldr	r0, [r4, #0]
+ 1034 0358 001093E5 		ldr	r1, [r3, #0]
+ 1035 035c 402090E5 		ldr	r2, [r0, #64]
+ 1036 0360 0030D1E5 		ldrb	r3, [r1, #0]	@ zero_extendqisi2
+ 1037 0364 0030C2E5 		strb	r3, [r2, #0]
+ 1038              		.loc 2 609 0
+ 1039 0368 402090E5 		ldr	r2, [r0, #64]
+ 1040 036c 0130D1E5 		ldrb	r3, [r1, #1]	@ zero_extendqisi2
+ 1041 0370 0130C2E5 		strb	r3, [r2, #1]
+ 1042 0374 F40000EA 		b	.L96
+ 1043              	.L108:
+ 1044              		.loc 2 613 0
+ 1045 0378 FC309FE5 		ldr	r3, .L123+16
+ 1046 037c B030D3E1 		ldrh	r3, [r3, #0]
+ 1047 0380 002092E5 		ldr	r2, [r2, #0]
+ 1048 0384 033083E2 		add	r3, r3, #3
+ 1049 0388 030052E1 		cmp	r2, r3
+ 1050              		.loc 2 614 0
+ 1051 038c 20019F15 		ldrne	r0, .L123+72
+ 1052              		.loc 2 613 0
+ 1053 0390 E800001A 		bne	.L116
+ 1054              		.loc 2 617 0
+ 1055 0394 E8309FE5 		ldr	r3, .L123+24
+ 1056 0398 000093E5 		ldr	r0, [r3, #0]
+ 1057 039c 0110A0E3 		mov	r1, #1
+ 1058              	.L117:
+ 1059 03a0 FEFFFFEB 		bl	msgb_pull
+ 1060 03a4 F40000EA 		b	.L96
+ 1061              	.L116:
+ 1062              	.L95:
+ 1063              		.loc 2 624 0
+ 1064 03a8 D4409FE5 		ldr	r4, .L123+24
+ 1065              		.loc 2 614 0
+ 1066 03ac FEFFFFEB 		bl	puts
+ 1067              		.loc 2 624 0
+ 1068 03b0 000094E5 		ldr	r0, [r4, #0]
+ 1069 03b4 B613D0E1 		ldrh	r1, [r0, #54]
+ 1070 03b8 021041E2 		sub	r1, r1, #2
+ 1071 03bc FEFFFFEB 		bl	msgb_pull
+ 1072              		.loc 2 625 0
+ 1073 03c0 001094E5 		ldr	r1, [r4, #0]
+ 1074 03c4 403091E5 		ldr	r3, [r1, #64]
+ 1075 03c8 0020A0E3 		mov	r2, #0
+ 1076 03cc 0020C3E5 		strb	r2, [r3, #0]
+ 1077              		.loc 2 626 0
+ 1078 03d0 403091E5 		ldr	r3, [r1, #64]
+ 1079 03d4 0120C3E5 		strb	r2, [r3, #1]
+ 1080              	.L96:
+ 1081              		.loc 2 628 0
+ 1082 03d8 A4609FE5 		ldr	r6, .L123+24
+ 1083 03dc 003096E5 		ldr	r3, [r6, #0]
+ 1084 03e0 B643D3E1 		ldrh	r4, [r3, #54]
+ 1085 03e4 400093E5 		ldr	r0, [r3, #64]
+ 1086 03e8 0410A0E1 		mov	r1, r4
+ 1087 03ec FEFFFFEB 		bl	osmo_hexdump
+ 1088 03f0 0410A0E1 		mov	r1, r4
+ 1089 03f4 0020A0E1 		mov	r2, r0
+ 1090 03f8 B8009FE5 		ldr	r0, .L123+76
+ 1091 03fc FEFFFFEB 		bl	printf
+ 1092              		.loc 2 630 0
+ 1093 0400 005096E5 		ldr	r5, [r6, #0]
+ 1094              	.LVL35:
+ 1095              	.LBB13:
+ 1096              	.LBB14:
+ 1097              		.loc 1 280 0
+ 1098 0404 402095E5 		ldr	r2, [r5, #64]
+ 1099 0408 383095E5 		ldr	r3, [r5, #56]
+ 1100 040c 022063E0 		rsb	r2, r3, r2
+ 1101 0410 030052E3 		cmp	r2, #3
+ 1102              		.loc 1 281 0
+ 1103 0414 A0009FD5 		ldrle	r0, .L123+80
+ 1104 0418 0510A0D1 		movle	r1, r5
+ 1105 041c 0430A0D3 		movle	r3, #4
+ 1106 0420 FEFFFFDB 		blle	osmo_panic
+ 1107              	.L112:
+ 1108              		.loc 1 284 0
+ 1109 0424 B633D5E1 		ldrh	r3, [r5, #54]
+ 1110              		.loc 1 283 0
+ 1111 0428 402095E5 		ldr	r2, [r5, #64]
+ 1112              		.loc 1 284 0
+ 1113 042c 043083E2 		add	r3, r3, #4
+ 1114 0430 B633C5E1 		strh	r3, [r5, #54]	@ movhi
+ 1115              		.loc 1 283 0
+ 1116 0434 041042E2 		sub	r1, r2, #4
+ 1117              	.LBE14:
+ 1118              	.LBE13:
+ 1119              		.loc 2 632 0
+ 1120 0438 0040A0E3 		mov	r4, #0
+ 1121              		.loc 2 631 0
+ 1122 043c 1730A0E3 		mov	r3, #23
+ 1123              	.LBB15:
+ 1124              	.LBB16:
+ 1125              		.loc 1 283 0
+ 1126 0440 401085E5 		str	r1, [r5, #64]
+ 1127              	.LBE16:
+ 1128              	.LBE15:
+ 1129              		.loc 2 631 0
+ 1130 0444 043042E5 		strb	r3, [r2, #-4]
+ 1131              		.loc 2 632 0
+ 1132 0448 034042E5 		strb	r4, [r2, #-3]
+ 1133              		.loc 2 633 0
+ 1134 044c 000096E5 		ldr	r0, [r6, #0]
+ 1135 0450 101080E5 		str	r1, [r0, #16]
+ 1136              		.loc 2 634 0
+ 1137 0454 FEFFFFEB 		bl	l1_queue_for_l2
+ 1138              		.loc 2 636 0
+ 1139 0458 0C309FE5 		ldr	r3, .L123
+ 1140 045c 0040C3E5 		strb	r4, [r3, #0]
+ 1141              		.loc 2 637 0
+ 1142 0460 08309FE5 		ldr	r3, .L123+4
+ 1143 0464 B040C3E1 		strh	r4, [r3, #0]	@ movhi
+ 1144              	.L114:
+ 1145 0468 F080BDE8 		ldmfd	sp!, {r4, r5, r6, r7, pc}
+ 1146              	.L124:
+ 1147              		.align	2
+ 1148              	.L123:
+ 1149 046c 12000000 		.word	sim_state
+ 1150 0470 10000000 		.word	sim_len
+ 1151 0474 38000000 		.word	sim_data
+ 1152 0478 30000000 		.word	mode.2229
+ 1153 047c 28000000 		.word	length.2231
+ 1154 0480 20000000 		.word	.LC1
+ 1155 0484 34000000 		.word	msg.2227
+ 1156 0488 28000000 		.word	.LC2
+ 1157 048c 2C000000 		.word	response.2230
+ 1158 0490 0C000000 		.word	txDoneFlag
+ 1159 0494 0E00FEFF 		.word	-131058
+ 1160 0498 00000000 		.word	rxDoneFlag
+ 1161 049c 08000000 		.word	sim_ignore_waiting_char
+ 1162 04a0 04000000 		.word	sim_rx_character_count
+ 1163 04a4 5C000000 		.word	.LC3
+ 1164 04a8 90000000 		.word	.LC5
+ 1165 04ac A8000000 		.word	.LC6
+ 1166 04b0 78000000 		.word	.LC4
+ 1167 04b4 CC000000 		.word	.LC7
+ 1168 04b8 E8000000 		.word	.LC8
+ 1169 04bc 00010000 		.word	.LC9
+ 1170              	.LFE43:
+ 1172              		.bss
+ 1173              	sim_data:
+ 1174 0038 00000000 		.space	256
+ 1174      00000000 
+ 1174      00000000 
+ 1174      00000000 
+ 1174      00000000 
+ 1361              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 sim.c
+                             .bss:0000000000000000 $d
+     /tmp/cc8by7Dm.s:12     .bss:0000000000000000 rxDoneFlag
+     /tmp/cc8by7Dm.s:15     .bss:0000000000000004 sim_rx_character_count
+     /tmp/cc8by7Dm.s:17     .bss:0000000000000008 sim_ignore_waiting_char
+     /tmp/cc8by7Dm.s:20     .bss:000000000000000c txDoneFlag
+     /tmp/cc8by7Dm.s:23     .bss:0000000000000010 sim_len
+     /tmp/cc8by7Dm.s:25     .bss:0000000000000012 sim_state
+     /tmp/cc8by7Dm.s:28     .bss:0000000000000014 sim_rx_max_character_count
+     /tmp/cc8by7Dm.s:31     .bss:0000000000000018 rx_buffer
+     /tmp/cc8by7Dm.s:34     .bss:000000000000001c tx_buffer
+     /tmp/cc8by7Dm.s:37     .bss:0000000000000020 sim_tx_character_length
+     /tmp/cc8by7Dm.s:40     .bss:0000000000000024 sim_tx_character_count
+     /tmp/cc8by7Dm.s:45     .text.msgb_tailroom:0000000000000000 msgb_tailroom
+     /tmp/cc8by7Dm.s:53     .text.msgb_tailroom:0000000000000000 $a
+     /tmp/cc8by7Dm.s:69     .text.msgb_pull:0000000000000000 msgb_pull
+     /tmp/cc8by7Dm.s:76     .text.msgb_pull:0000000000000000 $a
+     /tmp/cc8by7Dm.s:100    .text.calypso_sim_regdump:0000000000000000 calypso_sim_regdump
+     /tmp/cc8by7Dm.s:110    .text.calypso_sim_regdump:0000000000000000 $a
+     /tmp/cc8by7Dm.s:117    .text.calypso_sim_receive:0000000000000000 calypso_sim_receive
+     /tmp/cc8by7Dm.s:125    .text.calypso_sim_receive:0000000000000000 $a
+     /tmp/cc8by7Dm.s:164    .text.calypso_sim_receive:0000000000000050 $d
+     /tmp/cc8by7Dm.s:177    .text.calypso_sim_transmit:0000000000000000 calypso_sim_transmit
+     /tmp/cc8by7Dm.s:183    .text.calypso_sim_transmit:0000000000000000 $a
+     /tmp/cc8by7Dm.s:232    .text.calypso_sim_transmit:0000000000000068 $d
+     /tmp/cc8by7Dm.s:244    .text.sim_irq_handler:0000000000000000 sim_irq_handler
+     /tmp/cc8by7Dm.s:250    .text.sim_irq_handler:0000000000000000 $a
+     /tmp/cc8by7Dm.s:355    .text.sim_irq_handler:0000000000000108 $d
+     /tmp/cc8by7Dm.s:380    .text.sim_apdu:0000000000000000 sim_apdu
+     /tmp/cc8by7Dm.s:386    .text.sim_apdu:0000000000000000 $a
+     /tmp/cc8by7Dm.s:421    .text.sim_apdu:0000000000000040 $d
+     /tmp/cc8by7Dm.s:1173   .bss:0000000000000038 sim_data
+     /tmp/cc8by7Dm.s:431    .text.calypso_sim_init:0000000000000000 calypso_sim_init
+     /tmp/cc8by7Dm.s:437    .text.calypso_sim_init:0000000000000000 $a
+     /tmp/cc8by7Dm.s:458    .text.calypso_sim_init:0000000000000030 $d
+     /tmp/cc8by7Dm.s:465    .text.calypso_sim_powerup:0000000000000000 calypso_sim_powerup
+     /tmp/cc8by7Dm.s:471    .text.calypso_sim_powerup:0000000000000000 $a
+     /tmp/cc8by7Dm.s:518    .text.calypso_sim_powerup:000000000000006c $d
+     /tmp/cc8by7Dm.s:527    .text.calypso_sim_powerdown:0000000000000000 calypso_sim_powerdown
+     /tmp/cc8by7Dm.s:533    .text.calypso_sim_powerdown:0000000000000000 $a
+     /tmp/cc8by7Dm.s:573    .text.calypso_sim_powerdown:000000000000005c $d
+     /tmp/cc8by7Dm.s:582    .text.calypso_sim_reset:0000000000000000 calypso_sim_reset
+     /tmp/cc8by7Dm.s:588    .text.calypso_sim_reset:0000000000000000 $a
+     /tmp/cc8by7Dm.s:629    .text.calypso_sim_reset:000000000000005c $d
+     /tmp/cc8by7Dm.s:636    .bss:0000000000000028 length.2231
+     /tmp/cc8by7Dm.s:639    .bss:000000000000002c response.2230
+     /tmp/cc8by7Dm.s:641    .bss:0000000000000030 mode.2229
+     /tmp/cc8by7Dm.s:644    .bss:0000000000000034 msg.2227
+     /tmp/cc8by7Dm.s:680    .text.sim_handler:0000000000000000 sim_handler
+     /tmp/cc8by7Dm.s:686    .text.sim_handler:0000000000000000 $a
+     /tmp/cc8by7Dm.s:696    .text.sim_handler:0000000000000018 $d
+     /tmp/cc8by7Dm.s:704    .text.sim_handler:0000000000000030 $a
+     /tmp/cc8by7Dm.s:1149   .text.sim_handler:000000000000046c $d
+
+UNDEFINED SYMBOLS
+puts
+memcpy
+irq_register_handler
+irq_config
+irq_enable
+twl3025_reg_write
+delay_ms
+msgb_alloc
+osmo_panic
+osmo_hexdump
+printf
+l1_queue_for_l2

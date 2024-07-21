@@ -1,0 +1,11 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: Osmocom VTY Interface Library
+Description: C Utility Library
+Version: UNKNOWN
+Libs: -L${libdir} -losmovty
+Cflags: -I${includedir}/
+

@@ -1,0 +1,21 @@
+   1              		.file	"afcparams.c"
+   9              	.Ltext0:
+  10              		.global	afc_initial_dac_value
+  11              		.data
+  12              		.align	1
+  15              	afc_initial_dac_value:
+  16 0000 44FD     		.short	-700
+  17              		.global	afc_slope
+  18              		.align	1
+  21              	afc_slope:
+  22 0002 C601     		.short	454
+  23              		.file 1 "board/gta0x/afcparams.c"
+  24              		.file 2 "/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h"
+  25              		.text
+  26              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 afcparams.c
+     /tmp/ccN1aLcc.s:15     .data:0000000000000000 afc_initial_dac_value
+     /tmp/ccN1aLcc.s:21     .data:0000000000000002 afc_slope
+
+NO UNDEFINED SYMBOLS

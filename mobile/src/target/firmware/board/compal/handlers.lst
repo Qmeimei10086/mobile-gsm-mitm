@@ -1,0 +1,97 @@
+   1              	# 1 "board/compal/handlers.S"
+   2              	# 1 "<built-in>"
+   1              	
+   0              	
+   0              	
+   2              			.EQU	I_BIT,		0x80
+   3              			.EQU	F_BIT,		0x40
+   4              			
+   5              	.section .text
+   6              	
+   7              	/* handler for all kinds of aborts */
+   8              	.global handle_abort
+   9              	handle_abort:
+  10              			@ print the PC we would jump back to...
+  11 0000 04E04EE2 			sub	lr, lr, #4		@ we assume to be ARM32
+  12              	
+  13 0004 0E00A0E1 			mov	r0, lr
+  14 0008 0810A0E3 			mov	r1, #8
+  15 000c FEFFFFEB 			bl phex
+  16              	
+  17              			@ print abort message
+  18 0010 4100A0E3 			mov	r0, #'A'
+  19 0014 FEFFFFEB 			bl	putchar_asm
+  20 0018 4200A0E3 			mov	r0, #'B'
+  21 001c FEFFFFEB 			bl	putchar_asm
+  22 0020 4F00A0E3 			mov	r0, #'O'
+  23 0024 FEFFFFEB 			bl	putchar_asm
+  24 0028 5200A0E3 			mov	r0, #'R'
+  25 002c FEFFFFEB 			bl	putchar_asm
+  26 0030 5400A0E3 			mov	r0, #'T'
+  27 0034 FEFFFFEB 			bl	putchar_asm
+  28              	
+  29              			@ disable IRQ and FIQ
+  30 0038 C0F021E3 			msr	CPSR_c, #I_BIT | F_BIT
+  31              	
+  32              	0:					@ dead
+  33 003c 0D0000EA 			b	0b
+  34              	
+  35              	/* entry point for IRQs */
+  36              	.global irq_entry
+  37              	irq_entry:
+  38              			/* Adjust and save LR_irq in IRQ stack */
+  39 0040 04E04EE2 			sub	lr, lr, #4
+  40 0044 00402DE9 			stmfd	sp!, {lr}
+  41              	
+  42              			/* Save SPSR for nested interrupt */
+  43 0048 00E04FE1 			mrs	r14, SPSR
+  44 004c 00402DE9 			stmfd	sp!, {r14}
+  45              	
+  46              			/* Call the interrupt handler C function */
+  47 0050 1F102DE9 			stmfd	sp!, {r0-r4, r12}
+  48 0054 FEFFFFEB 			bl	irq
+  49 0058 1F10BDE8 			ldmfd	sp!, {r0-r4, r12}
+  50              	
+  51              			/* Restore SPSR_irq from IRQ stack */
+  52 005c 0040BDE8 			ldmia	sp!, {r14}
+  53 0060 0EF06FE1 			msr	SPSR_cxsf, r14
+  54              	
+  55              			/* Restore adjusted LR_irq from IRQ stack directly in the PC */
+  56 0064 0080FDE8 			ldmia	sp!, {pc}^
+  57              	
+  58              	/* entry point for FIQs */
+  59              	.global fiq_entry
+  60              	fiq_entry:
+  61              			/* Adjust and save LR_irq in IRQ stack */
+  62 0068 04E04EE2 			sub	lr, lr, #4
+  63 006c 00402DE9 			stmfd	sp!, {lr}
+  64              	
+  65              			/* Save SPSR for nested interrupt */
+  66 0070 00E04FE1 			mrs	r14, SPSR
+  67 0074 00402DE9 			stmfd	sp!, {r14}
+  68              	
+  69              			/* Call the interrupt handler C function */
+  70 0078 1F102DE9 			stmfd	sp!, {r0-r4, r12}
+  71 007c FEFFFFEB 			bl	fiq
+  72 0080 1F10BDE8 			ldmfd	sp!, {r0-r4, r12}
+  73              	
+  74              			/* Restore SPSR_irq from IRQ stack */
+  75 0084 0040BDE8 			ldmia	sp!, {r14}
+  76 0088 0EF06FE1 			msr	SPSR_cxsf, r14
+  77              	
+  78              			/* Restore adjusted LR_irq from IRQ stack directly in the PC */
+  79 008c 0080FDE8 			ldmia	sp!, {pc}^
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 board/compal/handlers.S
+board/compal/handlers.S:2      *ABS*:0000000000000080 I_BIT
+board/compal/handlers.S:3      *ABS*:0000000000000040 F_BIT
+board/compal/handlers.S:9      .text:0000000000000000 handle_abort
+board/compal/handlers.S:11     .text:0000000000000000 $a
+board/compal/handlers.S:37     .text:0000000000000040 irq_entry
+board/compal/handlers.S:60     .text:0000000000000068 fiq_entry
+
+UNDEFINED SYMBOLS
+phex
+putchar_asm
+irq
+fiq

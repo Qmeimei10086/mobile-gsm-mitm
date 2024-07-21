@@ -1,0 +1,112 @@
+   1              	# 1 "board/common/calypso_uart.S"
+   2              	# 1 "<built-in>"
+   1              	/* uart routines for early assembly code */
+   0              	
+   0              	
+   2              	
+   3              	#define BA_UART_MODEM	0xFFFF5800
+   4              	
+   5              	.macro	senduart, rd, rx
+   6              		strb	\rd, [\rx, #0]
+   7              	.endm
+   8              	
+   9              	.macro	busyuart, rd, rx
+  10              	1001:
+  11              		@busy waiting until THR is empty
+  12              		ldrb	\rd, [\rx, #5]		@ read LSR register
+  13              		mov	\rd, \rd, lsr #6
+  14              		tst	\rd, #1
+  15              		beq	1001b
+  16              	.endm
+  17              	
+  18              	.macro	loadsp, rd
+  19              		ldr	\rd, =BA_UART_MODEM
+  20              	.endm
+  21              	
+  22              	.section .text
+  23              	
+  24              			.align	2
+  26 0000 00000000 	phexbuf:	.space	12
+  26      00000000 
+  26      00000000 
+  28              	
+  29              	.globl phex
+  30 000c 14304FE2 	phex:		adr	r3, phexbuf
+  31 0010 0020A0E3 			mov	r2, #0
+  32 0014 0120C3E7 			strb	r2, [r3, r1]
+  33 0018 011051E2 	1:		subs	r1, r1, #1
+  34 001c 0300A041 			movmi	r0, r3
+  35 0020 FEFFFF4A 			bmi	puts_asm
+  36 0024 0F2000E2 			and	r2, r0, #15
+  37 0028 2002A0E1 			mov	r0, r0, lsr #4
+  38 002c 0A0052E3 			cmp	r2, #10
+  39 0030 072082A2 			addge	r2, r2, #7
+  40 0034 302082E2 			add	r2, r2, #'0'
+  41 0038 0120C3E7 			strb	r2, [r3, r1]
+  42 003c 040000EA 			b	1b
+  43              	
+  44              	.globl puts_asm
+  45 0040 B0309FE5 	puts_asm:	loadsp	r3
+  46 0044 0120D0E4 	1:		ldrb	r2, [r0], #1
+  47 0048 000032E3 			teq	r2, #0
+  48 004c 0EF0A001 			moveq	pc, lr
+  49 0050 0020C3E5 	2:		senduart r2, r3
+  50 0054 0510D3E5 			busyuart r1, r3
+  50      2113A0E1 
+  50      010011E3 
+  50      1300000A 
+  51 0064 0A0032E3 			teq	r2, #'\n'
+  52 0068 0D20A003 			moveq	r2, #'\r'
+  53 006c 1200000A 			beq	2b
+  54 0070 000030E3 			teq	r0, #0
+  55 0074 0F00001A 			bne	1b
+  56 0078 0EF0A0E1 			mov	pc, lr
+  57              	
+  58              	.globl putchar_asm
+  59              	putchar_asm:
+  60 007c 0020A0E1 			mov	r2, r0
+  61 0080 0000A0E3 			mov	r0, #0
+  62 0084 6C309FE5 			loadsp	r3
+  63 0088 120000EA 			b	2b
+  64              	
+  65              	.globl memdump_asm
+  66 008c 00C0A0E1 	memdump_asm:	mov	r12, r0
+  67 0090 0EA0A0E1 			mov	r10, lr
+  68 0094 00B0A0E3 			mov	r11, #0
+  69 0098 0B01A0E1 	2:		mov 	r0, r11, lsl #2
+  70 009c 0C0080E0 			add	r0, r0, r12
+  71 00a0 0810A0E3 			mov	r1, #8
+  72 00a4 FEFFFFEB 			bl	phex
+  73 00a8 3A00A0E3 			mov	r0, #':'
+  74 00ac FEFFFFEB 			bl	putchar_asm
+  75 00b0 2000A0E3 	1:		mov	r0, #' '
+  76 00b4 FEFFFFEB 			bl	putchar_asm
+  77 00b8 0B019CE7 			ldr	r0, [r12, r11, lsl #2]
+  78 00bc 0810A0E3 			mov	r1, #8
+  79 00c0 FEFFFFEB 			bl	phex
+  80 00c4 07000BE2 			and	r0, r11, #7
+  81 00c8 030030E3 			teq	r0, #3
+  82 00cc 2000A003 			moveq	r0, #' '
+  83 00d0 FEFFFF0B 			bleq	putchar_asm
+  84 00d4 07000BE2 			and	r0, r11, #7
+  85 00d8 01B08BE2 			add	r11, r11, #1
+  86 00dc 070030E3 			teq	r0, #7
+  87 00e0 2A00001A 			bne	1b
+  88 00e4 0A00A0E3 			mov	r0, #'\n'
+  89 00e8 FEFFFFEB 			bl	putchar_asm
+  90 00ec 40005BE3 			cmp	r11, #64
+  91 00f0 240000BA 			blt	2b
+  92 00f4 0AF0A0E1 			mov	pc, r10
+  92      0058FFFF 
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 board/common/calypso_uart.S
+board/common/calypso_uart.S:26     .text:0000000000000000 phexbuf
+board/common/calypso_uart.S:30     .text:000000000000000c phex
+board/common/calypso_uart.S:30     .text:000000000000000c $a
+board/common/calypso_uart.S:45     .text:0000000000000040 puts_asm
+board/common/calypso_uart.S:59     .text:000000000000007c putchar_asm
+board/common/calypso_uart.S:66     .text:000000000000008c memdump_asm
+board/common/calypso_uart.S:92     .text:00000000000000f8 $d
+
+UNDEFINED SYMBOLS
+phexubf

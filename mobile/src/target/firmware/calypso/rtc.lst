@@ -1,0 +1,168 @@
+   1              		.file	"rtc.c"
+   9              	.Ltext0:
+  10              		.section	.text.rtc_irq_tick,"ax",%progbits
+  11              		.align	2
+  13              	rtc_irq_tick:
+  14              	.LFB2:
+  15              		.file 1 "calypso/rtc.c"
+   1:calypso/rtc.c **** /* Driver for Calypso RTC controller */
+   2:calypso/rtc.c **** 
+   3:calypso/rtc.c **** /* (C) 2010 by Harald Welte <laforge@gnumonks.org>
+   4:calypso/rtc.c ****  *
+   5:calypso/rtc.c ****  * All Rights Reserved
+   6:calypso/rtc.c ****  *
+   7:calypso/rtc.c ****  * This program is free software; you can redistribute it and/or modify
+   8:calypso/rtc.c ****  * it under the terms of the GNU General Public License as published by
+   9:calypso/rtc.c ****  * the Free Software Foundation; either version 2 of the License, or
+  10:calypso/rtc.c ****  * (at your option) any later version.
+  11:calypso/rtc.c ****  *
+  12:calypso/rtc.c ****  * This program is distributed in the hope that it will be useful,
+  13:calypso/rtc.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  14:calypso/rtc.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  15:calypso/rtc.c ****  * GNU General Public License for more details.
+  16:calypso/rtc.c ****  *
+  17:calypso/rtc.c ****  * You should have received a copy of the GNU General Public License along
+  18:calypso/rtc.c ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  19:calypso/rtc.c ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  20:calypso/rtc.c ****  *
+  21:calypso/rtc.c ****  */
+  22:calypso/rtc.c **** 
+  23:calypso/rtc.c **** #include <stdint.h>
+  24:calypso/rtc.c **** #include <stdio.h>
+  25:calypso/rtc.c **** 
+  26:calypso/rtc.c **** #include <defines.h>
+  27:calypso/rtc.c **** #include <debug.h>
+  28:calypso/rtc.c **** #include <memory.h>
+  29:calypso/rtc.c **** #include <calypso/irq.h>
+  30:calypso/rtc.c **** 
+  31:calypso/rtc.c **** #define BASE_ADDR_RTC	0xfffe1800
+  32:calypso/rtc.c **** #define RTC_REG(x)	((void *)BASE_ADDR_RTC + (x))
+  33:calypso/rtc.c **** 
+  34:calypso/rtc.c **** enum rtc_reg {
+  35:calypso/rtc.c **** 	SECOND_REG		= 0x00,
+  36:calypso/rtc.c **** 	MINUTES_REG		= 0x01,
+  37:calypso/rtc.c **** 	HOURS_REG		= 0x02,
+  38:calypso/rtc.c **** 	DAYS_REG		= 0x03,
+  39:calypso/rtc.c **** 	MONTHS_REG		= 0x04,
+  40:calypso/rtc.c **** 	YEARS_REG		= 0x05,
+  41:calypso/rtc.c **** 	WEEK_REG		= 0x06,
+  42:calypso/rtc.c **** 	/* reserved */
+  43:calypso/rtc.c **** 	ALARM_SECOND_REG	= 0x08,
+  44:calypso/rtc.c **** 	ALARM_MINUTES_REG	= 0x09,
+  45:calypso/rtc.c **** 	ALARM_HOURS_REG		= 0x0a,
+  46:calypso/rtc.c **** 	ALARM_DAYS_REG		= 0x0b,
+  47:calypso/rtc.c **** 	ALARM_MONTHS_REG	= 0x0c,
+  48:calypso/rtc.c **** 	ALARM_YEARS_REG		= 0x0d,
+  49:calypso/rtc.c **** 	/* reserved */
+  50:calypso/rtc.c **** 	/* reserved */
+  51:calypso/rtc.c **** 	CTRL_REG		= 0x10,
+  52:calypso/rtc.c **** 	STATUS_REG		= 0x11,
+  53:calypso/rtc.c **** 	INT_REG			= 0x12,
+  54:calypso/rtc.c **** 	COMP_LSB_REG		= 0x13,
+  55:calypso/rtc.c **** 	COMP_MSB_REG		= 0x14,
+  56:calypso/rtc.c **** 	RES_PROG_REG		= 0x15,
+  57:calypso/rtc.c **** };
+  58:calypso/rtc.c **** 
+  59:calypso/rtc.c **** static int tick_ctr;
+  60:calypso/rtc.c **** 
+  61:calypso/rtc.c **** static void rtc_irq_tick(__unused enum irq_nr nr)
+  62:calypso/rtc.c **** {
+  16              		.loc 1 62 0
+  17              		@ args = 0, pretend = 0, frame = 0
+  18              		@ frame_needed = 0, uses_anonymous_args = 0
+  19              		@ link register save eliminated.
+  20              	.LVL0:
+  63:calypso/rtc.c **** 	tick_ctr++;
+  21              		.loc 1 63 0
+  22 0000 0C209FE5 		ldr	r2, .L3
+  23 0004 003092E5 		ldr	r3, [r2, #0]
+  24 0008 013083E2 		add	r3, r3, #1
+  25              		.loc 1 62 0
+  26              		@ lr needed for prologue
+  27              		.loc 1 63 0
+  28 000c 003082E5 		str	r3, [r2, #0]
+  64:calypso/rtc.c **** }
+  29              		.loc 1 64 0
+  30 0010 1EFF2FE1 		bx	lr
+  31              	.L4:
+  32              		.align	2
+  33              	.L3:
+  34 0014 00000000 		.word	tick_ctr
+  35              	.LFE2:
+  37              		.section	.text.rtc_init,"ax",%progbits
+  38              		.align	2
+  39              		.global	rtc_init
+  41              	rtc_init:
+  42              	.LFB3:
+  65:calypso/rtc.c **** 
+  66:calypso/rtc.c **** void rtc_init(void)
+  67:calypso/rtc.c **** {
+  43              		.loc 1 67 0
+  44              		@ args = 0, pretend = 0, frame = 0
+  45              		@ frame_needed = 0, uses_anonymous_args = 0
+  46              	.LVL1:
+  47 0000 04E02DE5 		str	lr, [sp, #-4]!
+  48              	.LCFI0:
+  68:calypso/rtc.c **** 	irq_register_handler(IRQ_RTC_TIMER, &rtc_irq_tick);
+  49              		.loc 1 68 0
+  50 0004 0900A0E3 		mov	r0, #9
+  51 0008 44109FE5 		ldr	r1, .L7
+  52 000c FEFFFFEB 		bl	irq_register_handler
+  69:calypso/rtc.c **** 	irq_config(IRQ_RTC_TIMER, 0, 1, 0);
+  53              		.loc 1 69 0
+  54 0010 0010A0E3 		mov	r1, #0
+  55 0014 0120A0E3 		mov	r2, #1
+  56 0018 0130A0E1 		mov	r3, r1
+  57 001c 0900A0E3 		mov	r0, #9
+  58 0020 FEFFFFEB 		bl	irq_config
+  70:calypso/rtc.c **** 	irq_enable(IRQ_RTC_TIMER);
+  59              		.loc 1 70 0
+  60 0024 0900A0E3 		mov	r0, #9
+  61 0028 FEFFFFEB 		bl	irq_enable
+  71:calypso/rtc.c **** 
+  72:calypso/rtc.c **** 	/* clear power-up reset */
+  73:calypso/rtc.c **** 	writeb(0x80, RTC_REG(STATUS_REG));
+  62              		.loc 1 73 0
+  63 002c 24309FE5 		ldr	r3, .L7+4
+  64 0030 7F20E0E3 		mvn	r2, #127
+  65 0034 0020C3E5 		strb	r2, [r3, #0]
+  74:calypso/rtc.c **** 	/* enable RTC running */
+  75:calypso/rtc.c **** 	writeb(0x01, RTC_REG(CTRL_REG));
+  66              		.loc 1 75 0
+  67 0038 812082E2 		add	r2, r2, #129
+  68 003c 013043E2 		sub	r3, r3, #1
+  69 0040 0020C3E5 		strb	r2, [r3, #0]
+  76:calypso/rtc.c **** 	/* enable periodic interrupts every second */
+  77:calypso/rtc.c **** 	writeb(0x04, RTC_REG(INT_REG));
+  70              		.loc 1 77 0
+  71 0044 032082E2 		add	r2, r2, #3
+  72 0048 023083E2 		add	r3, r3, #2
+  73 004c 0020C3E5 		strb	r2, [r3, #0]
+  78:calypso/rtc.c **** }
+  74              		.loc 1 78 0
+  75 0050 04F09DE4 		ldr	pc, [sp], #4
+  76              	.L8:
+  77              		.align	2
+  78              	.L7:
+  79 0054 00000000 		.word	rtc_irq_tick
+  80 0058 1118FEFF 		.word	-124911
+  81              	.LFE3:
+  83              		.bss
+  84              		.align	2
+  85              	tick_ctr:
+  86 0000 00000000 		.space	4
+ 126              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 rtc.c
+     /tmp/ccIM6P4j.s:13     .text.rtc_irq_tick:0000000000000000 rtc_irq_tick
+     /tmp/ccIM6P4j.s:22     .text.rtc_irq_tick:0000000000000000 $a
+     /tmp/ccIM6P4j.s:34     .text.rtc_irq_tick:0000000000000014 $d
+     /tmp/ccIM6P4j.s:85     .bss:0000000000000000 tick_ctr
+     /tmp/ccIM6P4j.s:41     .text.rtc_init:0000000000000000 rtc_init
+     /tmp/ccIM6P4j.s:47     .text.rtc_init:0000000000000000 $a
+     /tmp/ccIM6P4j.s:79     .text.rtc_init:0000000000000054 $d
+
+UNDEFINED SYMBOLS
+irq_register_handler
+irq_config
+irq_enable

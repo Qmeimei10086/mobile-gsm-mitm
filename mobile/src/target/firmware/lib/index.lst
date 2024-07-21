@@ -1,0 +1,51 @@
+   1              		.file	"index.c"
+   9              	.Ltext0:
+  10              		.section	.text.index,"ax",%progbits
+  11              		.align	2
+  12              		.global	index
+  14              	index:
+  15              	.LFB2:
+  16              		.file 1 "lib/index.c"
+   1:lib/index.c   **** char *
+   2:lib/index.c   **** index(p, ch)
+   3:lib/index.c   **** 	register char *p, ch;
+   4:lib/index.c   **** {
+  17              		.loc 1 4 0
+  18              		@ args = 0, pretend = 0, frame = 0
+  19              		@ frame_needed = 0, uses_anonymous_args = 0
+  20              		@ link register save eliminated.
+  21              	.LVL0:
+  22              		@ lr needed for prologue
+  23 0000 FF1001E2 		and	r1, r1, #255
+  24              	.L3:
+   5:lib/index.c   **** 	for (;; ++p) {
+   6:lib/index.c   **** 		if (*p == ch)
+  25              		.loc 1 6 0
+  26 0004 0030D0E5 		ldrb	r3, [r0, #0]	@ zero_extendqisi2
+  27 0008 010053E1 		cmp	r3, r1
+  28 000c 1EFF2F01 		bxeq	lr
+   7:lib/index.c   **** 			return(p);
+   8:lib/index.c   **** 		if (!*p)
+  29              		.loc 1 8 0
+  30 0010 000053E3 		cmp	r3, #0
+  31              		.loc 1 5 0
+  32 0014 010080E2 		add	r0, r0, #1
+  33              		.loc 1 8 0
+  34 0018 FFFFFF1A 		bne	.L3
+   9:lib/index.c   **** 			return((char *)0);
+  10:lib/index.c   **** 	}
+  35              		.loc 1 10 0
+  36 001c 0000A0E3 		mov	r0, #0
+  37              	.LVL1:
+  11:lib/index.c   **** 	/* NOTREACHED */
+  12:lib/index.c   **** }
+  38              		.loc 1 12 0
+  39 0020 1EFF2FE1 		bx	lr
+  40              	.LFE2:
+  66              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 index.c
+     /tmp/ccyC89UH.s:14     .text.index:0000000000000000 index
+     /tmp/ccyC89UH.s:23     .text.index:0000000000000000 $a
+
+NO UNDEFINED SYMBOLS

@@ -1,0 +1,1741 @@
+   1              		.file	"fb_bw8.c"
+   9              	.Ltext0:
+  10              		.section	.text.fb_limit_fb_range,"ax",%progbits
+  11              		.align	2
+  13              	fb_limit_fb_range:
+  14              	.LFB13:
+  15              		.file 1 "include/fb/framebuffer.h"
+   1:include/fb/framebuffer.h **** #ifndef _FB_FRAMEBUFFER_H
+   2:include/fb/framebuffer.h **** #define _FB_FRAMEBUFFER_H
+   3:include/fb/framebuffer.h **** 
+   4:include/fb/framebuffer.h **** #include <fb/font.h>
+   5:include/fb/framebuffer.h **** #include <stdint.h>
+   6:include/fb/framebuffer.h **** 
+   7:include/fb/framebuffer.h **** /* color is encoded as <special><red><green><blue> */
+   8:include/fb/framebuffer.h **** /* if a color is "special", then the RGB components most likely
+   9:include/fb/framebuffer.h ****    don't make sense. Use "special" colours when you have to
+  10:include/fb/framebuffer.h ****    mask out bits with transparency or you have to encode
+  11:include/fb/framebuffer.h ****    colours in a fixed color palette ... */
+  12:include/fb/framebuffer.h **** 
+  13:include/fb/framebuffer.h **** #define FB_COLOR_WHITE		0x00ffffffU
+  14:include/fb/framebuffer.h **** #define FB_COLOR_BLACK		0x00000000U
+  15:include/fb/framebuffer.h **** #define FB_COLOR_TRANSP		0x01ffffffU
+  16:include/fb/framebuffer.h **** 
+  17:include/fb/framebuffer.h **** #define FB_COLOR_RGB(r,g,b) ((((r) & 0xff)<<16)|(((g)&0xff)<<8)|((b)&0xff))
+  18:include/fb/framebuffer.h **** #define FB_COLOR_RED		FB_COLOR_RGB(0xff,0x00,0x00)
+  19:include/fb/framebuffer.h **** #define FB_COLOR_GREEN		FB_COLOR_RGB(0x00,0xff,0x00)
+  20:include/fb/framebuffer.h **** #define FB_COLOR_BLUE		FB_COLOR_RGB(0x00,0x00,0xff)
+  21:include/fb/framebuffer.h **** 
+  22:include/fb/framebuffer.h **** /* encode */
+  23:include/fb/framebuffer.h **** 
+  24:include/fb/framebuffer.h **** /* decode */
+  25:include/fb/framebuffer.h **** #define FB_COLOR_IS_SPECIAL(v)     (!!((v) & 0xff000000U))
+  26:include/fb/framebuffer.h **** #define FB_COLOR_TO_R(v)		(((v)>>16) & 0xff)
+  27:include/fb/framebuffer.h **** #define FB_COLOR_TO_G(v)		(((v)>> 8) & 0xff)
+  28:include/fb/framebuffer.h **** #define FB_COLOR_TO_B(v)		( (v)      & 0xff)
+  29:include/fb/framebuffer.h **** 
+  30:include/fb/framebuffer.h **** struct framebuffer {
+  31:include/fb/framebuffer.h **** 	char name[8];				// keep it short!
+  32:include/fb/framebuffer.h **** 	void (*init)();				// (re)initialize
+  33:include/fb/framebuffer.h **** 	void (*clear)();			// clear display
+  34:include/fb/framebuffer.h **** 	void (*set_p)(uint16_t x,uint16_t y);	// set pixel to fg color
+  35:include/fb/framebuffer.h **** 	void (*boxto)(uint16_t x,uint16_t y);	// draw box to xy
+  36:include/fb/framebuffer.h **** 	void (*lineto)(uint16_t x,uint16_t y);	// draw line to xy
+  37:include/fb/framebuffer.h **** 	int (*putstr)(char *c,int maxwidth);	// put text in current font to fb
+  38:include/fb/framebuffer.h **** 	void (*flush)();			// flush changes
+  39:include/fb/framebuffer.h **** 
+  40:include/fb/framebuffer.h **** 	uint16_t width,height;			// width/height of fb
+  41:include/fb/framebuffer.h **** 	uint16_t cursor_x,cursor_y;		// current cursor
+  42:include/fb/framebuffer.h **** 	uint32_t fg_color,bg_color;		// current fg/bg color
+  43:include/fb/framebuffer.h **** 	enum fb_font_id font;			// current font
+  44:include/fb/framebuffer.h **** };
+  45:include/fb/framebuffer.h **** 
+  46:include/fb/framebuffer.h **** /* there is a single framebuffer, the specific driver defines
+  47:include/fb/framebuffer.h ****    the "framebuffer" symbol */
+  48:include/fb/framebuffer.h **** extern struct framebuffer *framebuffer;
+  49:include/fb/framebuffer.h **** 
+  50:include/fb/framebuffer.h **** static inline void
+  51:include/fb/framebuffer.h **** fb_init(){
+  52:include/fb/framebuffer.h **** 	framebuffer->init();
+  53:include/fb/framebuffer.h **** }
+  54:include/fb/framebuffer.h **** 
+  55:include/fb/framebuffer.h **** static inline void
+  56:include/fb/framebuffer.h **** fb_clear(){
+  57:include/fb/framebuffer.h **** 	framebuffer->clear();
+  58:include/fb/framebuffer.h **** }
+  59:include/fb/framebuffer.h **** 
+  60:include/fb/framebuffer.h **** static inline void
+  61:include/fb/framebuffer.h **** fb_boxto(uint16_t x,uint16_t y){
+  62:include/fb/framebuffer.h **** 	framebuffer->boxto(x,y);
+  63:include/fb/framebuffer.h **** }
+  64:include/fb/framebuffer.h **** 
+  65:include/fb/framebuffer.h **** static inline void
+  66:include/fb/framebuffer.h **** fb_lineto(uint16_t x,uint16_t y){
+  67:include/fb/framebuffer.h **** 	framebuffer->lineto(x,y);
+  68:include/fb/framebuffer.h **** }
+  69:include/fb/framebuffer.h **** 
+  70:include/fb/framebuffer.h **** static inline void
+  71:include/fb/framebuffer.h **** fb_set_p(uint16_t x,uint16_t y){
+  72:include/fb/framebuffer.h **** 	framebuffer->set_p(x,y);
+  73:include/fb/framebuffer.h **** }
+  74:include/fb/framebuffer.h **** 
+  75:include/fb/framebuffer.h **** static inline int
+  76:include/fb/framebuffer.h **** fb_putstr(char *str,int maxwidth){
+  77:include/fb/framebuffer.h **** 	return framebuffer->putstr(str,maxwidth);
+  78:include/fb/framebuffer.h **** }
+  79:include/fb/framebuffer.h **** 
+  80:include/fb/framebuffer.h **** static inline void
+  81:include/fb/framebuffer.h **** fb_flush(){
+  82:include/fb/framebuffer.h **** 	framebuffer->flush();
+  83:include/fb/framebuffer.h **** }
+  84:include/fb/framebuffer.h **** 
+  85:include/fb/framebuffer.h **** static inline void
+  86:include/fb/framebuffer.h **** fb_gotoxy(uint16_t x,uint16_t y){
+  87:include/fb/framebuffer.h **** 	framebuffer->cursor_x = x;
+  88:include/fb/framebuffer.h **** 	framebuffer->cursor_y = y;
+  89:include/fb/framebuffer.h **** }
+  90:include/fb/framebuffer.h **** 
+  91:include/fb/framebuffer.h **** static inline void
+  92:include/fb/framebuffer.h **** fb_setfg(uint32_t color){
+  93:include/fb/framebuffer.h **** 	framebuffer->fg_color = color;
+  94:include/fb/framebuffer.h **** }
+  95:include/fb/framebuffer.h **** 
+  96:include/fb/framebuffer.h **** static inline void
+  97:include/fb/framebuffer.h **** fb_setbg(uint32_t color){
+  98:include/fb/framebuffer.h **** 	framebuffer->bg_color = color;
+  99:include/fb/framebuffer.h **** }
+ 100:include/fb/framebuffer.h **** 
+ 101:include/fb/framebuffer.h **** static inline void
+ 102:include/fb/framebuffer.h **** fb_setfont(enum fb_font_id fid){
+ 103:include/fb/framebuffer.h **** 	framebuffer->font = fid;
+ 104:include/fb/framebuffer.h **** }
+ 105:include/fb/framebuffer.h **** 
+ 106:include/fb/framebuffer.h **** /* utility function: limit coordinates to area of framebuffer */
+ 107:include/fb/framebuffer.h **** static inline void
+ 108:include/fb/framebuffer.h **** fb_limit_fb_range(uint16_t *x,uint16_t *y){
+  16              		.loc 1 108 0
+  17              		@ args = 0, pretend = 0, frame = 0
+  18              		@ frame_needed = 0, uses_anonymous_args = 0
+  19              		@ link register save eliminated.
+  20              	.LVL0:
+ 109:include/fb/framebuffer.h **** 	if(*x >= framebuffer->width)
+  21              		.loc 1 109 0
+  22 0000 2C309FE5 		ldr	r3, .L7
+ 110:include/fb/framebuffer.h **** 		*x = framebuffer->width - 1;
+ 111:include/fb/framebuffer.h **** 	if(*y >= framebuffer->height)
+  23              		.loc 1 111 0
+  24 0004 00C093E5 		ldr	ip, [r3, #0]
+  25              		.loc 1 109 0
+  26 0008 B030D0E1 		ldrh	r3, [r0, #0]
+  27 000c B422DCE1 		ldrh	r2, [ip, #36]
+  28 0010 020053E1 		cmp	r3, r2
+  29              		.loc 1 110 0
+  30 0014 012042E2 		sub	r2, r2, #1
+  31 0018 B020C021 		strcsh	r2, [r0, #0]	@ movhi
+  32              		.loc 1 111 0
+  33 001c B632DCE1 		ldrh	r3, [ip, #38]
+  34 0020 B020D1E1 		ldrh	r2, [r1, #0]
+ 112:include/fb/framebuffer.h **** 		*y = framebuffer->height - 1;
+  35              		.loc 1 112 0
+  36 0024 010043E2 		sub	r0, r3, #1
+  37              	.LVL1:
+  38              		.loc 1 111 0
+  39 0028 030052E1 		cmp	r2, r3
+  40              		.loc 1 108 0
+  41              		@ lr needed for prologue
+  42              		.loc 1 112 0
+  43 002c B000C121 		strcsh	r0, [r1, #0]	@ movhi
+  44 0030 1EFF2FE1 		bx	lr
+  45              	.L8:
+  46              		.align	2
+  47              	.L7:
+  48 0034 00000000 		.word	framebuffer
+  49              	.LFE13:
+  51              		.section	.text.fb_sanitize_box,"ax",%progbits
+  52              		.align	2
+  54              	fb_sanitize_box:
+  55              	.LFB14:
+ 113:include/fb/framebuffer.h **** }
+ 114:include/fb/framebuffer.h **** 
+ 115:include/fb/framebuffer.h **** /* utility function: limit box coordinates to area of framebuffer
+ 116:include/fb/framebuffer.h ****    and make sure that x1y1 is left upper edge, x2y2 is right lower */
+ 117:include/fb/framebuffer.h **** static inline void
+ 118:include/fb/framebuffer.h **** fb_sanitize_box(uint16_t *x1,uint16_t *y1,uint16_t *x2,uint16_t *y2){
+  56              		.loc 1 118 0
+  57              		@ args = 0, pretend = 0, frame = 0
+  58              		@ frame_needed = 0, uses_anonymous_args = 0
+  59              	.LVL2:
+  60 0000 F0402DE9 		stmfd	sp!, {r4, r5, r6, r7, lr}
+  61              	.LCFI0:
+  62              		.loc 1 118 0
+  63 0004 0240A0E1 		mov	r4, r2
+  64 0008 0350A0E1 		mov	r5, r3
+  65 000c 0060A0E1 		mov	r6, r0
+  66 0010 0170A0E1 		mov	r7, r1
+ 119:include/fb/framebuffer.h **** 	fb_limit_fb_range(x1,y1);
+  67              		.loc 1 119 0
+  68 0014 FEFFFFEB 		bl	fb_limit_fb_range
+  69              	.LVL3:
+ 120:include/fb/framebuffer.h **** 	fb_limit_fb_range(x2,y2);
+  70              		.loc 1 120 0
+  71 0018 0400A0E1 		mov	r0, r4
+  72 001c 0510A0E1 		mov	r1, r5
+  73 0020 FEFFFFEB 		bl	fb_limit_fb_range
+ 121:include/fb/framebuffer.h **** 	if(*x1 > *x2){
+  74              		.loc 1 121 0
+  75 0024 B020D6E1 		ldrh	r2, [r6, #0]
+  76 0028 B030D4E1 		ldrh	r3, [r4, #0]
+  77 002c 030052E1 		cmp	r2, r3
+  78              	.LBB2:
+ 122:include/fb/framebuffer.h **** 		uint16_t tmp = *x1;
+ 123:include/fb/framebuffer.h **** 		*x1 = *x2;
+  79              		.loc 1 123 0
+  80 0030 B030C681 		strhih	r3, [r6, #0]	@ movhi
+ 124:include/fb/framebuffer.h **** 		*x2 = tmp;
+  81              		.loc 1 124 0
+  82 0034 B020C481 		strhih	r2, [r4, #0]	@ movhi
+  83              	.LBE2:
+ 125:include/fb/framebuffer.h **** 	}
+ 126:include/fb/framebuffer.h **** 	if(*y1 > *y2){
+  84              		.loc 1 126 0
+  85 0038 B020D7E1 		ldrh	r2, [r7, #0]
+  86 003c B030D5E1 		ldrh	r3, [r5, #0]
+  87 0040 030052E1 		cmp	r2, r3
+  88              	.LBB3:
+ 127:include/fb/framebuffer.h **** 		uint16_t tmp = *y1;
+ 128:include/fb/framebuffer.h **** 		*y1 = *y2;
+  89              		.loc 1 128 0
+  90 0044 B030C781 		strhih	r3, [r7, #0]	@ movhi
+ 129:include/fb/framebuffer.h **** 		*y2 = tmp;
+  91              		.loc 1 129 0
+  92 0048 B020C581 		strhih	r2, [r5, #0]	@ movhi
+  93 004c F080BDE8 		ldmfd	sp!, {r4, r5, r6, r7, pc}
+  94              	.LBE3:
+  95              	.LFE14:
+  97              		.section	.text.fb_bw8_clear,"ax",%progbits
+  98              		.align	2
+  99              		.global	fb_bw8_clear
+ 101              	fb_bw8_clear:
+ 102              	.LFB15:
+ 103              		.file 2 "fb/fb_bw8.c"
+   1:fb/fb_bw8.c   **** /* utility functions for a black-and-white framebuffer organized
+   2:fb/fb_bw8.c   ****    as 8-vertically-stacked-pixels per byte. This matches the
+   3:fb/fb_bw8.c   ****    ST7558 LC Display Controller used on the Motorola C123 */
+   4:fb/fb_bw8.c   **** 
+   5:fb/fb_bw8.c   **** /* (C) 2010 by Christian Vogel <vogelchr@vogel.cx>
+   6:fb/fb_bw8.c   ****  *
+   7:fb/fb_bw8.c   ****  * All Rights Reserved
+   8:fb/fb_bw8.c   ****  *
+   9:fb/fb_bw8.c   ****  * This program is free software; you can redistribute it and/or modify
+  10:fb/fb_bw8.c   ****  * it under the terms of the GNU General Public License as published by
+  11:fb/fb_bw8.c   ****  * the Free Software Foundation; either version 2 of the License, or
+  12:fb/fb_bw8.c   ****  * (at your option) any later version.
+  13:fb/fb_bw8.c   ****  *
+  14:fb/fb_bw8.c   ****  * This program is distributed in the hope that it will be useful,
+  15:fb/fb_bw8.c   ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  16:fb/fb_bw8.c   ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  17:fb/fb_bw8.c   ****  * GNU General Public License for more details.
+  18:fb/fb_bw8.c   ****  *
+  19:fb/fb_bw8.c   ****  * You should have received a copy of the GNU General Public License along
+  20:fb/fb_bw8.c   ****  * with this program; if not, write to the Free Software Foundation, Inc.,
+  21:fb/fb_bw8.c   ****  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  22:fb/fb_bw8.c   ****  *
+  23:fb/fb_bw8.c   ****  */
+  24:fb/fb_bw8.c   **** 
+  25:fb/fb_bw8.c   **** #include <stdlib.h>
+  26:fb/fb_bw8.c   **** #include <fb/framebuffer.h>
+  27:fb/fb_bw8.c   **** #include <fb/fb_bw8.h>
+  28:fb/fb_bw8.c   **** 
+  29:fb/fb_bw8.c   **** #include <stdio.h> // debugging
+  30:fb/fb_bw8.c   **** 
+  31:fb/fb_bw8.c   **** void fb_bw8_clear(){
+ 104              		.loc 2 31 0
+ 105              		@ args = 0, pretend = 0, frame = 0
+ 106              		@ frame_needed = 0, uses_anonymous_args = 0
+ 107              		@ link register save eliminated.
+ 108              	.LVL4:
+  32:fb/fb_bw8.c   **** 	int i,n;
+  33:fb/fb_bw8.c   **** 
+  34:fb/fb_bw8.c   **** 	/* bytes to clear */
+  35:fb/fb_bw8.c   **** 	n = (framebuffer->height+7)/8 * framebuffer->width;
+ 109              		.loc 2 35 0
+ 110 0000 70309FE5 		ldr	r3, .L20
+ 111 0004 001093E5 		ldr	r1, [r3, #0]
+ 112 0008 B632D1E1 		ldrh	r3, [r1, #38]
+ 113 000c 072093E2 		adds	r2, r3, #7
+ 114 0010 0E208342 		addmi	r2, r3, #14
+ 115 0014 B432D1E1 		ldrh	r3, [r1, #36]
+ 116 0018 C221A0E1 		mov	r2, r2, asr #3
+ 117 001c 930200E0 		mul	r0, r3, r2
+ 118              	.LVL5:
+ 119 0020 0010A0E3 		mov	r1, #0
+ 120              	.LVL6:
+ 121              		.loc 2 31 0
+ 122              		@ lr needed for prologue
+ 123 0024 0D0000EA 		b	.L16
+ 124              	.L17:
+  36:fb/fb_bw8.c   **** 	for(i=0;i<n;i++)
+  37:fb/fb_bw8.c   **** 		fb_bw8->mem[i]=0;
+ 125              		.loc 2 37 0
+ 126 0028 003093E5 		ldr	r3, [r3, #0]
+ 127 002c 002093E5 		ldr	r2, [r3, #0]
+ 128 0030 0030A0E3 		mov	r3, #0
+ 129 0034 0130C2E7 		strb	r3, [r2, r1]
+ 130              		.loc 2 36 0
+ 131 0038 011081E2 		add	r1, r1, #1
+ 132              	.L16:
+ 133 003c 000051E1 		cmp	r1, r0
+ 134 0040 34309FE5 		ldr	r3, .L20+4
+ 135 0044 080000BA 		blt	.L17
+  38:fb/fb_bw8.c   **** 
+  39:fb/fb_bw8.c   **** 	/* mark everything as dirty */
+  40:fb/fb_bw8.c   **** 	fb_bw8->damage_x1 = 0;
+ 136              		.loc 2 40 0
+ 137 0048 003093E5 		ldr	r3, [r3, #0]
+  41:fb/fb_bw8.c   **** 	fb_bw8->damage_x2 = framebuffer->width;
+ 138              		.loc 2 41 0
+ 139 004c 24209FE5 		ldr	r2, .L20
+ 140              		.loc 2 40 0
+ 141 0050 0010A0E3 		mov	r1, #0	@ movhi
+ 142              	.LVL7:
+ 143              		.loc 2 41 0
+ 144 0054 002092E5 		ldr	r2, [r2, #0]
+ 145              		.loc 2 40 0
+ 146 0058 B410C3E1 		strh	r1, [r3, #4]	@ movhi
+ 147              		.loc 2 41 0
+ 148 005c B412D2E1 		ldrh	r1, [r2, #36]
+ 149 0060 B810C3E1 		strh	r1, [r3, #8]	@ movhi
+  42:fb/fb_bw8.c   **** 	fb_bw8->damage_y1 = 0;
+ 150              		.loc 2 42 0
+ 151 0064 0010A0E3 		mov	r1, #0	@ movhi
+ 152 0068 B610C3E1 		strh	r1, [r3, #6]	@ movhi
+  43:fb/fb_bw8.c   **** 	fb_bw8->damage_y2 = framebuffer->height;
+ 153              		.loc 2 43 0
+ 154 006c B622D2E1 		ldrh	r2, [r2, #38]
+ 155 0070 BA20C3E1 		strh	r2, [r3, #10]	@ movhi
+  44:fb/fb_bw8.c   **** }
+ 156              		.loc 2 44 0
+ 157 0074 1EFF2FE1 		bx	lr
+ 158              	.L21:
+ 159              		.align	2
+ 160              	.L20:
+ 161 0078 00000000 		.word	framebuffer
+ 162 007c 00000000 		.word	fb_bw8
+ 163              	.LFE15:
+ 165              		.section	.text.fb_bw8_update_damage,"ax",%progbits
+ 166              		.align	2
+ 168              	fb_bw8_update_damage:
+ 169              	.LFB16:
+  45:fb/fb_bw8.c   **** 
+  46:fb/fb_bw8.c   **** /* update damage rectangle to include the area
+  47:fb/fb_bw8.c   ****    x1,y1 (upper left) to x2,y2 (lower right)
+  48:fb/fb_bw8.c   ****    Note that all pixels *including* x1y2 and x2y2 are
+  49:fb/fb_bw8.c   ****    marked as dirty */
+  50:fb/fb_bw8.c   **** static void fb_bw8_update_damage(
+  51:fb/fb_bw8.c   **** 	uint16_t x1,uint16_t y1, /* left upper corner (inclusive) */
+  52:fb/fb_bw8.c   **** 	uint16_t x2,uint16_t y2  /* right lower corner (inclusive) */
+  53:fb/fb_bw8.c   **** ){
+ 170              		.loc 2 53 0
+ 171              		@ args = 0, pretend = 0, frame = 16
+ 172              		@ frame_needed = 0, uses_anonymous_args = 0
+ 173              	.LVL8:
+ 174 0000 04E02DE5 		str	lr, [sp, #-4]!
+ 175              	.LCFI1:
+ 176 0004 10D04DE2 		sub	sp, sp, #16
+ 177              	.LCFI2:
+ 178              	.LVL9:
+ 179              		.loc 2 53 0
+ 180 0008 BC00CDE1 		strh	r0, [sp, #12]	@ movhi
+ 181 000c B810CDE1 		strh	r1, [sp, #8]	@ movhi
+ 182 0010 B420CDE1 		strh	r2, [sp, #4]	@ movhi
+ 183 0014 B030CDE1 		strh	r3, [sp, #0]	@ movhi
+  54:fb/fb_bw8.c   **** 	fb_sanitize_box(&x1,&y1,&x2,&y2);
+ 184              		.loc 2 54 0
+ 185 0018 0C008DE2 		add	r0, sp, #12
+ 186              	.LVL10:
+ 187 001c 08108DE2 		add	r1, sp, #8
+ 188              	.LVL11:
+ 189 0020 04208DE2 		add	r2, sp, #4
+ 190              	.LVL12:
+ 191 0024 0D30A0E1 		mov	r3, sp
+ 192              	.LVL13:
+ 193 0028 FEFFFFEB 		bl	fb_sanitize_box
+  55:fb/fb_bw8.c   **** 
+  56:fb/fb_bw8.c   **** 	x2++; /* see definition of fb_bw8->damage_x2/y2 */
+  57:fb/fb_bw8.c   **** 	y2++;
+  58:fb/fb_bw8.c   **** 
+  59:fb/fb_bw8.c   **** 	/* maybe currently everything is clean? */
+  60:fb/fb_bw8.c   **** 	if(fb_bw8->damage_x1 == fb_bw8->damage_x2 ||
+ 194              		.loc 2 60 0
+ 195 002c A0309FE5 		ldr	r3, .L35
+ 196 0030 000093E5 		ldr	r0, [r3, #0]
+ 197              		.loc 2 56 0
+ 198 0034 B420DDE1 		ldrh	r2, [sp, #4]
+ 199              		.loc 2 60 0
+ 200 0038 B4C0D0E1 		ldrh	ip, [r0, #4]
+ 201 003c B830D0E1 		ldrh	r3, [r0, #8]
+ 202              		.loc 2 57 0
+ 203 0040 B010DDE1 		ldrh	r1, [sp, #0]
+ 204              		.loc 2 56 0
+ 205 0044 012082E2 		add	r2, r2, #1
+ 206              		.loc 2 57 0
+ 207 0048 011081E2 		add	r1, r1, #1
+ 208              		.loc 2 60 0
+ 209 004c 0C0053E1 		cmp	r3, ip
+ 210              		.loc 2 56 0
+ 211 0050 B420CDE1 		strh	r2, [sp, #4]	@ movhi
+ 212              		.loc 2 57 0
+ 213 0054 B010CDE1 		strh	r1, [sp, #0]	@ movhi
+ 214              		.loc 2 60 0
+ 215 0058 1900000A 		beq	.L23
+ 216 005c B620D0E1 		ldrh	r2, [r0, #6]
+ 217 0060 BA30D0E1 		ldrh	r3, [r0, #10]
+ 218 0064 030052E1 		cmp	r2, r3
+ 219 0068 2200001A 		bne	.L25
+ 220              	.L23:
+  61:fb/fb_bw8.c   **** 		fb_bw8->damage_y1 == fb_bw8->damage_y2){
+  62:fb/fb_bw8.c   **** 			fb_bw8->damage_x1 = x1;
+ 221              		.loc 2 62 0
+ 222 006c BC30DDE1 		ldrh	r3, [sp, #12]
+ 223 0070 B430C0E1 		strh	r3, [r0, #4]	@ movhi
+  63:fb/fb_bw8.c   **** 			fb_bw8->damage_y1 = y1;
+ 224              		.loc 2 63 0
+ 225 0074 B830DDE1 		ldrh	r3, [sp, #8]
+ 226 0078 B630C0E1 		strh	r3, [r0, #6]	@ movhi
+  64:fb/fb_bw8.c   **** 			fb_bw8->damage_x2 = x2;
+ 227              		.loc 2 64 0
+ 228 007c B430DDE1 		ldrh	r3, [sp, #4]
+ 229 0080 B830C0E1 		strh	r3, [r0, #8]	@ movhi
+  65:fb/fb_bw8.c   **** 			fb_bw8->damage_y2 = y2;
+ 230              		.loc 2 65 0
+ 231 0084 B030DDE1 		ldrh	r3, [sp, #0]
+ 232 0088 BA30C0E1 		strh	r3, [r0, #10]	@ movhi
+ 233 008c 310000EA 		b	.L34
+ 234              	.L25:
+  66:fb/fb_bw8.c   **** /*
+  67:fb/fb_bw8.c   **** 		printf("%s: was clean! damage now %d %d %d %d\n",
+  68:fb/fb_bw8.c   **** 			__FUNCTION__,fb_bw8->damage_x1,fb_bw8->damage_y1,
+  69:fb/fb_bw8.c   **** 			fb_bw8->damage_x2,fb_bw8->damage_y2);
+  70:fb/fb_bw8.c   **** */
+  71:fb/fb_bw8.c   **** 			return;
+  72:fb/fb_bw8.c   **** 	}
+  73:fb/fb_bw8.c   **** 
+  74:fb/fb_bw8.c   **** 	/* grow damage box */
+  75:fb/fb_bw8.c   **** 	if(x1 < fb_bw8->damage_x1)
+ 235              		.loc 2 75 0
+ 236 0090 BC30DDE1 		ldrh	r3, [sp, #12]
+ 237 0094 0C0053E1 		cmp	r3, ip
+  76:fb/fb_bw8.c   **** 		fb_bw8->damage_x1 = x1;
+ 238              		.loc 2 76 0
+ 239 0098 B430C031 		strcch	r3, [r0, #4]	@ movhi
+  77:fb/fb_bw8.c   **** 	if(y1 < fb_bw8->damage_y1)
+ 240              		.loc 2 77 0
+ 241 009c B630D0E1 		ldrh	r3, [r0, #6]
+ 242 00a0 B820DDE1 		ldrh	r2, [sp, #8]
+ 243 00a4 020053E1 		cmp	r3, r2
+  78:fb/fb_bw8.c   **** 		fb_bw8->damage_y1 = y1;
+ 244              		.loc 2 78 0
+ 245 00a8 B620C081 		strhih	r2, [r0, #6]	@ movhi
+  79:fb/fb_bw8.c   **** 	if(x2 > fb_bw8->damage_x2)
+ 246              		.loc 2 79 0
+ 247 00ac B830D0E1 		ldrh	r3, [r0, #8]
+ 248 00b0 B420DDE1 		ldrh	r2, [sp, #4]
+ 249 00b4 020053E1 		cmp	r3, r2
+  80:fb/fb_bw8.c   **** 		fb_bw8->damage_x2 = x2;
+ 250              		.loc 2 80 0
+ 251 00b8 B820C031 		strcch	r2, [r0, #8]	@ movhi
+  81:fb/fb_bw8.c   **** 	if(y2 > fb_bw8->damage_y2)
+ 252              		.loc 2 81 0
+ 253 00bc BA30D0E1 		ldrh	r3, [r0, #10]
+ 254 00c0 B020DDE1 		ldrh	r2, [sp, #0]
+ 255 00c4 020053E1 		cmp	r3, r2
+  82:fb/fb_bw8.c   **** 		fb_bw8->damage_y2 = y2;
+ 256              		.loc 2 82 0
+ 257 00c8 BA20C031 		strcch	r2, [r0, #10]	@ movhi
+ 258              	.L34:
+  83:fb/fb_bw8.c   **** #if 0
+  84:fb/fb_bw8.c   **** 	printf("%s: damage now %d %d %d %d\n",
+  85:fb/fb_bw8.c   **** 	       __FUNCTION__,fb_bw8->damage_x1,fb_bw8->damage_y1,
+  86:fb/fb_bw8.c   **** 	       fb_bw8->damage_x2,fb_bw8->damage_y2);
+  87:fb/fb_bw8.c   **** #endif
+  88:fb/fb_bw8.c   **** }
+ 259              		.loc 2 88 0
+ 260 00cc 10D08DE2 		add	sp, sp, #16
+ 261 00d0 0080BDE8 		ldmfd	sp!, {pc}
+ 262              	.L36:
+ 263              		.align	2
+ 264              	.L35:
+ 265 00d4 00000000 		.word	fb_bw8
+ 266              	.LFE16:
+ 268              		.section	.text.set_pixel,"ax",%progbits
+ 269              		.align	2
+ 271              	set_pixel:
+ 272              	.LFB17:
+  89:fb/fb_bw8.c   **** 
+  90:fb/fb_bw8.c   **** /* depending on color set (add to or_mask) or clear
+  91:fb/fb_bw8.c   ****    (remove from and_mask) bit number bitnum */
+  92:fb/fb_bw8.c   **** static void set_pixel(uint8_t *and_mask,
+  93:fb/fb_bw8.c   **** 		      uint8_t *or_mask,
+  94:fb/fb_bw8.c   **** 		      int bitnum,
+  95:fb/fb_bw8.c   **** 		      uint32_t color
+  96:fb/fb_bw8.c   **** ){
+ 273              		.loc 2 96 0
+ 274              		@ args = 0, pretend = 0, frame = 0
+ 275              		@ frame_needed = 0, uses_anonymous_args = 0
+ 276              	.LVL14:
+ 277 0000 04E02DE5 		str	lr, [sp, #-4]!
+ 278              	.LCFI3:
+ 279              		.loc 2 96 0
+ 280 0004 03E0A0E1 		mov	lr, r3
+  97:fb/fb_bw8.c   **** 	if(color == FB_COLOR_TRANSP)
+ 281              		.loc 2 97 0
+ 282 0008 FE34E0E3 		mvn	r3, #-33554432
+ 283              	.LVL15:
+ 284 000c 03005EE1 		cmp	lr, r3
+ 285              		.loc 2 96 0
+ 286 0010 02C0A0E1 		mov	ip, r2
+ 287              		.loc 2 97 0
+ 288 0014 04F09D04 		ldreq	pc, [sp], #4
+ 289              	.LVL16:
+  98:fb/fb_bw8.c   **** 		return;
+  99:fb/fb_bw8.c   **** 	if(color == FB_COLOR_WHITE)
+ 290              		.loc 2 99 0
+ 291 0018 FF3483E2 		add	r3, r3, #-16777216
+ 292 001c 03005EE1 		cmp	lr, r3
+ 100:fb/fb_bw8.c   **** 		*and_mask &= ~(1<<bitnum);
+ 293              		.loc 2 100 0
+ 294 0020 0030D005 		ldreqb	r3, [r0, #0]	@ zero_extendqisi2
+ 101:fb/fb_bw8.c   **** 	else
+ 102:fb/fb_bw8.c   **** 		*or_mask  |=   1<<bitnum;
+ 295              		.loc 2 102 0
+ 296 0024 0030D115 		ldrneb	r3, [r1, #0]	@ zero_extendqisi2
+ 297              		.loc 2 100 0
+ 298 0028 0120A003 		moveq	r2, #1
+ 299              		.loc 2 102 0
+ 300 002c 0120A013 		movne	r2, #1
+ 301              		.loc 2 100 0
+ 302 0030 123CC301 		biceq	r3, r3, r2, asl ip
+ 303              		.loc 2 102 0
+ 304 0034 123C8311 		orrne	r3, r3, r2, asl ip
+ 305              		.loc 2 100 0
+ 306 0038 0030C005 		streqb	r3, [r0, #0]
+ 307              		.loc 2 102 0
+ 308 003c 0030C115 		strneb	r3, [r1, #0]
+ 309 0040 04F09DE4 		ldr	pc, [sp], #4
+ 310              	.LFE17:
+ 312              		.section	.text.set_fg_pixel,"ax",%progbits
+ 313              		.align	2
+ 315              	set_fg_pixel:
+ 316              	.LFB18:
+ 103:fb/fb_bw8.c   **** }
+ 104:fb/fb_bw8.c   **** 
+ 105:fb/fb_bw8.c   **** static void set_fg_pixel(uint8_t *and_mask,uint8_t *or_mask,int bitnum){
+ 317              		.loc 2 105 0
+ 318              		@ args = 0, pretend = 0, frame = 0
+ 319              		@ frame_needed = 0, uses_anonymous_args = 0
+ 320              		@ link register save eliminated.
+ 321              	.LVL17:
+ 106:fb/fb_bw8.c   **** 	set_pixel(and_mask,or_mask,bitnum,framebuffer->fg_color);
+ 322              		.loc 2 106 0
+ 323 0000 08309FE5 		ldr	r3, .L45
+ 324 0004 003093E5 		ldr	r3, [r3, #0]
+ 325 0008 2C3093E5 		ldr	r3, [r3, #44]
+ 326              		.loc 2 105 0
+ 327              		@ lr needed for prologue
+ 107:fb/fb_bw8.c   **** }
+ 328              		.loc 2 107 0
+ 329              		.loc 2 106 0
+ 330 000c FEFFFFEA 		b	set_pixel
+ 331              	.LVL18:
+ 332              	.L46:
+ 333              		.align	2
+ 334              	.L45:
+ 335 0010 00000000 		.word	framebuffer
+ 336              	.LFE18:
+ 338              		.section	.text.set_bg_pixel,"ax",%progbits
+ 339              		.align	2
+ 341              	set_bg_pixel:
+ 342              	.LFB19:
+ 108:fb/fb_bw8.c   **** 
+ 109:fb/fb_bw8.c   **** static void set_bg_pixel(uint8_t *and_mask,uint8_t *or_mask,int bitnum){
+ 343              		.loc 2 109 0
+ 344              		@ args = 0, pretend = 0, frame = 0
+ 345              		@ frame_needed = 0, uses_anonymous_args = 0
+ 346              		@ link register save eliminated.
+ 347              	.LVL19:
+ 110:fb/fb_bw8.c   **** 	set_pixel(and_mask,or_mask,bitnum,framebuffer->bg_color);
+ 348              		.loc 2 110 0
+ 349 0000 08309FE5 		ldr	r3, .L49
+ 350 0004 003093E5 		ldr	r3, [r3, #0]
+ 351 0008 303093E5 		ldr	r3, [r3, #48]
+ 352              		.loc 2 109 0
+ 353              		@ lr needed for prologue
+ 111:fb/fb_bw8.c   **** }
+ 354              		.loc 2 111 0
+ 355              		.loc 2 110 0
+ 356 000c FEFFFFEA 		b	set_pixel
+ 357              	.LVL20:
+ 358              	.L50:
+ 359              		.align	2
+ 360              	.L49:
+ 361 0010 00000000 		.word	framebuffer
+ 362              	.LFE19:
+ 364              		.section	.text.fb_bw8_boxto,"ax",%progbits
+ 365              		.align	2
+ 366              		.global	fb_bw8_boxto
+ 368              	fb_bw8_boxto:
+ 369              	.LFB21:
+ 112:fb/fb_bw8.c   **** 
+ 113:fb/fb_bw8.c   **** static void fb_bw8_box(uint16_t x1,uint16_t y1,uint16_t x2,uint16_t y2)
+ 114:fb/fb_bw8.c   **** {
+ 115:fb/fb_bw8.c   **** 	uint16_t y,w;
+ 116:fb/fb_bw8.c   **** 	uint8_t *p;
+ 117:fb/fb_bw8.c   **** 
+ 118:fb/fb_bw8.c   **** 	uint8_t and_mask,or_mask;	// filling
+ 119:fb/fb_bw8.c   **** 	uint8_t and_mask_side,or_mask_side; // left and right side
+ 120:fb/fb_bw8.c   **** 
+ 121:fb/fb_bw8.c   **** 	fb_sanitize_box(&x1,&y1,&x2,&y2);
+ 122:fb/fb_bw8.c   **** 	fb_bw8_update_damage(x1,y1,x2,y2);
+ 123:fb/fb_bw8.c   **** 
+ 124:fb/fb_bw8.c   **** 	for(y=y1&0xfff8;y<=y2;y+=8){
+ 125:fb/fb_bw8.c   **** 		/* don't clear any pixels (white) */
+ 126:fb/fb_bw8.c   **** 		and_mask = and_mask_side = 0xff;
+ 127:fb/fb_bw8.c   **** 		or_mask = or_mask_side = 0;
+ 128:fb/fb_bw8.c   **** 
+ 129:fb/fb_bw8.c   **** 		for(w=0;w<8;w++){ /* check which pixels are affected */
+ 130:fb/fb_bw8.c   **** 			if(y+w >= y1 && y+w <= y2){
+ 131:fb/fb_bw8.c   **** 				set_bg_pixel(&and_mask,&or_mask,w);
+ 132:fb/fb_bw8.c   **** 				set_fg_pixel(&and_mask_side,&or_mask_side,w);
+ 133:fb/fb_bw8.c   **** 			}
+ 134:fb/fb_bw8.c   **** 
+ 135:fb/fb_bw8.c   **** 			if(y+w == y1 || y+w == y2){ /* top and bottom line */
+ 136:fb/fb_bw8.c   **** 				set_fg_pixel(&and_mask,&or_mask,w);
+ 137:fb/fb_bw8.c   **** 			}
+ 138:fb/fb_bw8.c   **** 		}
+ 139:fb/fb_bw8.c   **** 
+ 140:fb/fb_bw8.c   **** 		p = fb_bw8->mem + (y/8)*framebuffer->width + x1;
+ 141:fb/fb_bw8.c   **** 		for(w=x1;w<=x2;w++){
+ 142:fb/fb_bw8.c   **** 			if(w == x1 || w == x2)
+ 143:fb/fb_bw8.c   **** 				*p = (*p & and_mask_side)|or_mask_side;
+ 144:fb/fb_bw8.c   **** 			else
+ 145:fb/fb_bw8.c   **** 				*p = (*p & and_mask)|or_mask;
+ 146:fb/fb_bw8.c   **** 			p++;
+ 147:fb/fb_bw8.c   **** 		}
+ 148:fb/fb_bw8.c   **** 	}
+ 149:fb/fb_bw8.c   **** }
+ 150:fb/fb_bw8.c   **** 
+ 151:fb/fb_bw8.c   **** /* draw box from cursor to (x,y) */
+ 152:fb/fb_bw8.c   **** void
+ 153:fb/fb_bw8.c   **** fb_bw8_boxto(uint16_t x,uint16_t y){
+ 370              		.loc 2 153 0
+ 371              		@ args = 0, pretend = 0, frame = 12
+ 372              		@ frame_needed = 0, uses_anonymous_args = 0
+ 373              	.LVL21:
+ 374 0000 F0412DE9 		stmfd	sp!, {r4, r5, r6, r7, r8, lr}
+ 375              	.LCFI4:
+ 154:fb/fb_bw8.c   **** 	fb_bw8_box(framebuffer->cursor_x,framebuffer->cursor_y,x,y);
+ 376              		.loc 2 154 0
+ 377 0004 A4319FE5 		ldr	r3, .L74
+ 378 0008 00C093E5 		ldr	ip, [r3, #0]
+ 379              		.loc 2 153 0
+ 380 000c 0CD04DE2 		sub	sp, sp, #12
+ 381              	.LCFI5:
+ 382              	.LVL22:
+ 383              		.loc 2 154 0
+ 384 0010 BAE2DCE1 		ldrh	lr, [ip, #42]
+ 385              		.loc 2 153 0
+ 386 0014 0008A0E1 		mov	r0, r0, asl #16
+ 387              	.LVL23:
+ 388              		.loc 2 154 0
+ 389 0018 B8C2DCE1 		ldrh	ip, [ip, #40]
+ 390              		.loc 2 153 0
+ 391 001c 0118A0E1 		mov	r1, r1, asl #16
+ 392              	.LVL24:
+ 393 0020 2088A0E1 		mov	r8, r0, lsr #16
+ 394              	.LVL25:
+ 395 0024 2178A0E1 		mov	r7, r1, lsr #16
+ 396              	.LVL26:
+ 397              	.LBB4:
+ 398              	.LBB5:
+ 399              		.loc 2 121 0
+ 400 0028 0D00A0E1 		mov	r0, sp
+ 401 002c 02108DE2 		add	r1, sp, #2
+ 402 0030 04208DE2 		add	r2, sp, #4
+ 403 0034 06308DE2 		add	r3, sp, #6
+ 404              	.LBE5:
+ 405              	.LBE4:
+ 406              		.loc 2 154 0
+ 407 0038 B0C0CDE1 		strh	ip, [sp, #0]	@ movhi
+ 408              	.LVL27:
+ 409 003c B2E0CDE1 		strh	lr, [sp, #2]	@ movhi
+ 410              	.LVL28:
+ 411 0040 B480CDE1 		strh	r8, [sp, #4]	@ movhi
+ 412              	.LVL29:
+ 413 0044 B670CDE1 		strh	r7, [sp, #6]	@ movhi
+ 414              	.LVL30:
+ 415              	.LBB6:
+ 416              	.LBB7:
+ 417              		.loc 2 121 0
+ 418 0048 FEFFFFEB 		bl	fb_sanitize_box
+ 419              		.loc 2 122 0
+ 420 004c B630DDE1 		ldrh	r3, [sp, #6]
+ 421 0050 B000DDE1 		ldrh	r0, [sp, #0]
+ 422 0054 B210DDE1 		ldrh	r1, [sp, #2]
+ 423 0058 B420DDE1 		ldrh	r2, [sp, #4]
+ 424 005c FEFFFFEB 		bl	fb_bw8_update_damage
+ 425              		.loc 2 124 0
+ 426 0060 4C619FE5 		ldr	r6, .L74+4
+ 427              	.LVL31:
+ 428 0064 B230DDE1 		ldrh	r3, [sp, #2]
+ 429 0068 066003E0 		and	r6, r3, r6
+ 430 006c 610000EA 		b	.L52
+ 431              	.LVL32:
+ 432              	.L53:
+ 433              		.loc 2 127 0
+ 434 0070 0020A0E3 		mov	r2, #0
+ 435              		.loc 2 126 0
+ 436 0074 0030E0E3 		mvn	r3, #0
+ 437 0078 0B30CDE5 		strb	r3, [sp, #11]
+ 438 007c 0930CDE5 		strb	r3, [sp, #9]
+ 439              		.loc 2 127 0
+ 440 0080 0820CDE5 		strb	r2, [sp, #8]
+ 441 0084 0A20CDE5 		strb	r2, [sp, #10]
+ 442 0088 0250A0E1 		mov	r5, r2
+ 443              	.L54:
+ 444              		.loc 2 130 0
+ 445 008c B230DDE1 		ldrh	r3, [sp, #2]
+ 446              		.loc 2 127 0
+ 447 0090 064085E0 		add	r4, r5, r6
+ 448              		.loc 2 130 0
+ 449 0094 030054E1 		cmp	r4, r3
+ 450 0098 300000BA 		blt	.L55
+ 451 009c B630DDE1 		ldrh	r3, [sp, #6]
+ 452 00a0 030054E1 		cmp	r4, r3
+ 453              		.loc 2 131 0
+ 454 00a4 0520A0E1 		mov	r2, r5
+ 455 00a8 0B008DE2 		add	r0, sp, #11
+ 456              	.LVL33:
+ 457 00ac 0A108DE2 		add	r1, sp, #10
+ 458              		.loc 2 130 0
+ 459 00b0 300000CA 		bgt	.L55
+ 460              		.loc 2 131 0
+ 461 00b4 FEFFFFEB 		bl	set_bg_pixel
+ 462              		.loc 2 132 0
+ 463 00b8 0520A0E1 		mov	r2, r5
+ 464 00bc 09008DE2 		add	r0, sp, #9
+ 465 00c0 08108DE2 		add	r1, sp, #8
+ 466 00c4 FEFFFFEB 		bl	set_fg_pixel
+ 467              	.LVL34:
+ 468              	.L55:
+ 469              		.loc 2 135 0
+ 470 00c8 B230DDE1 		ldrh	r3, [sp, #2]
+ 471 00cc 030054E1 		cmp	r4, r3
+ 472              		.loc 2 136 0
+ 473 00d0 0520A0E1 		mov	r2, r5
+ 474 00d4 0B008DE2 		add	r0, sp, #11
+ 475              	.LVL35:
+ 476 00d8 015085E2 		add	r5, r5, #1
+ 477 00dc 0A108DE2 		add	r1, sp, #10
+ 478              		.loc 2 135 0
+ 479 00e0 3A00000A 		beq	.L58
+ 480 00e4 B630DDE1 		ldrh	r3, [sp, #6]
+ 481 00e8 030054E1 		cmp	r4, r3
+ 482 00ec 3B00001A 		bne	.L60
+ 483              	.L58:
+ 484              		.loc 2 136 0
+ 485 00f0 FEFFFFEB 		bl	set_fg_pixel
+ 486              	.L60:
+ 487              		.loc 2 129 0
+ 488 00f4 080055E3 		cmp	r5, #8
+ 489 00f8 2100001A 		bne	.L54
+ 490              		.loc 2 140 0
+ 491 00fc B4309FE5 		ldr	r3, .L74+8
+ 492 0100 002093E5 		ldr	r2, [r3, #0]
+ 493 0104 A4309FE5 		ldr	r3, .L74
+ 494 0108 003093E5 		ldr	r3, [r3, #0]
+ 495 010c 001092E5 		ldr	r1, [r2, #0]
+ 496 0110 B422D3E1 		ldrh	r2, [r3, #36]
+ 497 0114 A631A0E1 		mov	r3, r6, lsr #3
+ 498 0118 921323E0 		mla	r3, r2, r3, r1
+ 499 011c B000DDE1 		ldrh	r0, [sp, #0]
+ 500              	.LVL36:
+ 501 0120 003083E0 		add	r3, r3, r0
+ 502 0124 01C083E2 		add	ip, r3, #1
+ 503 0128 5B0000EA 		b	.L62
+ 504              	.LVL37:
+ 505              	.L63:
+ 506              		.loc 2 142 0
+ 507 012c B030DDE1 		ldrh	r3, [sp, #0]
+ 508 0130 000053E1 		cmp	r3, r0
+ 509 0134 5100000A 		beq	.L64
+ 510 0138 020050E1 		cmp	r0, r2
+ 511              		.loc 2 145 0
+ 512 013c 01305C15 		ldrneb	r3, [ip, #-1]	@ zero_extendqisi2
+ 513 0140 0B10DD15 		ldrneb	r1, [sp, #11]	@ zero_extendqisi2
+ 514 0144 0A20DD15 		ldrneb	r2, [sp, #10]	@ zero_extendqisi2
+ 515              		.loc 2 142 0
+ 516 0148 5400001A 		bne	.L73
+ 517              	.L64:
+ 518              		.loc 2 143 0
+ 519 014c 01305CE5 		ldrb	r3, [ip, #-1]	@ zero_extendqisi2
+ 520 0150 0910DDE5 		ldrb	r1, [sp, #9]	@ zero_extendqisi2
+ 521 0154 0820DDE5 		ldrb	r2, [sp, #8]	@ zero_extendqisi2
+ 522              	.LVL38:
+ 523              	.L73:
+ 524              		.loc 2 145 0
+ 525 0158 013003E0 		and	r3, r3, r1
+ 526 015c 032082E1 		orr	r2, r2, r3
+ 527              		.loc 2 141 0
+ 528 0160 013080E2 		add	r3, r0, #1
+ 529 0164 0338A0E1 		mov	r3, r3, asl #16
+ 530              		.loc 2 145 0
+ 531 0168 01204CE5 		strb	r2, [ip, #-1]
+ 532              		.loc 2 141 0
+ 533 016c 2308A0E1 		mov	r0, r3, lsr #16
+ 534 0170 01C08CE2 		add	ip, ip, #1
+ 535              	.L62:
+ 536 0174 B420DDE1 		ldrh	r2, [sp, #4]
+ 537 0178 020050E1 		cmp	r0, r2
+ 538 017c 4900009A 		bls	.L63
+ 539 0180 083086E2 		add	r3, r6, #8
+ 540 0184 0338A0E1 		mov	r3, r3, asl #16
+ 541 0188 2368A0E1 		mov	r6, r3, lsr #16
+ 542              	.L52:
+ 543              		.loc 2 124 0
+ 544 018c B630DDE1 		ldrh	r3, [sp, #6]
+ 545 0190 060053E1 		cmp	r3, r6
+ 546 0194 1A00002A 		bcs	.L53
+ 547              	.LBE7:
+ 548              	.LBE6:
+ 155:fb/fb_bw8.c   **** 	framebuffer->cursor_x = x;
+ 549              		.loc 2 155 0
+ 550 0198 10309FE5 		ldr	r3, .L74
+ 551 019c 003093E5 		ldr	r3, [r3, #0]
+ 156:fb/fb_bw8.c   **** 	framebuffer->cursor_y = y;
+ 552              		.loc 2 156 0
+ 553 01a0 BA72C3E1 		strh	r7, [r3, #42]	@ movhi
+ 554              		.loc 2 155 0
+ 555 01a4 B882C3E1 		strh	r8, [r3, #40]	@ movhi
+ 157:fb/fb_bw8.c   **** }
+ 556              		.loc 2 157 0
+ 557 01a8 0CD08DE2 		add	sp, sp, #12
+ 558 01ac F081BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, pc}
+ 559              	.L75:
+ 560              		.align	2
+ 561              	.L74:
+ 562 01b0 00000000 		.word	framebuffer
+ 563 01b4 F8FF0000 		.word	65528
+ 564 01b8 00000000 		.word	fb_bw8
+ 565              	.LFE21:
+ 567              		.section	.text.fb_bw8_set_pixel,"ax",%progbits
+ 568              		.align	2
+ 569              		.global	fb_bw8_set_pixel
+ 571              	fb_bw8_set_pixel:
+ 572              	.LFB22:
+ 158:fb/fb_bw8.c   **** 
+ 159:fb/fb_bw8.c   **** /* Just set the given pixel to the current front ground color.
+ 160:fb/fb_bw8.c   ****  * This function does not update the damage rectangle! */
+ 161:fb/fb_bw8.c   **** void fb_bw8_set_pixel(uint16_t x,uint16_t y){
+ 573              		.loc 2 161 0
+ 574              		@ args = 0, pretend = 0, frame = 4
+ 575              		@ frame_needed = 0, uses_anonymous_args = 0
+ 576              	.LVL39:
+ 577 0000 30402DE9 		stmfd	sp!, {r4, r5, lr}
+ 578              	.LCFI6:
+ 162:fb/fb_bw8.c   **** 	uint8_t *p = fb_bw8->mem + (y/8)*framebuffer->width + x;
+ 579              		.loc 2 162 0
+ 580 0004 6C309FE5 		ldr	r3, .L78
+ 581 0008 002093E5 		ldr	r2, [r3, #0]
+ 582 000c 68309FE5 		ldr	r3, .L78+4
+ 583 0010 003093E5 		ldr	r3, [r3, #0]
+ 584 0014 00E092E5 		ldr	lr, [r2, #0]
+ 585 0018 B4C2D3E1 		ldrh	ip, [r3, #36]
+ 586              		.loc 2 161 0
+ 587 001c 0128A0E1 		mov	r2, r1, asl #16
+ 588              		.loc 2 162 0
+ 589 0020 A239A0E1 		mov	r3, r2, lsr #19
+ 590              		.loc 2 161 0
+ 591 0024 04D04DE2 		sub	sp, sp, #4
+ 592              	.LCFI7:
+ 593              	.LVL40:
+ 594              		.loc 2 162 0
+ 595 0028 9CE325E0 		mla	r5, ip, r3, lr
+ 596              		.loc 2 161 0
+ 597 002c 2228A0E1 		mov	r2, r2, lsr #16
+ 163:fb/fb_bw8.c   **** 	uint8_t and_mask = 0xff, or_mask = 0x00;
+ 598              		.loc 2 163 0
+ 599 0030 0030E0E3 		mvn	r3, #0
+ 600              		.loc 2 161 0
+ 601 0034 0048A0E1 		mov	r4, r0, asl #16
+ 164:fb/fb_bw8.c   **** 	set_fg_pixel(&and_mask, &or_mask, y % 8);
+ 602              		.loc 2 164 0
+ 603 0038 072002E2 		and	r2, r2, #7
+ 604 003c 02108DE2 		add	r1, sp, #2
+ 605              	.LVL41:
+ 606              		.loc 2 163 0
+ 607 0040 0330CDE5 		strb	r3, [sp, #3]
+ 608              	.LVL42:
+ 609              		.loc 2 164 0
+ 610 0044 03008DE2 		add	r0, sp, #3
+ 611              	.LVL43:
+ 612              		.loc 2 163 0
+ 613 0048 013083E2 		add	r3, r3, #1
+ 614 004c 0230CDE5 		strb	r3, [sp, #2]
+ 615              	.LVL44:
+ 616              		.loc 2 164 0
+ 617 0050 FEFFFFEB 		bl	set_fg_pixel
+ 618              		.loc 2 161 0
+ 619 0054 2448A0E1 		mov	r4, r4, lsr #16
+ 620              	.LVL45:
+ 165:fb/fb_bw8.c   **** 	*p = (*p & and_mask)|or_mask;
+ 621              		.loc 2 165 0
+ 622 0058 0420D5E7 		ldrb	r2, [r5, r4]	@ zero_extendqisi2
+ 623 005c 0310DDE5 		ldrb	r1, [sp, #3]	@ zero_extendqisi2
+ 624 0060 0230DDE5 		ldrb	r3, [sp, #2]	@ zero_extendqisi2
+ 625 0064 012002E0 		and	r2, r2, r1
+ 626 0068 023083E1 		orr	r3, r3, r2
+ 627 006c 0430C5E7 		strb	r3, [r5, r4]
+ 166:fb/fb_bw8.c   **** 	/* printf("fb_bw8_set_pixel: set: (%u|%u)\n", x, y); */
+ 167:fb/fb_bw8.c   **** }
+ 628              		.loc 2 167 0
+ 629 0070 04D08DE2 		add	sp, sp, #4
+ 630 0074 3080BDE8 		ldmfd	sp!, {r4, r5, pc}
+ 631              	.L79:
+ 632              		.align	2
+ 633              	.L78:
+ 634 0078 00000000 		.word	fb_bw8
+ 635 007c 00000000 		.word	framebuffer
+ 636              	.LFE22:
+ 638              		.section	.text.fb_bw8_set_p,"ax",%progbits
+ 639              		.align	2
+ 640              		.global	fb_bw8_set_p
+ 642              	fb_bw8_set_p:
+ 643              	.LFB24:
+ 168:fb/fb_bw8.c   **** 
+ 169:fb/fb_bw8.c   **** /* Copy Paste from
+ 170:fb/fb_bw8.c   ****  * http://de.wikipedia.org/wiki/Bresenham-Algorithmus#Kompakte_Variante */
+ 171:fb/fb_bw8.c   **** static void fb_bw8_line(int16_t x1,int16_t y1,int16_t x2,int16_t y2){
+ 172:fb/fb_bw8.c   **** 	fb_limit_fb_range(&x1, &y1);
+ 173:fb/fb_bw8.c   **** 	fb_limit_fb_range(&x2, &y2);
+ 174:fb/fb_bw8.c   **** 	fb_bw8_update_damage(x1,y1,x2,y2);
+ 175:fb/fb_bw8.c   **** 	/* printf("fb_bw8_line from (%u|%u) -> (%u|%u)\n", x1, y1, x2, y2); */
+ 176:fb/fb_bw8.c   **** 	int16_t dx =  abs(x2-x1), dy = -abs(y2-y1);
+ 177:fb/fb_bw8.c   **** 	int16_t sx = x1<x2 ? 1 : -1, sy = y1<y2 ? 1 : -1;
+ 178:fb/fb_bw8.c   **** 	int16_t err = dx+dy, e2; /* error value e_xy */
+ 179:fb/fb_bw8.c   **** 
+ 180:fb/fb_bw8.c   **** 	while (1) {
+ 181:fb/fb_bw8.c   **** 		fb_bw8_set_pixel(x1,y1);
+ 182:fb/fb_bw8.c   **** 		if (x1==x2 && y1==y2) break;
+ 183:fb/fb_bw8.c   **** 		e2 = 2*err;
+ 184:fb/fb_bw8.c   **** 		if (e2 > dy) { err += dy; x1 += sx; } /* e_xy+e_x > 0 */
+ 185:fb/fb_bw8.c   **** 		if (e2 < dx) { err += dx; y1 += sy; } /* e_xy+e_y < 0 */
+ 186:fb/fb_bw8.c   **** 	}
+ 187:fb/fb_bw8.c   **** }
+ 188:fb/fb_bw8.c   **** 
+ 189:fb/fb_bw8.c   **** /* Set the given pixel to the current front ground color and update the damage
+ 190:fb/fb_bw8.c   ****  * rectangle. */
+ 191:fb/fb_bw8.c   **** void fb_bw8_set_p(uint16_t x,uint16_t y){
+ 644              		.loc 2 191 0
+ 645              		@ args = 0, pretend = 0, frame = 0
+ 646              		@ frame_needed = 0, uses_anonymous_args = 0
+ 647              	.LVL46:
+ 648 0000 30402DE9 		stmfd	sp!, {r4, r5, lr}
+ 649              	.LCFI8:
+ 650              		.loc 2 191 0
+ 651 0004 0048A0E1 		mov	r4, r0, asl #16
+ 652 0008 0158A0E1 		mov	r5, r1, asl #16
+ 192:fb/fb_bw8.c   **** 	fb_bw8_update_damage(x,y,x+1,y+1);
+ 653              		.loc 2 192 0
+ 654 000c 012884E2 		add	r2, r4, #65536
+ 655 0010 013885E2 		add	r3, r5, #65536
+ 656 0014 2448A0E1 		mov	r4, r4, lsr #16
+ 657 0018 2558A0E1 		mov	r5, r5, lsr #16
+ 658 001c 0400A0E1 		mov	r0, r4
+ 659              	.LVL47:
+ 660 0020 0510A0E1 		mov	r1, r5
+ 661              	.LVL48:
+ 662 0024 2228A0E1 		mov	r2, r2, lsr #16
+ 663 0028 2338A0E1 		mov	r3, r3, lsr #16
+ 664 002c FEFFFFEB 		bl	fb_bw8_update_damage
+ 193:fb/fb_bw8.c   **** 	fb_bw8_set_pixel(x,y);
+ 665              		.loc 2 193 0
+ 666 0030 0400A0E1 		mov	r0, r4
+ 667 0034 0510A0E1 		mov	r1, r5
+ 194:fb/fb_bw8.c   **** }
+ 668              		.loc 2 194 0
+ 669 0038 3040BDE8 		ldmfd	sp!, {r4, r5, lr}
+ 670              		.loc 2 193 0
+ 671 003c FEFFFFEA 		b	fb_bw8_set_pixel
+ 672              	.LFE24:
+ 674              		.section	.text.fb_bw8_lineto,"ax",%progbits
+ 675              		.align	2
+ 676              		.global	fb_bw8_lineto
+ 678              	fb_bw8_lineto:
+ 679              	.LFB25:
+ 195:fb/fb_bw8.c   **** 
+ 196:fb/fb_bw8.c   **** void fb_bw8_lineto(uint16_t x,uint16_t y){
+ 680              		.loc 2 196 0
+ 681              		@ args = 0, pretend = 0, frame = 8
+ 682              		@ frame_needed = 0, uses_anonymous_args = 0
+ 683              	.LVL49:
+ 684 0000 F0472DE9 		stmfd	sp!, {r4, r5, r6, r7, r8, r9, sl, lr}
+ 685              	.LCFI9:
+ 197:fb/fb_bw8.c   **** 	fb_bw8_line(framebuffer->cursor_x,framebuffer->cursor_y,x,y);
+ 686              		.loc 2 197 0
+ 687 0004 4C319FE5 		ldr	r3, .L103
+ 688 0008 003093E5 		ldr	r3, [r3, #0]
+ 689              		.loc 2 196 0
+ 690 000c 08D04DE2 		sub	sp, sp, #8
+ 691              	.LCFI10:
+ 692              	.LVL50:
+ 693              		.loc 2 197 0
+ 694 0010 FA22D3E1 		ldrsh	r2, [r3, #42]
+ 695              		.loc 2 196 0
+ 696 0014 0048A0E1 		mov	r4, r0, asl #16
+ 697              		.loc 2 197 0
+ 698 0018 B832D3E1 		ldrh	r3, [r3, #40]
+ 699              		.loc 2 196 0
+ 700 001c 0158A0E1 		mov	r5, r1, asl #16
+ 701              		.loc 2 197 0
+ 702 0020 44C8A0E1 		mov	ip, r4, asr #16
+ 703 0024 45E8A0E1 		mov	lr, r5, asr #16
+ 704              	.LBB8:
+ 705              	.LBB9:
+ 706              		.loc 2 172 0
+ 707 0028 0D00A0E1 		mov	r0, sp
+ 708              	.LVL51:
+ 709 002c 02108DE2 		add	r1, sp, #2
+ 710              	.LVL52:
+ 711              	.LBE9:
+ 712              	.LBE8:
+ 713              		.loc 2 197 0
+ 714 0030 B4C0CDE1 		strh	ip, [sp, #4]	@ movhi
+ 715              	.LVL53:
+ 716 0034 B6E0CDE1 		strh	lr, [sp, #6]	@ movhi
+ 717              	.LVL54:
+ 718 0038 B030CDE1 		strh	r3, [sp, #0]	@ movhi
+ 719              	.LVL55:
+ 720 003c B220CDE1 		strh	r2, [sp, #2]	@ movhi
+ 721              	.LVL56:
+ 722              	.LBB10:
+ 723              	.LBB11:
+ 724              		.loc 2 172 0
+ 725 0040 FEFFFFEB 		bl	fb_limit_fb_range
+ 726              		.loc 2 173 0
+ 727 0044 04008DE2 		add	r0, sp, #4
+ 728 0048 06108DE2 		add	r1, sp, #6
+ 729 004c FEFFFFEB 		bl	fb_limit_fb_range
+ 730              		.loc 2 174 0
+ 731 0050 B000DDE1 		ldrh	r0, [sp, #0]
+ 732 0054 B210DDE1 		ldrh	r1, [sp, #2]
+ 733 0058 B420DDE1 		ldrh	r2, [sp, #4]
+ 734 005c B630DDE1 		ldrh	r3, [sp, #6]
+ 735 0060 FEFFFFEB 		bl	fb_bw8_update_damage
+ 736              		.loc 2 176 0
+ 737 0064 F4E0DDE1 		ldrsh	lr, [sp, #4]
+ 738 0068 F0C0DDE1 		ldrsh	ip, [sp, #0]
+ 739 006c F600DDE1 		ldrsh	r0, [sp, #6]
+ 740 0070 F210DDE1 		ldrsh	r1, [sp, #2]
+ 741 0074 0E306CE0 		rsb	r3, ip, lr
+ 742 0078 002061E0 		rsb	r2, r1, r0
+ 743 007c 000053E3 		cmp	r3, #0
+ 744 0080 003063B2 		rsblt	r3, r3, #0
+ 745 0084 000052E3 		cmp	r2, #0
+ 746 0088 002062C2 		rsbgt	r2, r2, #0
+ 747 008c 0338A0E1 		mov	r3, r3, asl #16
+ 748 0090 0228A0E1 		mov	r2, r2, asl #16
+ 749              	.LBE11:
+ 750              	.LBE10:
+ 751              		.loc 2 197 0
+ 752 0094 25A8A0E1 		mov	sl, r5, lsr #16
+ 753              	.LVL57:
+ 754              	.LBB12:
+ 755              	.LBB13:
+ 756              		.loc 2 176 0
+ 757 0098 2368A0E1 		mov	r6, r3, lsr #16
+ 758              	.LVL58:
+ 759 009c 2258A0E1 		mov	r5, r2, lsr #16
+ 760              	.LVL59:
+ 761              		.loc 2 177 0
+ 762 00a0 B4209FE5 		ldr	r2, .L103+4
+ 763 00a4 000051E1 		cmp	r1, r0
+ 764              		.loc 2 178 0
+ 765 00a8 053086E0 		add	r3, r6, r5
+ 766 00ac 0338A0E1 		mov	r3, r3, asl #16
+ 767              		.loc 2 177 0
+ 768 00b0 0280A0A1 		movge	r8, r2
+ 769              	.LVL60:
+ 770 00b4 0180A0B3 		movlt	r8, #1
+ 771 00b8 0E005CE1 		cmp	ip, lr
+ 772              	.LBE13:
+ 773              	.LBE12:
+ 774              		.loc 2 197 0
+ 775 00bc 2498A0E1 		mov	r9, r4, lsr #16
+ 776              	.LVL61:
+ 777              	.LBB14:
+ 778              	.LBB15:
+ 779              		.loc 2 177 0
+ 780 00c0 0270A0A1 		movge	r7, r2
+ 781              	.LVL62:
+ 782 00c4 0170A0B3 		movlt	r7, #1
+ 783              		.loc 2 178 0
+ 784 00c8 2348A0E1 		mov	r4, r3, lsr #16
+ 785              	.LVL63:
+ 786              	.L102:
+ 787              		.loc 2 181 0
+ 788 00cc B000DDE1 		ldrh	r0, [sp, #0]
+ 789 00d0 B210DDE1 		ldrh	r1, [sp, #2]
+ 790 00d4 FEFFFFEB 		bl	fb_bw8_set_pixel
+ 791              		.loc 2 182 0
+ 792 00d8 F010DDE1 		ldrsh	r1, [sp, #0]
+ 793 00dc F430DDE1 		ldrsh	r3, [sp, #4]
+ 794 00e0 010053E1 		cmp	r3, r1
+ 795 00e4 B030DDE1 		ldrh	r3, [sp, #0]
+ 796              		.loc 2 184 0
+ 797 00e8 052084E0 		add	r2, r4, r5
+ 798 00ec 8408A0E1 		mov	r0, r4, asl #17
+ 799              		.loc 2 185 0
+ 800 00f0 06E8A0E1 		mov	lr, r6, asl #16
+ 801              		.loc 2 184 0
+ 802 00f4 02C8A0E1 		mov	ip, r2, asl #16
+ 803 00f8 071083E0 		add	r1, r3, r7
+ 804              		.loc 2 182 0
+ 805 00fc 4200001A 		bne	.L90
+ 806 0100 F220DDE1 		ldrsh	r2, [sp, #2]
+ 807 0104 F630DDE1 		ldrsh	r3, [sp, #6]
+ 808 0108 030052E1 		cmp	r2, r3
+ 809 010c 4E00000A 		beq	.L92
+ 810              	.L90:
+ 811              		.loc 2 184 0
+ 812 0110 050850E1 		cmp	r0, r5, asl #16
+ 813 0114 4038A0E1 		mov	r3, r0, asr #16
+ 814 0118 2C48A0C1 		movgt	r4, ip, lsr #16
+ 815 011c B010CDC1 		strgth	r1, [sp, #0]	@ movhi
+ 816              		.loc 2 185 0
+ 817 0120 4E0853E1 		cmp	r3, lr, asr #16
+ 818 0124 062084E0 		add	r2, r4, r6
+ 819 0128 B230DDB1 		ldrlth	r3, [sp, #2]
+ 820 012c 0228A0B1 		movlt	r2, r2, asl #16
+ 821 0130 083083B0 		addlt	r3, r3, r8
+ 822 0134 2248A0B1 		movlt	r4, r2, lsr #16
+ 823 0138 B230CDB1 		strlth	r3, [sp, #2]	@ movhi
+ 824 013c 310000EA 		b	.L102
+ 825              	.L92:
+ 826              	.LBE15:
+ 827              	.LBE14:
+ 198:fb/fb_bw8.c   **** 	framebuffer->cursor_x = x;
+ 828              		.loc 2 198 0
+ 829 0140 10309FE5 		ldr	r3, .L103
+ 830 0144 003093E5 		ldr	r3, [r3, #0]
+ 199:fb/fb_bw8.c   **** 	framebuffer->cursor_y = y;
+ 831              		.loc 2 199 0
+ 832 0148 BAA2C3E1 		strh	sl, [r3, #42]	@ movhi
+ 833              		.loc 2 198 0
+ 834 014c B892C3E1 		strh	r9, [r3, #40]	@ movhi
+ 200:fb/fb_bw8.c   **** }
+ 835              		.loc 2 200 0
+ 836 0150 08D08DE2 		add	sp, sp, #8
+ 837 0154 F087BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, r9, sl, pc}
+ 838              	.L104:
+ 839              		.align	2
+ 840              	.L103:
+ 841 0158 00000000 		.word	framebuffer
+ 842 015c FFFF0000 		.word	65535
+ 843              	.LFE25:
+ 845              		.section	.text.fb_bw8_putstr,"ax",%progbits
+ 846              		.align	2
+ 847              		.global	fb_bw8_putstr
+ 849              	fb_bw8_putstr:
+ 850              	.LFB26:
+ 201:fb/fb_bw8.c   **** 
+ 202:fb/fb_bw8.c   **** 
+ 203:fb/fb_bw8.c   **** /* this is the most ridiculous function ever, because it has to
+ 204:fb/fb_bw8.c   ****    fiddle with two braindead bitmaps at once, both being
+ 205:fb/fb_bw8.c   ****    organized differently */
+ 206:fb/fb_bw8.c   **** 
+ 207:fb/fb_bw8.c   **** /* draw text at current position, with current font and colours up
+ 208:fb/fb_bw8.c   ****    to a width of maxwidth pixels, return pixelwidth consumed */
+ 209:fb/fb_bw8.c   **** int
+ 210:fb/fb_bw8.c   **** fb_bw8_putstr(char *str,int maxwidth){
+ 851              		.loc 2 210 0
+ 852              		@ args = 0, pretend = 0, frame = 40
+ 853              		@ frame_needed = 0, uses_anonymous_args = 0
+ 854              	.LVL64:
+ 855 0000 F04F2DE9 		stmfd	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+ 856              	.LCFI11:
+ 211:fb/fb_bw8.c   **** 	const struct fb_font *font = fb_fonts[framebuffer->font];
+ 857              		.loc 2 211 0
+ 858 0004 4C339FE5 		ldr	r3, .L148
+ 859 0008 003093E5 		ldr	r3, [r3, #0]
+ 860 000c 342093E5 		ldr	r2, [r3, #52]
+ 861 0010 44339FE5 		ldr	r3, .L148+4
+ 862 0014 022193E7 		ldr	r2, [r3, r2, asl #2]
+ 863              		.loc 2 210 0
+ 864 0018 28D04DE2 		sub	sp, sp, #40
+ 865              	.LCFI12:
+ 866              	.LVL65:
+ 212:fb/fb_bw8.c   **** 	const struct fb_char *fchr;
+ 213:fb/fb_bw8.c   **** 
+ 214:fb/fb_bw8.c   **** 	int x1,y1,x2,y2; 		// will become bounding box
+ 215:fb/fb_bw8.c   **** 	int w;				// 0..7 while building bits per byte
+ 216:fb/fb_bw8.c   **** 	int y;				// coordinates in display
+ 217:fb/fb_bw8.c   **** 	int char_x,char_y;		// coordinates in font character
+ 218:fb/fb_bw8.c   **** 	int bitmap_x,bitmap_y;		// coordinates in character's bitmap
+ 219:fb/fb_bw8.c   **** 	int byte_per_line;		// depending on character width in font
+ 220:fb/fb_bw8.c   **** 	int bitmap_offs,bitmap_bit;	// offset inside bitmap, bit number of pixel
+ 221:fb/fb_bw8.c   **** 	int fb8_offs;			// offset to current pixel in framebuffer
+ 222:fb/fb_bw8.c   **** 	uint8_t and_mask,or_mask;	// to draw on framebuffer
+ 223:fb/fb_bw8.c   **** 	uint8_t *p;			// pointer into framebuffer memory
+ 224:fb/fb_bw8.c   **** 	int total_w;			// total width
+ 225:fb/fb_bw8.c   **** 
+ 226:fb/fb_bw8.c   **** 	/* center, if maxwidth < 0 */
+ 227:fb/fb_bw8.c   **** 	if (maxwidth < 0) {
+ 867              		.loc 2 227 0
+ 868 001c 000051E3 		cmp	r1, #0
+ 869              		.loc 2 211 0
+ 870 0020 08208DE5 		str	r2, [sp, #8]
+ 871              	.LVL66:
+ 872              		.loc 2 210 0
+ 873 0024 00008DE5 		str	r0, [sp, #0]
+ 228:fb/fb_bw8.c   **** 		total_w = 0;
+ 229:fb/fb_bw8.c   **** 		/* count width of string */
+ 230:fb/fb_bw8.c   **** 		for(p=(uint8_t *)str;*p;p++){
+ 874              		.loc 2 230 0
+ 875 0028 0040A0B1 		movlt	r4, r0
+ 876              	.LVL67:
+ 877 002c 0050A0B3 		movlt	r5, #0
+ 878              	.LVL68:
+ 879              		.loc 2 227 0
+ 880 0030 150000BA 		blt	.L108
+ 881 0034 230000EA 		b	.L106
+ 882              	.LVL69:
+ 883              	.L109:
+ 231:fb/fb_bw8.c   **** 			fchr = fb_font_get_char(font,*p);
+ 884              		.loc 2 231 0
+ 885 0038 FEFFFFEB 		bl	fb_font_get_char
+ 886              	.LVL70:
+ 232:fb/fb_bw8.c   **** 			if(!fchr)  /* FIXME: Does '?' exist in every font? */
+ 887              		.loc 2 232 0
+ 888 003c 003050E2 		subs	r3, r0, #0
+ 889              	.LVL71:
+ 233:fb/fb_bw8.c   **** 				fchr = fb_font_get_char(font,'?');
+ 890              		.loc 2 233 0
+ 891 0040 3F10A0E3 		mov	r1, #63
+ 892 0044 08009DE5 		ldr	r0, [sp, #8]
+ 893              		.loc 2 232 0
+ 894 0048 1300001A 		bne	.L110
+ 895              	.LVL72:
+ 896              		.loc 2 233 0
+ 897 004c FEFFFFEB 		bl	fb_font_get_char
+ 898              	.LVL73:
+ 899 0050 0030A0E1 		mov	r3, r0
+ 900              	.LVL74:
+ 901              	.L110:
+ 234:fb/fb_bw8.c   **** 			total_w += fchr->width;
+ 902              		.loc 2 234 0
+ 903 0054 D030D3E1 		ldrsb	r3, [r3, #0]
+ 904              	.LVL75:
+ 905 0058 035085E0 		add	r5, r5, r3
+ 906              	.LVL76:
+ 907              	.L108:
+ 908              		.loc 2 230 0
+ 909 005c 0030D4E5 		ldrb	r3, [r4, #0]	@ zero_extendqisi2
+ 910 0060 001053E2 		subs	r1, r3, #0
+ 911              	.LVL77:
+ 912              		.loc 2 231 0
+ 913 0064 08009DE5 		ldr	r0, [sp, #8]
+ 914              		.loc 2 230 0
+ 915 0068 014084E2 		add	r4, r4, #1
+ 916 006c 0C00001A 		bne	.L109
+ 917              	.LVL78:
+ 235:fb/fb_bw8.c   **** 
+ 236:fb/fb_bw8.c   **** 		} // str
+ 237:fb/fb_bw8.c   **** 		if (total_w <= framebuffer->width)
+ 918              		.loc 2 237 0
+ 919 0070 E0129FE5 		ldr	r1, .L148
+ 920 0074 002091E5 		ldr	r2, [r1, #0]
+ 921 0078 B432D2E1 		ldrh	r3, [r2, #36]
+ 922 007c 030055E1 		cmp	r5, r3
+ 238:fb/fb_bw8.c   **** 			framebuffer->cursor_x =
+ 923              		.loc 2 238 0
+ 924 0080 033065D0 		rsble	r3, r5, r3
+ 925 0084 C330A0D1 		movle	r3, r3, asr #1
+ 926 0088 B832C2D1 		strleh	r3, [r2, #40]	@ movhi
+ 239:fb/fb_bw8.c   **** 				(framebuffer->width - total_w) >> 1;
+ 240:fb/fb_bw8.c   **** 		maxwidth = framebuffer->width;
+ 927              		.loc 2 240 0
+ 928 008c 003091E5 		ldr	r3, [r1, #0]
+ 929 0090 B412D3E1 		ldrh	r1, [r3, #36]
+ 930              	.LVL79:
+ 931              	.L106:
+ 241:fb/fb_bw8.c   **** 	}
+ 242:fb/fb_bw8.c   **** 
+ 243:fb/fb_bw8.c   **** 	x1 = framebuffer->cursor_x;	// first col (incl!)
+ 932              		.loc 2 243 0
+ 933 0094 BC329FE5 		ldr	r3, .L148
+ 934 0098 000093E5 		ldr	r0, [r3, #0]
+ 935 009c B822D0E1 		ldrh	r2, [r0, #40]
+ 936 00a0 0C208DE5 		str	r2, [sp, #12]
+ 937              	.LVL80:
+ 244:fb/fb_bw8.c   **** 	x2 = x1 + maxwidth - 1;		// last col (incl!)
+ 938              		.loc 2 244 0
+ 939 00a4 013082E0 		add	r3, r2, r1
+ 245:fb/fb_bw8.c   **** 	if(x2 >= framebuffer->width)
+ 940              		.loc 2 245 0
+ 941 00a8 B422D0E1 		ldrh	r2, [r0, #36]
+ 942              		.loc 2 244 0
+ 943 00ac 013043E2 		sub	r3, r3, #1
+ 944              		.loc 2 245 0
+ 945 00b0 020053E1 		cmp	r3, r2
+ 246:fb/fb_bw8.c   **** 		x2 = framebuffer->width - 1;
+ 946              		.loc 2 246 0
+ 947 00b4 012042A2 		subge	r2, r2, #1
+ 948              		.loc 2 244 0
+ 949 00b8 10308DE5 		str	r3, [sp, #16]
+ 950              	.LVL81:
+ 247:fb/fb_bw8.c   **** 
+ 248:fb/fb_bw8.c   **** 	y1 = framebuffer->cursor_y - font->ascent + 1; // first row
+ 951              		.loc 2 248 0
+ 952 00bc 08C09DE5 		ldr	ip, [sp, #8]
+ 953              		.loc 2 246 0
+ 954 00c0 10208DA5 		strge	r2, [sp, #16]
+ 955              		.loc 2 248 0
+ 956 00c4 BA32D0E1 		ldrh	r3, [r0, #42]
+ 957 00c8 D120DCE1 		ldrsb	r2, [ip, #1]
+ 249:fb/fb_bw8.c   **** 	y2 = y1 + font->height - 1;	// last row
+ 958              		.loc 2 249 0
+ 959 00cc D010DCE1 		ldrsb	r1, [ip, #0]
+ 960              	.LVL82:
+ 961              		.loc 2 248 0
+ 962 00d0 033062E0 		rsb	r3, r2, r3
+ 250:fb/fb_bw8.c   **** 
+ 251:fb/fb_bw8.c   **** #if 0
+ 252:fb/fb_bw8.c   **** 	printf("%s: %d %d %d %d\n",__FUNCTION__,x1,y1,x2,y2);
+ 253:fb/fb_bw8.c   **** #endif
+ 254:fb/fb_bw8.c   **** 
+ 255:fb/fb_bw8.c   **** 	if(y1 < 0)			// sanitize in case of overflow
+ 256:fb/fb_bw8.c   **** 		y1 = 0;
+ 257:fb/fb_bw8.c   **** 	if(y2 >= framebuffer->height)
+ 963              		.loc 2 257 0
+ 964 00d4 B622D0E1 		ldrh	r2, [r0, #38]
+ 965              		.loc 2 249 0
+ 966 00d8 011083E0 		add	r1, r3, r1
+ 967 00dc 01B083E2 		add	fp, r3, #1
+ 968              	.LVL83:
+ 969              		.loc 2 255 0
+ 970 00e0 00005BE3 		cmp	fp, #0
+ 971 00e4 00B0A0B3 		movlt	fp, #0
+ 972              		.loc 2 257 0
+ 973 00e8 020051E1 		cmp	r1, r2
+ 258:fb/fb_bw8.c   **** 		y2 = framebuffer->height - 1;
+ 974              		.loc 2 258 0
+ 975 00ec 012042A2 		subge	r2, r2, #1
+ 976              		.loc 2 249 0
+ 977 00f0 14108DE5 		str	r1, [sp, #20]
+ 978              	.LVL84:
+ 979              		.loc 2 258 0
+ 980 00f4 14208DA5 		strge	r2, [sp, #20]
+ 981 00f8 BB0000EA 		b	.L147
+ 982              	.LVL85:
+ 983              	.L121:
+ 259:fb/fb_bw8.c   **** 
+ 260:fb/fb_bw8.c   **** 	fb8_offs = x1 + (y1 & 0xfff8)/8;
+ 261:fb/fb_bw8.c   **** 
+ 262:fb/fb_bw8.c   **** 	/* iterate over all characters */
+ 263:fb/fb_bw8.c   **** 	for(;*str && framebuffer->cursor_x <= x2;str++){
+ 264:fb/fb_bw8.c   **** 		fchr = fb_font_get_char(font,*str);
+ 984              		.loc 2 264 0
+ 985 00fc 08009DE5 		ldr	r0, [sp, #8]
+ 986 0100 FEFFFFEB 		bl	fb_font_get_char
+ 265:fb/fb_bw8.c   **** 		if(!fchr)  /* FIXME: Does '?' exist in every font? */
+ 987              		.loc 2 265 0
+ 988 0104 006050E2 		subs	r6, r0, #0
+ 989 0108 4500001A 		bne	.L122
+ 266:fb/fb_bw8.c   **** 			fchr = fb_font_get_char(font,'?');
+ 990              		.loc 2 266 0
+ 991 010c 08009DE5 		ldr	r0, [sp, #8]
+ 992 0110 3F10A0E3 		mov	r1, #63
+ 993 0114 FEFFFFEB 		bl	fb_font_get_char
+ 994 0118 0060A0E1 		mov	r6, r0
+ 995              	.L122:
+ 267:fb/fb_bw8.c   **** 
+ 268:fb/fb_bw8.c   **** 		byte_per_line = (fchr->bbox_w+7)/8;;
+ 996              		.loc 2 268 0
+ 997 011c D130D6E1 		ldrsb	r3, [r6, #1]
+ 998 0120 072093E2 		adds	r2, r3, #7
+ 999 0124 0E208342 		addmi	r2, r3, #14
+ 1000 0128 C221A0E1 		mov	r2, r2, asr #3
+ 1001 012c 0090A0E3 		mov	r9, #0
+ 1002 0130 18208DE5 		str	r2, [sp, #24]
+ 1003 0134 A90000EA 		b	.L124
+ 1004              	.L125:
+ 269:fb/fb_bw8.c   **** 
+ 270:fb/fb_bw8.c   **** 		/* character pixels, left to right */
+ 271:fb/fb_bw8.c   **** 		for(char_x=0;
+ 272:fb/fb_bw8.c   **** 		    char_x<fchr->width && char_x + framebuffer->cursor_x <= x2;
+ 273:fb/fb_bw8.c   **** 		    char_x++
+ 274:fb/fb_bw8.c   **** 		){
+ 275:fb/fb_bw8.c   **** 			/* character pixels, top to bottom, in stripes
+ 276:fb/fb_bw8.c   **** 			   of 8 to match LCD RAM organisation */
+ 277:fb/fb_bw8.c   **** 			for(y=y1&0xfff8;y<=y2;y+=8){ // display lines
+ 1005              		.loc 2 277 0
+ 1006 0138 20829FE5 		ldr	r8, .L148+8
+ 1007 013c 08800BE0 		and	r8, fp, r8
+ 1008 0140 A50000EA 		b	.L126
+ 1009              	.LVL86:
+ 1010              	.L127:
+ 278:fb/fb_bw8.c   **** 				/* bitmap coordinates, X= left to right */
+ 279:fb/fb_bw8.c   **** 				bitmap_x = char_x - fchr->bbox_x;
+ 280:fb/fb_bw8.c   **** 				/* character coords. Y increases from
+ 281:fb/fb_bw8.c   **** 				   cursor upwards */
+ 282:fb/fb_bw8.c   **** 				char_y = framebuffer->cursor_y-y;
+ 1011              		.loc 2 282 0
+ 1012 0144 0C329FE5 		ldr	r3, .L148
+ 1013 0148 001093E5 		ldr	r1, [r3, #0]
+ 1014              	.LVL87:
+ 283:fb/fb_bw8.c   **** 				/* bitmap index = height-(bitmap coords)-1 */
+ 284:fb/fb_bw8.c   **** 				bitmap_y = fchr->bbox_h -
+ 1015              		.loc 2 284 0
+ 1016 014c BA22D1E1 		ldrh	r2, [r1, #42]
+ 1017              		.loc 2 279 0
+ 1018 0150 D330D6E1 		ldrsb	r3, [r6, #3]
+ 1019              		.loc 2 284 0
+ 1020 0154 D4E0D6E1 		ldrsb	lr, [r6, #4]
+ 285:fb/fb_bw8.c   **** 					(char_y - fchr->bbox_y) - 1;
+ 286:fb/fb_bw8.c   **** 
+ 287:fb/fb_bw8.c   **** 				fb8_offs = framebuffer->cursor_x +
+ 1021              		.loc 2 287 0
+ 1022 0158 B802D1E1 		ldrh	r0, [r1, #40]
+ 1023 015c 000058E3 		cmp	r8, #0
+ 1024              		.loc 2 284 0
+ 1025 0160 022068E0 		rsb	r2, r8, r2
+ 1026              		.loc 2 279 0
+ 1027 0164 095063E0 		rsb	r5, r3, r9
+ 1028              	.LVL88:
+ 1029              		.loc 2 284 0
+ 1030 0168 02206EE0 		rsb	r2, lr, r2
+ 1031              		.loc 2 287 0
+ 1032 016c 073088E2 		add	r3, r8, #7
+ 1033 0170 B4E2D1E1 		ldrh	lr, [r1, #36]
+ 1034 0174 0830A0A1 		movge	r3, r8
+ 1035 0178 090080E0 		add	r0, r0, r9
+ 1036 017c C331A0E1 		mov	r3, r3, asr #3
+ 1037 0180 9E0323E0 		mla	r3, lr, r3, r0
+ 288:fb/fb_bw8.c   **** 					char_x + (y/8)*framebuffer->width;
+ 289:fb/fb_bw8.c   **** 
+ 290:fb/fb_bw8.c   **** 				and_mask = 0xff;
+ 291:fb/fb_bw8.c   **** 				or_mask = 0x00;
+ 292:fb/fb_bw8.c   **** 
+ 293:fb/fb_bw8.c   **** 				/* top to bottom inside of a 8bit column */
+ 294:fb/fb_bw8.c   **** 				for(w=0;w<8;w++,bitmap_y++){
+ 295:fb/fb_bw8.c   **** 					/* inside drawing area? */
+ 296:fb/fb_bw8.c   **** 					if(y+w < y1 || y+w > y2)
+ 297:fb/fb_bw8.c   **** 						continue;
+ 298:fb/fb_bw8.c   **** 
+ 299:fb/fb_bw8.c   **** 					/* outside pixel data of this
+ 300:fb/fb_bw8.c   **** 					   character? */
+ 301:fb/fb_bw8.c   **** 					if(bitmap_x < 0 ||
+ 302:fb/fb_bw8.c   **** 					   bitmap_x >= fchr->bbox_w ||
+ 303:fb/fb_bw8.c   **** 					   bitmap_y < 0 ||
+ 304:fb/fb_bw8.c   **** 					   bitmap_y >= fchr->bbox_h
+ 305:fb/fb_bw8.c   **** 					)
+ 306:fb/fb_bw8.c   **** 						goto outside_char_bitmap;
+ 307:fb/fb_bw8.c   **** 
+ 308:fb/fb_bw8.c   **** 					/* check bit in pixel data for
+ 309:fb/fb_bw8.c   **** 					   this character */
+ 310:fb/fb_bw8.c   **** 					bitmap_offs = bitmap_x/8+
+ 1038              		.loc 2 310 0
+ 1039 0184 000055E3 		cmp	r5, #0
+ 1040              		.loc 2 284 0
+ 1041 0188 D2C0D6E1 		ldrsb	ip, [r6, #2]
+ 1042              		.loc 2 310 0
+ 1043 018c 071085E2 		add	r1, r5, #7
+ 1044              		.loc 2 287 0
+ 1045 0190 20308DE5 		str	r3, [sp, #32]
+ 1046              		.loc 2 310 0
+ 1047 0194 0510A0A1 		movge	r1, r5
+ 1048              		.loc 2 290 0
+ 1049 0198 0030E0E3 		mvn	r3, #0
+ 311:fb/fb_bw8.c   **** 						bitmap_y*byte_per_line;
+ 312:fb/fb_bw8.c   **** 					bitmap_bit = 7-(bitmap_x%8);
+ 1050              		.loc 2 312 0
+ 1051 019c 1E4115E2 		ands	r4, r5, #-2147483641
+ 1052              	.LVL89:
+ 1053 01a0 03408440 		addmi	r4, r4, r3
+ 1054 01a4 844EE041 		mvnmi	r4, r4, asl #29
+ 1055 01a8 A44EE041 		mvnmi	r4, r4, lsr #29
+ 1056              		.loc 2 284 0
+ 1057 01ac 0CC062E0 		rsb	ip, r2, ip
+ 1058              		.loc 2 310 0
+ 1059 01b0 C111A0E1 		mov	r1, r1, asr #3
+ 1060              		.loc 2 291 0
+ 1061 01b4 0020A0E3 		mov	r2, #0
+ 1062              		.loc 2 312 0
+ 1063 01b8 01408442 		addmi	r4, r4, #1
+ 1064 01bc 074064E2 		rsb	r4, r4, #7
+ 1065              		.loc 2 290 0
+ 1066 01c0 2730CDE5 		strb	r3, [sp, #39]
+ 1067              		.loc 2 291 0
+ 1068 01c4 2620CDE5 		strb	r2, [sp, #38]
+ 1069              		.loc 2 310 0
+ 1070 01c8 04108DE5 		str	r1, [sp, #4]
+ 1071              		.loc 2 312 0
+ 1072 01cc 1C408DE5 		str	r4, [sp, #28]
+ 1073              		.loc 2 284 0
+ 1074 01d0 03708CE0 		add	r7, ip, r3
+ 1075              		.loc 2 312 0
+ 1076 01d4 02A0A0E1 		mov	sl, r2
+ 1077 01d8 0840A0E1 		mov	r4, r8
+ 1078              	.LVL90:
+ 1079              	.L129:
+ 1080              		.loc 2 296 0
+ 1081 01dc 0B0054E1 		cmp	r4, fp
+ 1082 01e0 940000BA 		blt	.L130
+ 1083 01e4 14109DE5 		ldr	r1, [sp, #20]
+ 1084 01e8 010054E1 		cmp	r4, r1
+ 313:fb/fb_bw8.c   **** 
+ 314:fb/fb_bw8.c   **** 					/* bit is set  */
+ 315:fb/fb_bw8.c   **** 					if(fchr->data[bitmap_offs] &
+ 316:fb/fb_bw8.c   **** 					   (1<<bitmap_bit)){
+ 317:fb/fb_bw8.c   **** 						set_fg_pixel(&and_mask,
+ 318:fb/fb_bw8.c   **** 							     &or_mask,w);
+ 319:fb/fb_bw8.c   **** 					} else { // unset, or outside bitmap
+ 320:fb/fb_bw8.c   **** outside_char_bitmap:
+ 321:fb/fb_bw8.c   **** 						set_bg_pixel(&and_mask,
+ 1085              		.loc 2 321 0
+ 1086 01ec 0A20A0E1 		mov	r2, sl
+ 1087 01f0 27008DE2 		add	r0, sp, #39
+ 1088 01f4 26108DE2 		add	r1, sp, #38
+ 1089              		.loc 2 296 0
+ 1090 01f8 940000CA 		bgt	.L130
+ 1091              	.LVL91:
+ 1092              		.loc 2 301 0
+ 1093 01fc 000055E3 		cmp	r5, #0
+ 1094 0200 930000BA 		blt	.L133
+ 1095 0204 D130D6E1 		ldrsb	r3, [r6, #1]
+ 1096 0208 030055E1 		cmp	r5, r3
+ 1097 020c 0030A0B3 		movlt	r3, #0
+ 1098 0210 0130A0A3 		movge	r3, #1
+ 1099 0214 A73F93E1 		orrs	r3, r3, r7, lsr #31
+ 1100 0218 9300001A 		bne	.L133
+ 1101              		.loc 2 315 0
+ 1102 021c 04309DE5 		ldr	r3, [sp, #4]
+ 1103 0220 06C083E0 		add	ip, r3, r6
+ 1104              		.loc 2 301 0
+ 1105 0224 D230D6E1 		ldrsb	r3, [r6, #2]
+ 1106 0228 030057E1 		cmp	r7, r3
+ 1107 022c 930000AA 		bge	.L133
+ 1108              		.loc 2 315 0
+ 1109 0230 18309DE5 		ldr	r3, [sp, #24]
+ 1110 0234 97C323E0 		mla	r3, r7, r3, ip
+ 1111 0238 1CC09DE5 		ldr	ip, [sp, #28]
+ 1112 023c 0530D3E5 		ldrb	r3, [r3, #5]	@ zero_extendqisi2
+ 1113 0240 533CA0E1 		mov	r3, r3, asr ip
+ 1114 0244 010013E3 		tst	r3, #1
+ 1115 0248 9300000A 		beq	.L133
+ 1116              		.loc 2 317 0
+ 1117 024c FEFFFFEB 		bl	set_fg_pixel
+ 1118              	.LVL92:
+ 1119 0250 940000EA 		b	.L130
+ 1120              	.LVL93:
+ 1121              	.L133:
+ 1122              		.loc 2 321 0
+ 1123 0254 FEFFFFEB 		bl	set_bg_pixel
+ 1124              	.LVL94:
+ 1125              	.L130:
+ 1126              		.loc 2 294 0
+ 1127 0258 01A08AE2 		add	sl, sl, #1
+ 1128 025c 08005AE3 		cmp	sl, #8
+ 1129 0260 017087E2 		add	r7, r7, #1
+ 1130 0264 014084E2 		add	r4, r4, #1
+ 1131 0268 7500001A 		bne	.L129
+ 322:fb/fb_bw8.c   **** 							     &or_mask,w);
+ 323:fb/fb_bw8.c   **** 					}
+ 324:fb/fb_bw8.c   **** 				} // for(w...)
+ 325:fb/fb_bw8.c   **** 				/* adjust byte in framebuffer */
+ 326:fb/fb_bw8.c   **** 				p = fb_bw8->mem + fb8_offs;
+ 1132              		.loc 2 326 0
+ 1133 026c F0309FE5 		ldr	r3, .L148+12
+ 1134 0270 003093E5 		ldr	r3, [r3, #0]
+ 327:fb/fb_bw8.c   **** 				*p = ( *p & and_mask ) | or_mask;
+ 1135              		.loc 2 327 0
+ 1136 0274 20209DE5 		ldr	r2, [sp, #32]
+ 1137              		.loc 2 326 0
+ 1138 0278 000093E5 		ldr	r0, [r3, #0]
+ 1139              		.loc 2 327 0
+ 1140 027c 2710DDE5 		ldrb	r1, [sp, #39]	@ zero_extendqisi2
+ 1141 0280 0230D0E7 		ldrb	r3, [r0, r2]	@ zero_extendqisi2
+ 1142 0284 2620DDE5 		ldrb	r2, [sp, #38]	@ zero_extendqisi2
+ 1143 0288 013003E0 		and	r3, r3, r1
+ 1144 028c 032082E1 		orr	r2, r2, r3
+ 1145 0290 20309DE5 		ldr	r3, [sp, #32]
+ 1146 0294 0320C0E7 		strb	r2, [r0, r3]
+ 1147              		.loc 2 277 0
+ 1148 0298 088088E2 		add	r8, r8, #8
+ 1149              	.LVL95:
+ 1150              	.L126:
+ 1151 029c 14C09DE5 		ldr	ip, [sp, #20]
+ 1152 02a0 0C0058E1 		cmp	r8, ip
+ 1153 02a4 4F0000DA 		ble	.L127
+ 1154              	.LVL96:
+ 1155              		.loc 2 274 0
+ 1156 02a8 019089E2 		add	r9, r9, #1
+ 1157              	.LVL97:
+ 1158              	.L124:
+ 1159              		.loc 2 272 0
+ 1160 02ac D030D6E1 		ldrsb	r3, [r6, #0]
+ 1161 02b0 030059E1 		cmp	r9, r3
+ 1162 02b4 B30000AA 		bge	.L140
+ 1163              	.LVL98:
+ 1164 02b8 98309FE5 		ldr	r3, .L148
+ 1165 02bc 003093E5 		ldr	r3, [r3, #0]
+ 1166 02c0 B832D3E1 		ldrh	r3, [r3, #40]
+ 1167 02c4 10109DE5 		ldr	r1, [sp, #16]
+ 1168              	.LVL99:
+ 1169 02c8 033089E0 		add	r3, r9, r3
+ 1170 02cc 010053E1 		cmp	r3, r1
+ 1171 02d0 4C0000DA 		ble	.L125
+ 1172              	.LVL100:
+ 1173              	.L140:
+ 328:fb/fb_bw8.c   **** 			} // for(y...)
+ 329:fb/fb_bw8.c   **** 		} // for(char_x...)
+ 330:fb/fb_bw8.c   **** 		framebuffer->cursor_x += char_x;
+ 1174              		.loc 2 330 0
+ 1175 02d4 7C309FE5 		ldr	r3, .L148
+ 1176 02d8 002093E5 		ldr	r2, [r3, #0]
+ 1177 02dc B832D2E1 		ldrh	r3, [r2, #40]
+ 1178 02e0 093083E0 		add	r3, r3, r9
+ 1179 02e4 B832C2E1 		strh	r3, [r2, #40]	@ movhi
+ 1180              		.loc 2 263 0
+ 1181 02e8 00209DE5 		ldr	r2, [sp, #0]
+ 1182 02ec 012082E2 		add	r2, r2, #1
+ 1183 02f0 00208DE5 		str	r2, [sp, #0]
+ 1184              	.L147:
+ 1185 02f4 00309DE5 		ldr	r3, [sp, #0]
+ 1186 02f8 0010D3E5 		ldrb	r1, [r3, #0]	@ zero_extendqisi2
+ 1187 02fc 000051E3 		cmp	r1, #0
+ 1188 0300 C500000A 		beq	.L142
+ 1189 0304 4C309FE5 		ldr	r3, .L148
+ 1190 0308 003093E5 		ldr	r3, [r3, #0]
+ 1191 030c 10C09DE5 		ldr	ip, [sp, #16]
+ 1192 0310 B832D3E1 		ldrh	r3, [r3, #40]
+ 1193 0314 0C0053E1 		cmp	r3, ip
+ 1194 0318 3D0000DA 		ble	.L121
+ 1195              	.L142:
+ 331:fb/fb_bw8.c   **** 	} // str
+ 332:fb/fb_bw8.c   **** 
+ 333:fb/fb_bw8.c   **** 	x2 = framebuffer->cursor_x;
+ 1196              		.loc 2 333 0
+ 1197 031c 34309FE5 		ldr	r3, .L148
+ 1198 0320 003093E5 		ldr	r3, [r3, #0]
+ 334:fb/fb_bw8.c   **** 	fb_bw8_update_damage(x1,y1,x2,y2);
+ 1199              		.loc 2 334 0
+ 1200 0324 14209DE5 		ldr	r2, [sp, #20]
+ 1201              		.loc 2 333 0
+ 1202 0328 B842D3E1 		ldrh	r4, [r3, #40]
+ 1203              	.LVL101:
+ 1204              		.loc 2 334 0
+ 1205 032c 0B18A0E1 		mov	r1, fp, asl #16
+ 1206 0330 0238A0E1 		mov	r3, r2, asl #16
+ 1207 0334 0C009DE5 		ldr	r0, [sp, #12]
+ 1208 0338 2118A0E1 		mov	r1, r1, lsr #16
+ 1209 033c 2338A0E1 		mov	r3, r3, lsr #16
+ 1210 0340 0420A0E1 		mov	r2, r4
+ 1211 0344 FEFFFFEB 		bl	fb_bw8_update_damage
+ 335:fb/fb_bw8.c   **** 	return x2-x1;
+ 336:fb/fb_bw8.c   **** }
+ 1212              		.loc 2 336 0
+ 1213 0348 0C309DE5 		ldr	r3, [sp, #12]
+ 1214 034c 040063E0 		rsb	r0, r3, r4
+ 1215 0350 28D08DE2 		add	sp, sp, #40
+ 1216 0354 F08FBDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
+ 1217              	.L149:
+ 1218              		.align	2
+ 1219              	.L148:
+ 1220 0358 00000000 		.word	framebuffer
+ 1221 035c 00000000 		.word	fb_fonts
+ 1222 0360 F8FF0000 		.word	65528
+ 1223 0364 00000000 		.word	fb_bw8
+ 1224              	.LFE26:
+ 1226              		.section	.text.fb_bw8_putchar,"ax",%progbits
+ 1227              		.align	2
+ 1228              		.global	fb_bw8_putchar
+ 1230              	fb_bw8_putchar:
+ 1231              	.LFB27:
+ 337:fb/fb_bw8.c   **** 
+ 338:fb/fb_bw8.c   **** int
+ 339:fb/fb_bw8.c   **** fb_bw8_putchar(char c,int maxwidth){
+ 1232              		.loc 2 339 0
+ 1233              		@ args = 0, pretend = 0, frame = 4
+ 1234              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1235              	.LVL102:
+ 1236 0000 04E02DE5 		str	lr, [sp, #-4]!
+ 1237              	.LCFI13:
+ 1238 0004 04D04DE2 		sub	sp, sp, #4
+ 1239              	.LCFI14:
+ 1240              	.LVL103:
+ 1241              		.loc 2 339 0
+ 1242 0008 FF3000E2 		and	r3, r0, #255
+ 340:fb/fb_bw8.c   **** 	char tmp[2];
+ 341:fb/fb_bw8.c   **** 	tmp[0]=c;
+ 342:fb/fb_bw8.c   **** 	tmp[1]=c;
+ 343:fb/fb_bw8.c   **** 	return fb_bw8_putstr(tmp,maxwidth);
+ 1243              		.loc 2 343 0
+ 1244 000c 02008DE2 		add	r0, sp, #2
+ 1245              	.LVL104:
+ 1246              		.loc 2 342 0
+ 1247 0010 0330CDE5 		strb	r3, [sp, #3]
+ 1248              		.loc 2 341 0
+ 1249 0014 0230CDE5 		strb	r3, [sp, #2]
+ 1250              		.loc 2 343 0
+ 1251 0018 FEFFFFEB 		bl	fb_bw8_putstr
+ 1252              	.LVL105:
+ 344:fb/fb_bw8.c   **** }
+ 1253              		.loc 2 344 0
+ 1254 001c 04D08DE2 		add	sp, sp, #4
+ 1255 0020 0080BDE8 		ldmfd	sp!, {pc}
+ 1256              	.LFE27:
+ 1515              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 fb_bw8.c
+     /tmp/ccZChZTT.s:13     .text.fb_limit_fb_range:0000000000000000 fb_limit_fb_range
+     /tmp/ccZChZTT.s:22     .text.fb_limit_fb_range:0000000000000000 $a
+     /tmp/ccZChZTT.s:48     .text.fb_limit_fb_range:0000000000000034 $d
+     /tmp/ccZChZTT.s:54     .text.fb_sanitize_box:0000000000000000 fb_sanitize_box
+     /tmp/ccZChZTT.s:60     .text.fb_sanitize_box:0000000000000000 $a
+     /tmp/ccZChZTT.s:101    .text.fb_bw8_clear:0000000000000000 fb_bw8_clear
+     /tmp/ccZChZTT.s:110    .text.fb_bw8_clear:0000000000000000 $a
+     /tmp/ccZChZTT.s:161    .text.fb_bw8_clear:0000000000000078 $d
+     /tmp/ccZChZTT.s:168    .text.fb_bw8_update_damage:0000000000000000 fb_bw8_update_damage
+     /tmp/ccZChZTT.s:174    .text.fb_bw8_update_damage:0000000000000000 $a
+     /tmp/ccZChZTT.s:265    .text.fb_bw8_update_damage:00000000000000d4 $d
+     /tmp/ccZChZTT.s:271    .text.set_pixel:0000000000000000 set_pixel
+     /tmp/ccZChZTT.s:277    .text.set_pixel:0000000000000000 $a
+     /tmp/ccZChZTT.s:315    .text.set_fg_pixel:0000000000000000 set_fg_pixel
+     /tmp/ccZChZTT.s:323    .text.set_fg_pixel:0000000000000000 $a
+     /tmp/ccZChZTT.s:335    .text.set_fg_pixel:0000000000000010 $d
+     /tmp/ccZChZTT.s:341    .text.set_bg_pixel:0000000000000000 set_bg_pixel
+     /tmp/ccZChZTT.s:349    .text.set_bg_pixel:0000000000000000 $a
+     /tmp/ccZChZTT.s:361    .text.set_bg_pixel:0000000000000010 $d
+     /tmp/ccZChZTT.s:368    .text.fb_bw8_boxto:0000000000000000 fb_bw8_boxto
+     /tmp/ccZChZTT.s:374    .text.fb_bw8_boxto:0000000000000000 $a
+     /tmp/ccZChZTT.s:562    .text.fb_bw8_boxto:00000000000001b0 $d
+     /tmp/ccZChZTT.s:571    .text.fb_bw8_set_pixel:0000000000000000 fb_bw8_set_pixel
+     /tmp/ccZChZTT.s:577    .text.fb_bw8_set_pixel:0000000000000000 $a
+     /tmp/ccZChZTT.s:634    .text.fb_bw8_set_pixel:0000000000000078 $d
+     /tmp/ccZChZTT.s:642    .text.fb_bw8_set_p:0000000000000000 fb_bw8_set_p
+     /tmp/ccZChZTT.s:648    .text.fb_bw8_set_p:0000000000000000 $a
+     /tmp/ccZChZTT.s:678    .text.fb_bw8_lineto:0000000000000000 fb_bw8_lineto
+     /tmp/ccZChZTT.s:684    .text.fb_bw8_lineto:0000000000000000 $a
+     /tmp/ccZChZTT.s:841    .text.fb_bw8_lineto:0000000000000158 $d
+     /tmp/ccZChZTT.s:849    .text.fb_bw8_putstr:0000000000000000 fb_bw8_putstr
+     /tmp/ccZChZTT.s:855    .text.fb_bw8_putstr:0000000000000000 $a
+     /tmp/ccZChZTT.s:1220   .text.fb_bw8_putstr:0000000000000358 $d
+     /tmp/ccZChZTT.s:1230   .text.fb_bw8_putchar:0000000000000000 fb_bw8_putchar
+     /tmp/ccZChZTT.s:1236   .text.fb_bw8_putchar:0000000000000000 $a
+
+UNDEFINED SYMBOLS
+framebuffer
+fb_bw8
+fb_font_get_char
+fb_fonts

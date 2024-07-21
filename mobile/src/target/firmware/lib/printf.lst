@@ -1,0 +1,88 @@
+   1              		.file	"printf.c"
+   9              	.Ltext0:
+  10              		.section	.text.printf,"ax",%progbits
+  11              		.align	2
+  12              		.global	printf
+  14              	printf:
+  15              	.LFB2:
+  16              		.file 1 "lib/printf.c"
+   1:lib/printf.c  **** 
+   2:lib/printf.c  **** #include <stdio.h>
+   3:lib/printf.c  **** #include <stdarg.h>
+   4:lib/printf.c  **** 
+   5:lib/printf.c  **** static char printf_buffer[1024];
+   6:lib/printf.c  **** 
+   7:lib/printf.c  **** int printf(const char *fmt, ...)
+   8:lib/printf.c  **** {
+  17              		.loc 1 8 0
+  18              		@ args = 4, pretend = 16, frame = 4
+  19              		@ frame_needed = 0, uses_anonymous_args = 1
+  20              	.LVL0:
+  21 0000 0F002DE9 		stmfd	sp!, {r0, r1, r2, r3}
+  22              	.LCFI0:
+  23 0004 30402DE9 		stmfd	sp!, {r4, r5, lr}
+  24              	.LCFI1:
+   9:lib/printf.c  **** 	va_list args;
+  10:lib/printf.c  **** 	int r;
+  11:lib/printf.c  **** 
+  12:lib/printf.c  **** 	va_start(args, fmt);
+  13:lib/printf.c  **** 	r = vsnprintf(printf_buffer, sizeof(printf_buffer), fmt, args);
+  25              		.loc 1 13 0
+  26 0008 3C509FE5 		ldr	r5, .L3
+  27              		.loc 1 8 0
+  28 000c 04D04DE2 		sub	sp, sp, #4
+  29              	.LCFI2:
+  30              	.LVL1:
+  31              		.loc 1 12 0
+  32 0010 14C08DE2 		add	ip, sp, #20
+  33              		.loc 1 13 0
+  34 0014 0C30A0E1 		mov	r3, ip
+  35              	.LVL2:
+  36 0018 011BA0E3 		mov	r1, #1024
+  37 001c 10209DE5 		ldr	r2, [sp, #16]
+  38 0020 0500A0E1 		mov	r0, r5
+  39              		.loc 1 12 0
+  40 0024 00C08DE5 		str	ip, [sp, #0]
+  41              		.loc 1 13 0
+  42 0028 FEFFFFEB 		bl	vsnprintf
+  43              	.LVL3:
+  44 002c 0040A0E1 		mov	r4, r0
+  45              	.LVL4:
+  14:lib/printf.c  **** 	va_end(args);
+  15:lib/printf.c  **** 
+  16:lib/printf.c  **** 	puts(printf_buffer);
+  46              		.loc 1 16 0
+  47 0030 0500A0E1 		mov	r0, r5
+  48 0034 FEFFFFEB 		bl	puts
+  17:lib/printf.c  **** 
+  18:lib/printf.c  **** 	return r;
+  19:lib/printf.c  **** }
+  49              		.loc 1 19 0
+  50 0038 0400A0E1 		mov	r0, r4
+  51 003c 04D08DE2 		add	sp, sp, #4
+  52 0040 3040BDE8 		ldmfd	sp!, {r4, r5, lr}
+  53 0044 10D08DE2 		add	sp, sp, #16
+  54 0048 1EFF2FE1 		bx	lr
+  55              	.L4:
+  56              		.align	2
+  57              	.L3:
+  58 004c 00000000 		.word	printf_buffer
+  59              	.LFE2:
+  61              		.bss
+  62              	printf_buffer:
+  63 0000 00000000 		.space	1024
+  63      00000000 
+  63      00000000 
+  63      00000000 
+  63      00000000 
+ 115              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 printf.c
+     /tmp/ccauReUl.s:14     .text.printf:0000000000000000 printf
+     /tmp/ccauReUl.s:21     .text.printf:0000000000000000 $a
+     /tmp/ccauReUl.s:58     .text.printf:000000000000004c $d
+     /tmp/ccauReUl.s:62     .bss:0000000000000000 printf_buffer
+
+UNDEFINED SYMBOLS
+vsnprintf
+puts

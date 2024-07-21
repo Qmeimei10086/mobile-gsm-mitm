@@ -1,0 +1,38 @@
+   1              	# 1 "board/compal/exceptions_redirected.S"
+   2              	# 1 "<built-in>"
+   1              	
+   0              	
+   0              	
+   2              	/* Exception Vectors like they are needed for the exception vector
+   3              	   indirection of the internal boot ROM.  The following section must be liked
+   4              	   to appear at 0x80001c */
+   5              	.section .text.exceptions
+   6              	_undef_instr:
+   7 0000 FEFFFFEA 		b	handle_abort
+   8              	_sw_interr:
+   9 0004 FFFFFFEA 		b	_sw_interr
+  10              	_prefetch_abort:
+  11 0008 FEFFFFEA 		b	handle_abort
+  12              	_data_abort:
+  13 000c FEFFFFEA 		b	handle_abort
+  14              	_reserved:
+  15 0010 020000EA 		b	_reserved
+  16              	_irq:
+  17 0014 FEFFFFEA 		b	irq_entry
+  18              	_fiq:
+  19 0018 FEFFFFEA 		b	fiq_entry
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 board/compal/exceptions_redirected.S
+board/compal/exceptions_redirected.S:6      .text.exceptions:0000000000000000 _undef_instr
+board/compal/exceptions_redirected.S:7      .text.exceptions:0000000000000000 $a
+board/compal/exceptions_redirected.S:8      .text.exceptions:0000000000000004 _sw_interr
+board/compal/exceptions_redirected.S:10     .text.exceptions:0000000000000008 _prefetch_abort
+board/compal/exceptions_redirected.S:12     .text.exceptions:000000000000000c _data_abort
+board/compal/exceptions_redirected.S:14     .text.exceptions:0000000000000010 _reserved
+board/compal/exceptions_redirected.S:16     .text.exceptions:0000000000000014 _irq
+board/compal/exceptions_redirected.S:18     .text.exceptions:0000000000000018 _fiq
+
+UNDEFINED SYMBOLS
+handle_abort
+irq_entry
+fiq_entry

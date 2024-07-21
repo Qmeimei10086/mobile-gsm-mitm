@@ -1,0 +1,48 @@
+   1              	# 1 "board/compal/exceptions_redirect.S"
+   2              	# 1 "<built-in>"
+   1              	
+   0              	
+   0              	
+   2              	.section .text.exceptions
+   3              	_undef_instr:
+   4 0000 14F09FE5 		ldr pc, _vec_undef_instr
+   5              	_sw_interr:
+   6 0004 14F09FE5 		ldr pc, _vec_sw_interr
+   7              	_prefetch_abort:
+   8 0008 14F09FE5 		ldr pc, _vec_prefetch_abort
+   9              	_data_abort:
+  10 000c 14F09FE5 		ldr pc, _vec_data_abort
+  11              	_reserved:
+  12 0010 14F09FE5 		ldr pc, _vec_reserved
+  13              	_irq:
+  14 0014 14F09FE5 		ldr pc, _vec_irq
+  15              	_fiq:
+  16 0018 14F09FE5 		ldr pc, _vec_fiq
+  17              	
+  18 001c 1C008000 	_vec_undef_instr:		.word(0x80001c)
+  19 0020 20008000 	_vec_sw_interr:			.word(0x800020)
+  20 0024 24008000 	_vec_prefetch_abort:	.word(0x800024)
+  21 0028 28008000 	_vec_data_abort:		.word(0x800028)
+  22 002c 2C008000 	_vec_reserved:			.word(0x80002c)
+  23 0030 30008000 	_vec_irq:				.word(0x800030)
+  24 0034 34008000 	_vec_fiq:				.word(0x800034)
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 board/compal/exceptions_redirect.S
+board/compal/exceptions_redirect.S:3      .text.exceptions:0000000000000000 _undef_instr
+board/compal/exceptions_redirect.S:4      .text.exceptions:0000000000000000 $a
+board/compal/exceptions_redirect.S:18     .text.exceptions:000000000000001c _vec_undef_instr
+board/compal/exceptions_redirect.S:5      .text.exceptions:0000000000000004 _sw_interr
+board/compal/exceptions_redirect.S:19     .text.exceptions:0000000000000020 _vec_sw_interr
+board/compal/exceptions_redirect.S:7      .text.exceptions:0000000000000008 _prefetch_abort
+board/compal/exceptions_redirect.S:20     .text.exceptions:0000000000000024 _vec_prefetch_abort
+board/compal/exceptions_redirect.S:9      .text.exceptions:000000000000000c _data_abort
+board/compal/exceptions_redirect.S:21     .text.exceptions:0000000000000028 _vec_data_abort
+board/compal/exceptions_redirect.S:11     .text.exceptions:0000000000000010 _reserved
+board/compal/exceptions_redirect.S:22     .text.exceptions:000000000000002c _vec_reserved
+board/compal/exceptions_redirect.S:13     .text.exceptions:0000000000000014 _irq
+board/compal/exceptions_redirect.S:23     .text.exceptions:0000000000000030 _vec_irq
+board/compal/exceptions_redirect.S:15     .text.exceptions:0000000000000018 _fiq
+board/compal/exceptions_redirect.S:24     .text.exceptions:0000000000000034 _vec_fiq
+board/compal/exceptions_redirect.S:18     .text.exceptions:000000000000001c $d
+
+NO UNDEFINED SYMBOLS

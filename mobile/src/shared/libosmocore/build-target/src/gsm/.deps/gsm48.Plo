@@ -1,0 +1,117 @@
+gsm48.lo gsm48.o: ../../../src/gsm/gsm48.c \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdio.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/_ansi.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/newlib.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/config.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/ieeefp.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/_types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/limits.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/syslimits.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/limits.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/_types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/lock.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stddef.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/types.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/features.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stdarg.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/comm/sercomm_cons.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/string.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/arpa/inet.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/byteorder.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/swab.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/defines.h \
+  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/asm/swab.h \
+  ../../../include/osmocom/core/utils.h \
+  ../../../include/osmocom/gsm/tlv.h ../../../include/osmocom/core/msgb.h \
+  ../../../include/osmocom/core/linuxlist.h \
+  ../../../include/osmocom/core/panic.h \
+  ../../../include/osmocom/gsm/gsm48.h \
+  ../../../include/osmocom/gsm/protocol/gsm_04_08.h \
+  ../../../include/osmocom/gsm/gsm48_ie.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/errno.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/errno.h \
+  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/reent.h \
+  ../../../include/osmocom/gsm/mncc.h \
+  ../../../include/osmocom/gsm/gsm0502.h \
+  ../../../include/osmocom/gsm/protocol/gsm_08_58.h
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdio.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/_ansi.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/newlib.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/config.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/ieeefp.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/_types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/limits.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/syslimits.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/limits.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/_types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/lock.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stddef.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/machine/types.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/features.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/include/stdarg.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/comm/sercomm_cons.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/string.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/arpa/inet.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/byteorder.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/swab.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/defines.h:
+
+/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/asm/swab.h:
+
+../../../include/osmocom/core/utils.h:
+
+../../../include/osmocom/gsm/tlv.h:
+
+../../../include/osmocom/core/msgb.h:
+
+../../../include/osmocom/core/linuxlist.h:
+
+../../../include/osmocom/core/panic.h:
+
+../../../include/osmocom/gsm/gsm48.h:
+
+../../../include/osmocom/gsm/protocol/gsm_04_08.h:
+
+../../../include/osmocom/gsm/gsm48_ie.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/errno.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/errno.h:
+
+/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/sys/reent.h:
+
+../../../include/osmocom/gsm/mncc.h:
+
+../../../include/osmocom/gsm/gsm0502.h:
+
+../../../include/osmocom/gsm/protocol/gsm_08_58.h:
