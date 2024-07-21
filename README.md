@@ -5,6 +5,7 @@
 此程序为gsm中间人攻击的mobile程序，对osmocombb的mobile程序就行修改，使其可以将鉴权时的rand发送至服务端并获取相对应的sres，已经完全符合gsm中间人攻击的需求 
 # 编译
 环境：Ubuntu16.04 
+参考：https://blog.csdn.net/gibbs_/article/details/119213685（目前国内最详细的过程）
 ## 1.安装编译osmocombb的环境
 ```javascript
 apt-get install build-essential libgmp3-dev libmpfr-dev libx11-6 libx11-dev texinfo flex bison libncurses5 libncurses5-dbg libncurses5-dev libncursesw5 libncursesw5-dbg libncursesw5-dev zlibc zlib1g-dev libmpfr4 libmpc-dev   subversion  git  autoconf  vim 
@@ -69,6 +70,7 @@ cd osmocom-bb/src
 ```javascript
 make osmocon 
 make firmware
+cd .. 
 ```
 ## 6.编译mobile程序
 ```javascript
@@ -78,6 +80,49 @@ cd mobile/src
 我们只需要编译mobile以及一些layer23的程序
 ```javascript
 make layer23 
+cd .. 
 ```
-# 像我自己修改的openbts一样，我依然提供了编译过的程序以及所需的动态链接库文件(.so)，不过可能有缺
+## 像我自己修改的openbts一样，我依然提供了编译过的程序以及所需的动态链接库文件(.so)，不过可能有缺
+# 使用
+## 刷写layer1固件
+```javascript
+cd osmocom-bb/src/host/osmocon
+./osmocon -m c123xor -p /dev/ttyU SB0 -c ../../target/firmware/board/compal_e88/layer1.highram.bin 
+```
+此时短按按c118的开机键即可刷入 
+## 启动server程序
+```javascript
+python3 server.py 
+```
+使用参考我的openbts程序：https://github.com/Qmeimei10086/Openbts-gsm-mitm 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
