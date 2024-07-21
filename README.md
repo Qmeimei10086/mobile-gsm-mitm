@@ -5,7 +5,8 @@
 此程序为gsm中间人攻击的mobile程序，对osmocombb的mobile程序就行修改，使其可以将鉴权时的rand发送至服务端并获取相对应的sres，已经完全符合gsm中间人攻击的需求 
 # 编译
 环境：Ubuntu16.04 
-参考：https://blog.csdn.net/gibbs_/article/details/119213685（目前国内最详细的过程）
+参考：https://blog.csdn.net/gibbs_/article/details/119213685 
+（目前国内最详细的过程）
 ## 1.安装编译osmocombb的环境
 ```javascript
 apt-get install build-essential libgmp3-dev libmpfr-dev libx11-6 libx11-dev texinfo flex bison libncurses5 libncurses5-dbg libncurses5-dev libncursesw5 libncursesw5-dbg libncursesw5-dev zlibc zlib1g-dev libmpfr4 libmpc-dev   subversion  git  autoconf  vim 
