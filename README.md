@@ -6,7 +6,7 @@
 # 编译
 环境：Ubuntu16.04 
 参考：https://blog.csdn.net/gibbs_/article/details/119213685 
-（目前国内最详细的过程）
+（目前我见到国内最详细的过程，符合中国宝宝体质）
 ## 1.安装编译osmocombb的环境
 ```javascript
 apt-get install build-essential libgmp3-dev libmpfr-dev libx11-6 libx11-dev texinfo flex bison libncurses5 libncurses5-dbg libncurses5-dev libncursesw5 libncursesw5-dbg libncursesw5-dev zlibc zlib1g-dev libmpfr4 libmpc-dev   subversion  git  autoconf  vim 
@@ -83,7 +83,7 @@ cd mobile/src
 make layer23 
 cd .. 
 ```
-## 像我自己修改的openbts一样，我依然提供了编译过的程序以及所需的动态链接库文件(.so)，不过可能有缺
+## 像我自己修改的openbts一样，我依然提供了编译过的程序以及所需的动态链接库文件(.so)，在/bin目录下，不过可能有缺
 # 使用
 ## 刷写layer1固件
 ```javascript
@@ -96,6 +96,16 @@ cd osmocom-bb/src/host/osmocon
 python3 server.py 
 ```
 使用参考我的openbts程序：https://github.com/Qmeimei10086/Openbts-gsm-mitm 
+## 启动mobile程序
+在开一个终端
+```javascript
+cd mobile/src/host/layer23/src/mobile 
+./mobile -c default.cfg
+```
+即可搜索附近基站并附着
+### 如果你使用已编译过的程序，过程差不多不过路径可能要改一改
+
+# 关于作者
 
 
 
