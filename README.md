@@ -24,5 +24,7 @@ apt-get install libunbound-dev libusb-dev libmnl-dev libsctp-dev python3 libgnut
 ```
 ## 2.编译libosmocore
 ```javascript
-
+cd libosmocore 
+atoreconf -i 
+./configure
 ```
