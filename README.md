@@ -5,4 +5,7 @@
 此程序为gsm中间人攻击的mobile程序，对osmocombb的mobile程序就行修改，使其可以将鉴权时的rand发送至服务端并获取相对应的sres，已经完全符合gsm中间人攻击的需求 
 # 编译
 环境：Ubuntu16.04 
-
+## 编译libosmocore
+```javascript
+aaa
+```
