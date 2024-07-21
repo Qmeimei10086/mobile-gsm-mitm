@@ -106,7 +106,8 @@ cd mobile/src/host/layer23/src/mobile
 ### 如果你使用已编译过的程序，过程差不多不过路径可能要改一改
 
 # 关于作者
-
+bilibili：https://space.bilibili.com/431312664?spm_id_from=333.1007.0.0
+有问题来这里找我，本人已高三，可能不能及时回
 
 
 
