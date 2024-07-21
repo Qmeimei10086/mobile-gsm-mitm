@@ -40,6 +40,12 @@ ldconfig -i
 ```
 ## 编译libosmo-dsp
 ```javascript
-git clone https://gitea.osmoxom.org/libosmo-dsp
+git clone https://gitea.osmoxom.org/libosmo-dsp 
+cd libosmo-dsp 
+atoreconf -i 
+./configure 
+make 
+make install 
+ldconfig -i  
 
 ```
