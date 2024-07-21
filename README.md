@@ -39,7 +39,7 @@ make install
 ldconfig -i 
 cd ..
 ```
-## 编译libosmo-dsp
+## 3.编译libosmo-dsp
 ```javascript
 git clone https://gitea.osmoxom.org/libosmo-dsp 
 cd libosmo-dsp 
@@ -51,7 +51,7 @@ ldconfig -i
 cd ..
 
 ```
-## 配置gnuarm交叉编译环境
+## 4.配置gnuarm交叉编译环境
 ```javascript
 tar xvf bu-2.16.1_gcc-4.0.2-c-c++_nl-1.14.0_gi-6.4_x86-64.tar.bz2 
 mv gnuarm-* ~/gnuarm 
@@ -59,7 +59,7 @@ export PATH=~/gnuarm/bin:$PATH
 ```
 ###注意：这个gnuarm的编译环境是暂时的，以后每一次编译osmocombb程序都需要再一次实行export PATH=~/gnuarm/bin:$PATH这条命令将gnuarm环境加入环境变量 
 
-## 编译刷写程序以及固件
+## 5.编译刷写程序以及固件
 ```javascript
 unzip osmocom-bb.zip 
 cd osmocom-bb/src 
@@ -70,7 +70,7 @@ cd osmocom-bb/src
 make osmocon 
 make firmware
 ```
-## 编译mobile程序
+## 6.编译mobile程序
 ```javascript
 unzio mobile.zip
 cd mobile/src
@@ -79,5 +79,5 @@ cd mobile/src
 ```javascript
 make layer23 
 ```
-
+# 像我自己修改的openbts一样，我依然提供了编译过的程序以及所需的动态链接库文件(.so)，不过可能有缺
 
