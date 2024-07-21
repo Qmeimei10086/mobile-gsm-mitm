@@ -1,4 +1,7 @@
 # 本程序仅供测试学习，请勿用于非法
+# 指路
+中间人攻击的基站部分： 
+https://github.com/Qmeimei10086/Openbts-gsm-mitm 
 # FIXME
 处于奇怪的原因我无法完整的上传修改过osmocom-bb文件，只能上传压缩包 
 # 简介
@@ -85,19 +88,20 @@ cd ..
 ```
 ## 像我自己修改的openbts一样，我依然提供了编译过的程序以及所需的动态链接库文件(.so)，在/bin目录下，不过可能有缺
 # 使用
-## 刷写layer1固件
+## 1.刷写layer1固件
 ```javascript
 cd osmocom-bb/src/host/osmocon
 ./osmocon -m c123xor -p /dev/ttyU SB0 -c ../../target/firmware/board/compal_e88/layer1.highram.bin 
 ```
 此时短按按c118的开机键即可刷入 
-## 启动server程序
+## 2.启动server程序
+再开一个终端
 ```javascript
 python3 server.py 
 ```
 使用参考我的openbts程序：https://github.com/Qmeimei10086/Openbts-gsm-mitm 
-## 启动mobile程序
-在开一个终端
+## 3.启动mobile程序
+再开一个终端
 ```javascript
 cd mobile/src/host/layer23/src/mobile 
 ./mobile -c default.cfg
@@ -108,6 +112,24 @@ cd mobile/src/host/layer23/src/mobile
 # 关于作者
 bilibili：https://space.bilibili.com/431312664?spm_id_from=333.1007.0.0
 有问题来这里找我，本人已高三，可能不能及时回
+
+# 参考
+参考论文：张浩 基于USRP的无线移动通信网络隐蔽定点攻击研究 西安电子科技大学 June 2018  
+https://www.doc88.com/p-6314772688570.html?_refluxos=a10  
+
+参考报道：如何利用LTE4G伪基站GSM中间人攻击攻破所有短信验证，纯干货！|硬创公开课  
+https://mr.baidu.com/r/1mu2ZKDWZc4?f=cp&u=eaecb9839550917e  
+
+参考视频：GSM中间人攻击演示 科技张工  
+https://b23.tv/oMYL3BO  
+
+# Finally
+本程序仅供学习，请勿用于非法 
+这这只是个测试程序，还不是完整的gsm中间人攻击mobile部分的全部
+这也算圆了我初一时的梦想，我从初一时接触osmocombb项目，到现在一步一步的写出中间人攻击的程序，感谢所有互联网上公开教程的那些大佬与osmocom开源社区，正是因为你们无私的互联网精神帮助着我一步一步的探索着 
+虽然我知道这个程序可能被用于违法，但我依然公开了代码与教程，这正是我对互联网精神的诠释，希望能补充gsm中间人攻击这一领域的空白 
+第一次写教程，若有错误，多多指教 
+
 
 
 
