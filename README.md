@@ -24,12 +24,11 @@ apt-get install libunbound-dev libusb-dev libmnl-dev libsctp-dev python3 libgnut
 ```
 ## 2.编译libosmocore
 ```javascript
-cd libosmocore 
+cd libosmocore-1.8.0
 atoreconf -i 
 ./configure
 ```
 ### 注意，因为下载的libosmocore默认版本是unknown所以我们需要修改版本防止接下来报错 
 ```javascript
-
-vim MakeFile
+vim Makefile
 ```
