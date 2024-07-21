@@ -32,3 +32,11 @@ atoreconf -i
 ```javascript
 vim Makefile
 ```
+搜索"UNKNOWN"并所有的替换为1.8.0
+```javascript
+make 
+make install 
+ldconfig -i 
+```
+## 编译libosmo-dsp
+
