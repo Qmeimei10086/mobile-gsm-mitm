@@ -28,3 +28,5 @@ cd libosmocore
 atoreconf -i 
 ./configure
 ```
+###注意，因为下载的libosmocore默认版本是unknown所以我们需要修改版本防止接下来报错 
+
