@@ -37,6 +37,7 @@ vim Makefile
 make 
 make install 
 ldconfig -i 
+cd ..
 ```
 ## 编译libosmo-dsp
 ```javascript
@@ -46,6 +47,37 @@ atoreconf -i
 ./configure 
 make 
 make install 
-ldconfig -i  
+ldconfig -i 
+cd ..
 
 ```
+## 配置gnuarm交叉编译环境
+```javascript
+tar xvf bu-2.16.1_gcc-4.0.2-c-c++_nl-1.14.0_gi-6.4_x86-64.tar.bz2 
+mv gnuarm-* ~/gnuarm 
+export PATH=~/gnuarm/bin:$PATH 
+```
+###注意：这个gnuarm的编译环境是暂时的，以后每一次编译osmocombb程序都需要再一次实行export PATH=~/gnuarm/bin:$PATH这条命令将gnuarm环境加入环境变量 
+
+## 编译刷写程序以及固件
+```javascript
+unzip osmocom-bb.zip 
+cd osmocom-bb/src 
+```
+我们只需要编译刷写程序和固件
+
+```javascript
+make osmocon 
+make firmware
+```
+## 编译mobile程序
+```javascript
+unzio mobile.zip
+cd mobile/src
+```
+我们只需要编译mobile以及一些layer23的程序
+```javascript
+make layer23 
+```
+
+
