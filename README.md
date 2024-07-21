@@ -28,7 +28,7 @@ cd libosmocore-1.8.0
 atoreconf -i 
 ./configure
 ```
-### 注意，因为下载的libosmocore默认版本是unknown所以我们需要修改版本防止接下来报错 
+### 注意，因为下载的libosmocore默认版本是unknown所以我们需要修改版本防止接下来报错，修改完之后 
 ```javascript
 vim Makefile
 ```
@@ -39,4 +39,7 @@ make install
 ldconfig -i 
 ```
 ## 编译libosmo-dsp
+```javascript
+git clone https://gitea.osmoxom.org/libosmo-dsp
 
+```
