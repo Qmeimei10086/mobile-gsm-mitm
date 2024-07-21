@@ -1,7 +1,0 @@
-gsm610.lo gsm610.o: ../../../src/codec/gsm610.c \
-  /home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h \
-  /root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h
-
-/home/ubuntu/osmocom/osmocom-bb/src/target/firmware/include/stdint.h:
-
-/root/gnuarm/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/sys-include/stdint.h:
