@@ -1,0 +1,89 @@
+OsmoNSdummy> list
+...
+  show ns binds [stats]
+  show ns entities [stats]
+  show ns persistent
+  show ns (nsei|nsvc) <0-65535> [stats]
+...
+  logging filter nse nsei <0-65535>
+  logging filter nsvc nsvci <0-65535>
+...
+OsmoNSdummy> enable
+OsmoNSdummy# configure terminal
+OsmoNSdummy(config)# list
+...
+  ns
+...
+OsmoNSdummy(config)# ns
+OsmoNSdummy(config-ns)# list
+...
+  timer (tns-block|tns-block-retries|tns-reset|tns-reset-retries|tns-test|tns-alive|tns-alive-retries|tsns-prov|tsns-size-retries|tsns-config-retries|tsns-procedures-retries) <0-65535>
+  nse <0-65535> [ip-sns-role-sgsn]
+  no nse <0-65535>
+  bind (fr|udp) ID
+  no bind ID
+...
+OsmoNSdummy(config-ns)# bind udp abc
+OsmoNSdummy(config-ns-bind)# fr eta0 frnet
+fr can be only used with frame relay bind
+OsmoNSdummy(config-ns-bind)# listen 127.0.0.14 42999
+OsmoNSdummy(config-ns-bind)# end
+OsmoNSdummy# show ns
+UDP bind: 127.0.0.14:42999 DSCP: 0 Priority: 0
+  IP-SNS signalling weight: 1 data weight: 1
+  0 NS-VC:
+OsmoNSdummy# configure terminal
+OsmoNSdummy(config)# ns
+OsmoNSdummy(config-ns)# nse 1234
+OsmoNSdummy(config-ns-nse)# nsvc udp abc 127.0.0.15 9496
+OsmoNSdummy(config-ns-nse)# end
+OsmoNSdummy# show ns
+NSEI 01234: UDP, DEAD since 0d 0h 0m 0s
+  1 NS-VC:
+   RECOVERING PERSIST sig_weight=1 data_weight=1 udp)[127.0.0.14]:42999<>[127.0.0.15]:9496 DEAD (cause: remote) since 0d 0h 0m 0s
+UDP bind: 127.0.0.14:42999 DSCP: 0 Priority: 0
+  IP-SNS signalling weight: 1 data weight: 1
+  1 NS-VC:
+   RECOVERING PERSIST sig_weight=1 data_weight=1 udp)[127.0.0.14]:42999<>[127.0.0.15]:9496 DEAD (cause: remote) since 0d 0h 0m 0s
+OsmoNSdummy# configure terminal
+OsmoNSdummy(config)# ns
+OsmoNSdummy(config-ns)# nse 1234
+OsmoNSdummy(config-ns-nse)# nsvc udp abc 127.0.0.16 9496 signalling-weight 0 data-weight 9
+OsmoNSdummy(config-ns-nse)# nsvc udp abc 127.0.0.17 9496 signalling-weight 0 data-weight 0
+OsmoNSdummy(config-ns-nse)# end
+OsmoNSdummy# show ns
+NSEI 01234: UDP, DEAD since 0d 0h 0m 0s
+  3 NS-VC:
+   RECOVERING PERSIST sig_weight=1 data_weight=1 udp)[127.0.0.14]:42999<>[127.0.0.15]:9496 DEAD (cause: remote) since 0d 0h 0m 0s
+   RECOVERING PERSIST sig_weight=0 data_weight=9 udp)[127.0.0.14]:42999<>[127.0.0.16]:9496 DEAD (cause: remote) since 0d 0h 0m 0s
+   RECOVERING PERSIST sig_weight=0 data_weight=0 udp)[127.0.0.14]:42999<>[127.0.0.17]:9496 DEAD (cause: remote) since 0d 0h 0m 0s
+UDP bind: 127.0.0.14:42999 DSCP: 0 Priority: 0
+  IP-SNS signalling weight: 1 data weight: 1
+  3 NS-VC:
+   RECOVERING PERSIST sig_weight=1 data_weight=1 udp)[127.0.0.14]:42999<>[127.0.0.15]:9496 DEAD (cause: remote) since 0d 0h 0m 0s
+   RECOVERING PERSIST sig_weight=0 data_weight=9 udp)[127.0.0.14]:42999<>[127.0.0.16]:9496 DEAD (cause: remote) since 0d 0h 0m 0s
+   RECOVERING PERSIST sig_weight=0 data_weight=0 udp)[127.0.0.14]:42999<>[127.0.0.17]:9496 DEAD (cause: remote) since 0d 0h 0m 0s
+OsmoNSdummy# configure terminal
+OsmoNSdummy(config)# ns
+OsmoNSdummy(config-ns)# nse 1234
+OsmoNSdummy(config-ns-nse)# nsvc udp abc 127.0.0.16 9496 signalling-weight 2 data-weight 2
+Specified NSVC is already present in this NSE.
+OsmoNSdummy(config-ns-nse)# exit
+OsmoNSdummy(config-ns)# nse 1235
+OsmoNSdummy(config-ns-nse)# nsvc udp abc 127.0.0.16 9496 signalling-weight 2 data-weight 2
+Specified NSVC is already present in another NSE01234.
+OsmoNSdummy(config-ns-nse)# exit
+OsmoNSdummy(config-ns)# nse 2342
+OsmoNSdummy(config-ns-nse)# ip-sns-bind abc
+OsmoNSdummy(config-ns-nse)# ip-sns-bind abc
+Failed to add ip-sns-bind abc already present
+OsmoNSdummy(config-ns-nse)# ip-sns-bind abc2
+Can not find the given bind 'abc2'
+OsmoNSdummy(config-ns-nse)# ip-sns-remote 127.0.0.1 22222
+OsmoNSdummy(config-ns-nse)# ip-sns-remote 127.0.0.1 22222
+Specified SNS endpoint already part of the NSE.
+OsmoNSdummy(config-ns-nse)# exit
+OsmoNSdummy(config-ns)# no bind abc
+OsmoNSdummy(config-ns)# no bind abc77
+bind abc77 does not exist!
+OsmoNSdummy(config-ns)# exit

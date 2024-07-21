@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: Osmocom GPRS Gb Library
+Description: Osmocom GPRS Gb Interface (NS/BSSGP) Library
+Version: @VERSION@
+Requires: talloc, libosmocore, libosmovty
+Libs: -L${libdir} -losmogb
+Cflags: -I${includedir}/ -fno-strict-aliasing

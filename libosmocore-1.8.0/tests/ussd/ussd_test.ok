@@ -1,0 +1,100 @@
+[i] Testing gsm0480_extract_ie_by_tag()
+[?] REGISTER message with Facility IE (len=21): a1 13 02 01 03 02 01 3b 30 0b 04 01 0f 04 06 2a d5 4c 16 1b 01 
+[?] REGISTER message with SS version IE (len=1): 00 
+[?] FACILITY message with Facility IE (len=18): a2 10 02 01 01 30 0b 02 01 3c 30 06 04 01 0f 04 01 32 
+[?] RELEASE COMPLETE message with Facility IE (len=8): a3 06 02 01 05 02 01 24 
+
+[i] Testing gsm0480_parse_facility_ie()
+[?] FACILITY message with Facility IE (len=18): a2 10 02 01 01 30 0b 02 01 3c 30 06 04 01 0f 04 01 32 
+[?] InvokeID: expected 0x01, decoded 0x01
+[?] Operation code: expected 0x3c, decoded 0x3c
+[?] Data Coding Scheme: expected 0x0f, decoded 0x0f
+[?] Data length: expected 0x01, decoded 0x01
+[?] Data: expected 32, decoded 32
+
+Tested if it still works. Text was: **321#
+interrogateSS CFU text..'' code 33
+Testing parsing a USSD request and truncated versions
+Result for len=28 is 1
+Result for len=27 is 1
+Result for len=26 is 1
+Result for len=25 is 1
+Result for len=24 is 0
+Result for len=23 is 0
+Result for len=22 is 0
+Result for len=21 is 0
+Result for len=20 is 0
+Result for len=19 is 0
+Result for len=18 is 0
+Result for len=17 is 0
+Result for len=16 is 0
+Result for len=15 is 0
+Result for len=14 is 0
+Result for len=13 is 0
+Result for len=12 is 0
+Result for len=11 is 0
+Result for len=10 is 0
+Result for len=9 is 0
+Result for len=8 is 0
+Result for len=7 is 0
+Result for len=6 is 0
+Result for len=5 is 0
+Result for len=4 is 0
+Result for len=3 is 0
+Mangling the container now
+Result for len=28 is 0
+Result for len=27 is 0
+Result for len=26 is 1
+Result for len=25 is 1
+Result for len=24 is 0
+Result for len=23 is 0
+Result for len=22 is 0
+Result for len=21 is 0
+Result for len=20 is 0
+Result for len=19 is 0
+Result for len=18 is 0
+Result for len=17 is 0
+Result for len=16 is 0
+Result for len=15 is 0
+Result for len=14 is 0
+Result for len=13 is 0
+Result for len=12 is 0
+Result for len=11 is 0
+Result for len=10 is 0
+Result for len=9 is 0
+Result for len=8 is 0
+Result for len=7 is 0
+Result for len=6 is 0
+Result for len=5 is 1
+<CR> case test for 7 bit encode
+original = 30 31 32 33 34 35 36 37 
+encoded = b0 98 6c 46 ab d9 6e 
+decoded = 30 31 32 33 34 35 36 37 
+
+original = 30 31 32 33 34 35 36 
+encoded = b0 98 6c 46 ab d9 1a 
+decoded = 30 31 32 33 34 35 36 
+
+original = 30 31 32 33 34 35 36 37 0d 
+encoded = b0 98 6c 46 ab d9 6e 0d 
+decoded = 30 31 32 33 34 35 36 37 0d 
+
+original = 30 31 32 33 34 35 36 0d 
+encoded = b0 98 6c 46 ab d9 1a 0d 
+decoded = 30 31 32 33 34 35 36 0d 0d 
+
+original = 30 31 32 33 34 35 0d 
+encoded = b0 98 6c 46 ab 35 1a 
+decoded = 30 31 32 33 34 35 0d 
+
+Checking GSM 04.80 USSD message generation.
+original = 
+encoded = 
+decoded = 
+
+Created unstructuredSS_Notify (0x00): 30 08 04 01 0f 04 00 04 01 00 
+original = 66 6f 72 74 79 2d 74 77 6f 
+encoded = e6 b7 9c 9e 6f d1 ef 6f 
+decoded = 66 6f 72 74 79 2d 74 77 6f 
+
+Created unstructuredSS_Notify (0x42): 30 10 04 01 0f 04 08 e6 b7 9c 9e 6f d1 ef 6f 04 01 42 

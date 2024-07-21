@@ -1,0 +1,810 @@
+Test `CSD 9600/V.110/transparent' passed
+Test `Speech, all codecs' passed
+Test `Speech, without octet 3a' failed
+Simple TMSI encoding test....passed
+Simple IMSI encoding test....passed: [10] 17 08 99 10 07 00 00 00 64 02 
+
+Testing Mobile Identity conversions
+- IMSI 123456789012345
+  -> MI-TLV-hex='17081932547698103254'
+  -> MI-str="123456789012345" rc=16
+  -> MI-name="IMSI-123456789012345"
+- IMSI 12345678901234
+  -> MI-TLV-hex='170811325476981032f4'
+  -> MI-str="12345678901234" rc=15
+  -> MI-name="IMSI-12345678901234"
+- IMSI 423423
+  -> MI-TLV-hex='1704413224f3'
+  -> MI-str="423423" rc=7
+  -> MI-name="IMSI-423423"
+- unknown 0x9 423423
+  -> MI-TLV-hex='1704413224f3'
+  -> MI-str="423423" rc=7
+  -> MI-name="IMSI-423423"
+- IMSI 4234235
+  -> MI-TLV-hex='170449322453'
+  -> MI-str="4234235" rc=8
+  -> MI-name="IMSI-4234235"
+- IMSI 4234235
+  -> MI-TLV-hex='170449322453'
+  -> MI-str="423" rc=4
+  -> MI-name="IMSI-4234235"
+- IMEI 123456789012345
+  -> MI-TLV-hex='17081a32547698103254'
+  -> MI-str="123456789012345" rc=16
+  -> MI-name="IMEI-123456789012345"
+- IMEI 98765432109876
+  -> MI-TLV-hex='170892785634129078f6'
+  -> MI-str="98765432109876" rc=15
+  -> MI-name="IMEI-98765432109876"
+- IMEI 987654321098765
+  -> MI-TLV-hex='17089a78563412907856'
+  -> MI-str="987654321098765" rc=16
+  -> MI-name="IMEI-987654321098765"
+- IMEI-SV 9876543210987654
+  -> MI-TLV-hex='17099378563412907856f4'
+  -> MI-str="9876543210987654" rc=17
+  -> MI-name="IMEI-SV-9876543210987654"
+- IMEI-SV 9876543210987654
+  -> MI-TLV-hex='17099378563412907856f4'
+  -> MI-str="9876543210987654" rc=17
+  -> MI-name="IMEI-SV-9876543210987654"
+- TMSI 305419896
+  -> MI-TLV-hex='1705f412345678'
+  -> MI-str="305419896" rc=9
+  -> MI-name="TMSI-0x12345678"
+- TMSI 12648430
+  -> MI-TLV-hex='1705f400c0ffee'
+  -> MI-str="12648430" rc=8
+  -> MI-name="TMSI-0x00C0FFEE"
+- TMSI 0
+  -> MI-TLV-hex='1705f400000000'
+  -> MI-str="0" rc=1
+  -> MI-name="TMSI-0x00000000"
+- TMSI 305419896
+  -> MI-TLV-hex='1705f412345678'
+  -> MI-str="3054" rc=9
+  -> MI-name="TMSI-0x12345678"
+- NONE 123
+  -> MI-TLV-hex='17021832'
+  -> MI-str="" rc=1
+  -> MI-name="unknown"
+- NONE 1234
+  -> MI-TLV-hex='17031032f4'
+  -> MI-str="" rc=1
+  -> MI-name="unknown"
+- unknown 0x8 1234
+  -> MI-TLV-hex='17031032f4'
+  -> MI-str="" rc=1
+  -> MI-name="unknown"
+
+Decoding zero length Mobile Identities
+- MI type: IMSI
+  - writing to zero-length string:
+    rc=0
+    nothing written
+  - writing to 1-byte-length string:
+    rc=1
+    returned empty string
+  - decode zero-length mi:
+    rc=1
+    returned empty string
+- MI type: TMSI
+  - writing to zero-length string:
+    rc=0
+    nothing written
+  - writing to 1-byte-length string:
+    rc=1
+    returned empty string
+  - decode zero-length mi:
+    rc=1
+    returned empty string
+- MI type: NONE
+  - writing to zero-length string:
+    rc=0
+    nothing written
+  - writing to 1-byte-length string:
+    rc=1
+    returned empty string
+  - decode zero-length mi:
+    rc=1
+    returned empty string
+- MI type: IMSI | GSM_MI_ODD
+  - writing to zero-length string:
+    rc=0
+    nothing written
+  - writing to 1-byte-length string:
+    rc=1
+    returned empty string
+  - decode zero-length mi:
+    rc=1
+    returned empty string
+- MI type: TMSI | GSM_MI_ODD
+  - writing to zero-length string:
+    rc=0
+    nothing written
+  - writing to 1-byte-length string:
+    rc=1
+    returned empty string
+  - decode zero-length mi:
+    rc=1
+    returned empty string
+- MI type: NONE | GSM_MI_ODD
+  - writing to zero-length string:
+    rc=0
+    nothing written
+  - writing to 1-byte-length string:
+    rc=1
+    returned empty string
+  - decode zero-length mi:
+    rc=1
+    returned empty string
+
+test_struct_mobile_identity()
+LU with IMSI 901700000004620: rc == 0, mi = IMSI-901700000004620 ok
+LU with TMSI 0x0980ad8a: rc == 0, mi = TMSI-0x0980AD8A ok
+LU with invalid MI type: rc != 0 ok
+LU with truncated IMSI MI: rc != 0 ok
+LU with too short IMSI MI (12345): rc != 0 ok
+LU with just long enough IMSI MI 123456: rc == 0, mi = IMSI-123456 ok
+LU with max length IMSI MI 123456789012345: rc == 0, mi = IMSI-123456789012345 ok
+LU with just too long IMSI MI 1234567890123456: rc != 0 ok
+LU with truncated TMSI MI: rc != 0 ok
+LU with odd length TMSI: rc != 0 ok
+LU with too long TMSI MI: rc != 0 ok
+LU with too short TMSI: rc != 0 ok
+CM Service Request with IMSI 123456: rc == 0, mi = IMSI-123456 ok
+CM Service Request with TMSI 0x5a42e404: rc == 0, mi = TMSI-0x5A42E404 ok
+CM Service Request with shorter CM2, with IMSI 123456: rc == 0, mi = IMSI-123456 ok
+CM Service Request with longer CM2, with IMSI 123456: rc == 0, mi = IMSI-123456 ok
+CM Service Request with shorter CM2, with TMSI 0x00000000: rc == 0, mi = TMSI-0x00000000 ok
+CM Service Request with invalid MI type: rc != 0 ok
+CM Service Request with truncated IMSI MI: rc != 0 ok
+CM Service Request with truncated TMSI MI: rc != 0 ok
+CM Service Request with odd length TMSI: rc != 0 ok
+CM Service Request with too long TMSI MI: rc != 0 ok
+CM Service Request with too short TMSI: rc != 0 ok
+CM Service Reestablish Request with TMSI 0x5a42e404: rc == 0, mi = TMSI-0x5A42E404 ok
+Paging Response with IMSI 1234567: rc == 0, mi = IMSI-1234567 ok
+Paging Response with TMSI 0xb48883de: rc == 0, mi = TMSI-0xB48883DE ok
+Paging Response with TMSI, with unused nibble not 0xf: rc != 0 ok
+Paging Response with too short IMEI (1234567): rc != 0 ok
+Paging Response with IMEI 123456789012345: rc == 0, mi = IMEI-123456789012345 ok
+Paging Response with IMEI 12345678901234 (no Luhn checksum): rc == 0, mi = IMEI-12345678901234 ok
+Paging Response with IMEISV 1234567890123456: rc == 0, mi = IMEI-SV-1234567890123456 ok
+Paging Response with too short IMEISV 123456789012345: rc != 0 ok
+Paging Response with too long IMEISV 12345678901234567: rc != 0 ok
+Paging Response with IMSI 123456789012345 and flipped ODD bit: rc != 0 ok
+IMSI-Detach with IMSI 901700000004620: rc == 0, mi = IMSI-901700000004620 ok
+IMSI-Detach with TMSI 0x0980ad8a: rc == 0, mi = TMSI-0x0980AD8A ok
+IMSI-Detach with invalid MI type: rc != 0 ok
+IMSI-Detach with truncated IMSI MI: rc != 0 ok
+IMSI-Detach with too short IMSI MI (12345): rc != 0 ok
+IMSI-Detach with just long enough IMSI MI 123456: rc == 0, mi = IMSI-123456 ok
+IMSI-Detach with max length IMSI MI 123456789012345: rc == 0, mi = IMSI-123456789012345 ok
+IMSI-Detach with just too long IMSI MI 1234567890123456: rc != 0 ok
+IMSI-Detach with truncated TMSI MI: rc != 0 ok
+IMSI-Detach with odd length TMSI: rc != 0 ok
+IMSI-Detach with too long TMSI MI: rc != 0 ok
+IMSI-Detach with too short TMSI: rc != 0 ok
+Identity Response with IMSI 901700000004620: rc == 0, mi = IMSI-901700000004620 ok
+Identity Response with IMEI 123456789012345: rc == 0, mi = IMEI-123456789012345 ok
+Identity Response with IMEISV 9876543210987654: rc == 0, mi = IMEI-SV-9876543210987654 ok
+
+BSD number encoding / decoding test
+- Running test: regular 9-digit MSISDN
+  - Encoding ASCII (buffer limit=0) '123456789'...
+    - Expected: (rc=6) '0521436587f9'
+    -   Actual: (rc=6) '0521436587f9'
+  - Decoding HEX (buffer limit=0) '0521436587f9'...
+    - Expected: (rc=0) '123456789'
+    -   Actual: (rc=0) '123456789'
+- Running test: regular 6-digit MSISDN with optional header (LHV)
+  - Encoding ASCII (buffer limit=0) '123456'...
+    - Expected: (rc=8) '07ffffffff214365'
+    -   Actual: (rc=8) '07ffffffff214365'
+  - Decoding HEX (buffer limit=0) '07deadbeef214365'...
+    - Expected: (rc=0) '123456'
+    -   Actual: (rc=0) '123456'
+- Running test: long 15-digit (maximum) MSISDN
+  - Encoding ASCII (buffer limit=0) '123456789012345'...
+    - Expected: (rc=9) '0821436587092143f5'
+    -   Actual: (rc=9) '0821436587092143f5'
+  - Decoding HEX (buffer limit=0) '0821436587092143f5'...
+    - Expected: (rc=0) '123456789012345'
+    -   Actual: (rc=0) '123456789012345'
+- Running test: long 15-digit (maximum) MSISDN, limited buffer
+  - Encoding ASCII (buffer limit=9) '123456789012345'...
+    - Expected: (rc=9) '0821436587092143f5'
+    -   Actual: (rc=9) '0821436587092143f5'
+  - Decoding HEX (buffer limit=16) '0821436587092143f5'...
+    - Expected: (rc=0) '123456789012345'
+    -   Actual: (rc=0) '123456789012345'
+- Running test: to be truncated 20-digit MSISDN
+  - Encoding ASCII (buffer limit=9) '12345678901234567890'...
+    - Expected: (rc=-5) ''
+    -   Actual: (rc=-5) ''
+  - Decoding HEX (buffer limit=16) '0a21436587092143658709'...
+    - Expected: (rc=-28) '123456789012345'
+    -   Actual: (rc=-28) '123456789012345'
+- Running test: LV incorrect length
+  - Decoding HEX (buffer limit=0) '05214365'...
+    - Expected: (rc=-22) '(none)'
+    -   Actual: (rc=-22) '(none)'
+- Running test: empty input buffer
+  - Encoding ASCII (buffer limit=0) ''...
+    - Expected: (rc=1) '00'
+    -   Actual: (rc=1) '00'
+  - Decoding HEX (buffer limit=0) ''...
+    - Expected: (rc=-5) '(none)'
+    -   Actual: (rc=-5) '(none)'
+- Running test: decoding buffer is one byte too small (OS#4049)
+  - Decoding HEX (buffer limit=4) '022143'...
+    - Expected: (rc=-28) '123'
+    -   Actual: (rc=-28) '123'
+
+Constructed RA:
+077-121-666-5
+MCC+MNC in BCD: 70 17 21 
+077-121-666-5 (3-digit MNC)
+RA test...passed
+Constructed RA:
+084-98-11-89
+MCC+MNC in BCD: 80 f4 89 
+084-98-11-89
+RA test...passed
+Constructed RA:
+000-00-0-0
+MCC+MNC in BCD: 00 f0 00 
+000-00-0-0
+RA test...passed
+Constructed RA:
+000-000-0-0 (3-digit MNC)
+MCC+MNC in BCD: 00 00 00 
+000-000-0-0 (3-digit MNC)
+RA test...passed
+Constructed RA:
+999-999-65535-255
+MCC+MNC in BCD: 99 99 99 
+999-999-65535-255 (3-digit MNC)
+RA test...passed
+Constructed RA:
+001-02-23-42
+MCC+MNC in BCD: 00 f1 20 
+001-02-23-42
+RA test...passed
+Constructed RA:
+001-002-23-42 (3-digit MNC)
+MCC+MNC in BCD: 00 21 00 
+001-002-23-42 (3-digit MNC)
+RA test...passed
+Constructed RA:
+012-34-56-78
+MCC+MNC in BCD: 10 f2 43 
+012-34-56-78
+RA test...passed
+Constructed RA:
+012-034-23-42 (3-digit MNC)
+MCC+MNC in BCD: 10 42 30 
+012-034-23-42 (3-digit MNC)
+RA test...passed
+Constructed RA:
+123-456-23-42
+MCC+MNC in BCD: 21 63 54 
+123-456-23-42 (3-digit MNC)
+RA test...passed
+Constructed RA:
+123-456-23-42 (3-digit MNC)
+MCC+MNC in BCD: 21 63 54 
+123-456-23-42 (3-digit MNC)
+RA test...passed
+- gsm48_generate_lai() from 077-121-666-0
+  Encoded 70 17 21 02 9a 
+  gsm48_decode_lai() gives  077-121-666-0
+  passed
+- gsm48_generate_lai2() from 077-121-666
+  Encoded 70 17 21 02 9a 
+  gsm48_decode_lai2() gives  077-121-666 (3-digit MNC)
+  passed
+- gsm48_generate_lai() from 084-98-11-0
+  Encoded 80 f4 89 00 0b 
+  gsm48_decode_lai() gives  084-98-11-0
+  passed
+- gsm48_generate_lai2() from 084-98-11
+  Encoded 80 f4 89 00 0b 
+  gsm48_decode_lai2() gives  084-98-11
+  passed
+- gsm48_generate_lai() from 000-00-0-0
+  Encoded 00 f0 00 00 00 
+  gsm48_decode_lai() gives  000-00-0-0
+  passed
+- gsm48_generate_lai2() from 000-00-0
+  Encoded 00 f0 00 00 00 
+  gsm48_decode_lai2() gives  000-00-0
+  passed
+- gsm48_generate_lai() from 000-000-0-0 (3-digit MNC)
+  Encoded 00 f0 00 00 00 
+  gsm48_decode_lai() gives  000-00-0-0
+  passed
+- gsm48_generate_lai2() from 000-000-0 (3-digit MNC)
+  Encoded 00 00 00 00 00 
+  gsm48_decode_lai2() gives  000-000-0 (3-digit MNC)
+  passed
+- gsm48_generate_lai() from 999-999-65535-0
+  Encoded 99 99 99 ff ff 
+  gsm48_decode_lai() gives  999-999-65535-0
+  passed
+- gsm48_generate_lai2() from 999-999-65535
+  Encoded 99 99 99 ff ff 
+  gsm48_decode_lai2() gives  999-999-65535 (3-digit MNC)
+  passed
+- gsm48_generate_lai() from 001-02-23-0
+  Encoded 00 f1 20 00 17 
+  gsm48_decode_lai() gives  001-02-23-0
+  passed
+- gsm48_generate_lai2() from 001-02-23
+  Encoded 00 f1 20 00 17 
+  gsm48_decode_lai2() gives  001-02-23
+  passed
+- gsm48_generate_lai() from 001-002-23-0 (3-digit MNC)
+  Encoded 00 f1 20 00 17 
+  gsm48_decode_lai() gives  001-02-23-0
+  passed
+- gsm48_generate_lai2() from 001-002-23 (3-digit MNC)
+  Encoded 00 21 00 00 17 
+  gsm48_decode_lai2() gives  001-002-23 (3-digit MNC)
+  passed
+- gsm48_generate_lai() from 012-34-56-0
+  Encoded 10 f2 43 00 38 
+  gsm48_decode_lai() gives  012-34-56-0
+  passed
+- gsm48_generate_lai2() from 012-34-56
+  Encoded 10 f2 43 00 38 
+  gsm48_decode_lai2() gives  012-34-56
+  passed
+- gsm48_generate_lai() from 012-034-23-0 (3-digit MNC)
+  Encoded 10 f2 43 00 17 
+  gsm48_decode_lai() gives  012-34-23-0
+  passed
+- gsm48_generate_lai2() from 012-034-23 (3-digit MNC)
+  Encoded 10 42 30 00 17 
+  gsm48_decode_lai2() gives  012-034-23 (3-digit MNC)
+  passed
+- gsm48_generate_lai() from 123-456-23-0
+  Encoded 21 63 54 00 17 
+  gsm48_decode_lai() gives  123-456-23-0
+  passed
+- gsm48_generate_lai2() from 123-456-23
+  Encoded 21 63 54 00 17 
+  gsm48_decode_lai2() gives  123-456-23 (3-digit MNC)
+  passed
+- gsm48_generate_lai() from 123-456-23-0 (3-digit MNC)
+  Encoded 21 63 54 00 17 
+  gsm48_decode_lai() gives  123-456-23-0
+  passed
+- gsm48_generate_lai2() from 123-456-23 (3-digit MNC)
+  Encoded 21 63 54 00 17 
+  gsm48_decode_lai2() gives  123-456-23 (3-digit MNC)
+  passed
+=====cm3_1=====
+mult_band_supp=06
+a5_bits=00
+assoc_radio_cap_1=04
+assoc_radio_cap_2=01
+
+r_support.present=0
+r_support.r_gsm_assoc_radio_cap=00
+
+hscsd_mult_slot_cap.present=0
+hscsd_mult_slot_cap.mslot_class=00
+
+ucs2_treatment=0
+extended_meas_cap=0
+
+ms_meas_cap.present=0
+ms_meas_cap.sms_value=00
+ms_meas_cap.sm_value=00
+
+ms_pos_method_cap.present=1
+ms_pos_method_cap.method=01
+
+ecsd_multislot_cap.present=0
+ecsd_multislot_cap.mslot_class=00
+
+psk8_struct.present=1
+psk8_struct.mod_cap=1
+psk8_struct.rf_pwr_cap_1.present=1
+psk8_struct.rf_pwr_cap_1.value=02
+psk8_struct.rf_pwr_cap_2.present=1
+psk8_struct.rf_pwr_cap_2.value=02
+
+gsm_400_bands_supp.present=0
+gsm_400_bands_supp.value=00
+gsm_400_bands_supp.assoc_radio_cap=00
+
+gsm_850_assoc_radio_cap.present=1
+gsm_850_assoc_radio_cap.value=04
+
+gsm_1900_assoc_radio_cap.present=0
+gsm_1900_assoc_radio_cap.value=00
+
+umts_fdd_rat_cap=0
+umts_tdd_rat_cap=0
+cdma200_rat_cap=0
+
+dtm_gprs_multislot_cap.present=0
+dtm_gprs_multislot_cap.mslot_class=00
+dtm_gprs_multislot_cap.single_slot_dtm=0
+dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.present=0
+dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.mslot_class=00
+
+single_band_supp.present=0
+single_band_supp.value=0
+
+gsm_750_assoc_radio_cap.present=0
+gsm_750_assoc_radio_cap.value=00
+
+umts_1_28_mcps_tdd_rat_cap=0
+geran_feature_package=1
+
+extended_dtm_gprs_multislot_cap.present=0
+extended_dtm_gprs_multislot_cap.mslot_class=00
+extended_dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.present=0
+extended_dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.mslot_class=00
+
+high_multislot_cap.present=0
+high_multislot_cap.value=00
+
+geran_feature_package_2=0
+gmsk_multislot_power_prof=00
+psk8_multislot_power_prof=00
+
+t_gsm_400_bands_supp.present=0
+t_gsm_400_bands_supp.value=00
+t_gsm_400_bands_supp.assoc_radio_cap=00
+
+dl_advanced_rx_perf=01
+dtm_enhancements_cap=1
+
+dtm_gprs_high_multislot_cap.present=0
+dtm_gprs_high_multislot_cap.mslot_class=00
+dtm_gprs_high_multislot_cap.offset_required=0
+dtm_gprs_high_multislot_cap.dtm_egprs_high_multislot_cap.present=0
+dtm_gprs_high_multislot_cap.dtm_egprs_high_multislot_cap.mslot_class=00
+
+repeated_acch_capability=1
+
+gsm_710_assoc_radio_cap.present=0
+gsm_710_assoc_radio_cap.value=00
+
+t_gsm_810_assoc_radio_cap.present=0
+t_gsm_810_assoc_radio_cap.value=00
+
+ciphering_mode_setting_cap=0
+add_pos_cap=0
+e_utra_fdd_supp=0
+e_utra_tdd_supp=0
+e_utra_meas_rep_supp=0
+prio_resel_supp=1
+utra_csg_cells_rep=0
+vamos_level=01
+tighter_capability=01
+sel_ciph_dl_sacch=0
+cs_ps_srvcc_geran_utra=00
+cs_ps_srvcc_geran_eutra=00
+geran_net_sharing=0
+e_utra_wb_rsrq_meas_supp=0
+er_band_support=0
+utra_mult_band_ind_supp=0
+e_utra_mult_band_ind_supp=0
+extended_tsc_set_cap_supp=0
+extended_earfcn_val_range=0
+
+=====cm3_2=====
+mult_band_supp=05
+a5_bits=05
+assoc_radio_cap_1=05
+assoc_radio_cap_2=05
+
+r_support.present=0
+r_support.r_gsm_assoc_radio_cap=00
+
+hscsd_mult_slot_cap.present=1
+hscsd_mult_slot_cap.mslot_class=0a
+
+ucs2_treatment=1
+extended_meas_cap=0
+
+ms_meas_cap.present=1
+ms_meas_cap.sms_value=05
+ms_meas_cap.sm_value=05
+
+ms_pos_method_cap.present=0
+ms_pos_method_cap.method=00
+
+ecsd_multislot_cap.present=1
+ecsd_multislot_cap.mslot_class=0a
+
+psk8_struct.present=1
+psk8_struct.mod_cap=0
+psk8_struct.rf_pwr_cap_1.present=1
+psk8_struct.rf_pwr_cap_1.value=01
+psk8_struct.rf_pwr_cap_2.present=0
+psk8_struct.rf_pwr_cap_2.value=00
+
+gsm_400_bands_supp.present=1
+gsm_400_bands_supp.value=01
+gsm_400_bands_supp.assoc_radio_cap=05
+
+gsm_850_assoc_radio_cap.present=0
+gsm_850_assoc_radio_cap.value=00
+
+gsm_1900_assoc_radio_cap.present=1
+gsm_1900_assoc_radio_cap.value=05
+
+umts_fdd_rat_cap=0
+umts_tdd_rat_cap=1
+cdma200_rat_cap=0
+
+dtm_gprs_multislot_cap.present=1
+dtm_gprs_multislot_cap.mslot_class=01
+dtm_gprs_multislot_cap.single_slot_dtm=0
+dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.present=1
+dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.mslot_class=01
+
+single_band_supp.present=0
+single_band_supp.value=0
+
+gsm_750_assoc_radio_cap.present=1
+gsm_750_assoc_radio_cap.value=05
+
+umts_1_28_mcps_tdd_rat_cap=0
+geran_feature_package=1
+
+extended_dtm_gprs_multislot_cap.present=0
+extended_dtm_gprs_multislot_cap.mslot_class=00
+extended_dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.present=0
+extended_dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.mslot_class=00
+
+high_multislot_cap.present=1
+high_multislot_cap.value=01
+
+geran_feature_package_2=1
+gmsk_multislot_power_prof=01
+psk8_multislot_power_prof=01
+
+t_gsm_400_bands_supp.present=0
+t_gsm_400_bands_supp.value=00
+t_gsm_400_bands_supp.assoc_radio_cap=00
+
+dl_advanced_rx_perf=01
+dtm_enhancements_cap=0
+
+dtm_gprs_high_multislot_cap.present=1
+dtm_gprs_high_multislot_cap.mslot_class=02
+dtm_gprs_high_multislot_cap.offset_required=1
+dtm_gprs_high_multislot_cap.dtm_egprs_high_multislot_cap.present=0
+dtm_gprs_high_multislot_cap.dtm_egprs_high_multislot_cap.mslot_class=00
+
+repeated_acch_capability=1
+
+gsm_710_assoc_radio_cap.present=0
+gsm_710_assoc_radio_cap.value=00
+
+t_gsm_810_assoc_radio_cap.present=1
+t_gsm_810_assoc_radio_cap.value=05
+
+ciphering_mode_setting_cap=0
+add_pos_cap=1
+e_utra_fdd_supp=0
+e_utra_tdd_supp=0
+e_utra_meas_rep_supp=0
+prio_resel_supp=0
+utra_csg_cells_rep=0
+vamos_level=00
+tighter_capability=00
+sel_ciph_dl_sacch=0
+cs_ps_srvcc_geran_utra=00
+cs_ps_srvcc_geran_eutra=00
+geran_net_sharing=0
+e_utra_wb_rsrq_meas_supp=0
+er_band_support=0
+utra_mult_band_ind_supp=0
+e_utra_mult_band_ind_supp=0
+extended_tsc_set_cap_supp=0
+extended_earfcn_val_range=0
+
+=====cm3_3=====
+mult_band_supp=02
+a5_bits=0a
+assoc_radio_cap_1=0a
+assoc_radio_cap_2=00
+
+r_support.present=1
+r_support.r_gsm_assoc_radio_cap=02
+
+hscsd_mult_slot_cap.present=1
+hscsd_mult_slot_cap.mslot_class=0a
+
+ucs2_treatment=1
+extended_meas_cap=0
+
+ms_meas_cap.present=1
+ms_meas_cap.sms_value=05
+ms_meas_cap.sm_value=05
+
+ms_pos_method_cap.present=0
+ms_pos_method_cap.method=00
+
+ecsd_multislot_cap.present=1
+ecsd_multislot_cap.mslot_class=0a
+
+psk8_struct.present=1
+psk8_struct.mod_cap=0
+psk8_struct.rf_pwr_cap_1.present=1
+psk8_struct.rf_pwr_cap_1.value=01
+psk8_struct.rf_pwr_cap_2.present=0
+psk8_struct.rf_pwr_cap_2.value=00
+
+gsm_400_bands_supp.present=1
+gsm_400_bands_supp.value=01
+gsm_400_bands_supp.assoc_radio_cap=05
+
+gsm_850_assoc_radio_cap.present=0
+gsm_850_assoc_radio_cap.value=00
+
+gsm_1900_assoc_radio_cap.present=1
+gsm_1900_assoc_radio_cap.value=05
+
+umts_fdd_rat_cap=0
+umts_tdd_rat_cap=1
+cdma200_rat_cap=0
+
+dtm_gprs_multislot_cap.present=1
+dtm_gprs_multislot_cap.mslot_class=01
+dtm_gprs_multislot_cap.single_slot_dtm=0
+dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.present=1
+dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.mslot_class=01
+
+single_band_supp.present=0
+single_band_supp.value=0
+
+gsm_750_assoc_radio_cap.present=1
+gsm_750_assoc_radio_cap.value=05
+
+umts_1_28_mcps_tdd_rat_cap=0
+geran_feature_package=1
+
+extended_dtm_gprs_multislot_cap.present=0
+extended_dtm_gprs_multislot_cap.mslot_class=00
+extended_dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.present=0
+extended_dtm_gprs_multislot_cap.dtm_egprs_multislot_cap.mslot_class=00
+
+high_multislot_cap.present=1
+high_multislot_cap.value=01
+
+geran_feature_package_2=1
+gmsk_multislot_power_prof=01
+psk8_multislot_power_prof=01
+
+t_gsm_400_bands_supp.present=0
+t_gsm_400_bands_supp.value=00
+t_gsm_400_bands_supp.assoc_radio_cap=00
+
+dl_advanced_rx_perf=01
+dtm_enhancements_cap=0
+
+dtm_gprs_high_multislot_cap.present=1
+dtm_gprs_high_multislot_cap.mslot_class=02
+dtm_gprs_high_multislot_cap.offset_required=1
+dtm_gprs_high_multislot_cap.dtm_egprs_high_multislot_cap.present=0
+dtm_gprs_high_multislot_cap.dtm_egprs_high_multislot_cap.mslot_class=00
+
+repeated_acch_capability=1
+
+gsm_710_assoc_radio_cap.present=0
+gsm_710_assoc_radio_cap.value=00
+
+t_gsm_810_assoc_radio_cap.present=1
+t_gsm_810_assoc_radio_cap.value=04
+
+ciphering_mode_setting_cap=0
+add_pos_cap=0
+e_utra_fdd_supp=0
+e_utra_tdd_supp=0
+e_utra_meas_rep_supp=0
+prio_resel_supp=0
+utra_csg_cells_rep=0
+vamos_level=00
+tighter_capability=00
+sel_ciph_dl_sacch=0
+cs_ps_srvcc_geran_utra=00
+cs_ps_srvcc_geran_eutra=00
+geran_net_sharing=0
+e_utra_wb_rsrq_meas_supp=0
+er_band_support=0
+utra_mult_band_ind_supp=0
+e_utra_mult_band_ind_supp=0
+extended_tsc_set_cap_supp=0
+extended_earfcn_val_range=0
+
+Element is: 2 => freqs[i] = 121
+Element is: 2 => freqs[i] = 1
+Element is: 0 => freqs[i] = 68
+w[0]=122
+w[1]=2
+w[2]=69
+w[3]=204
+w[4]=75
+w[5]=66
+w[6]=60
+w[7]=70
+w[8]=83
+w[9]=3
+w[10]=24
+w[11]=67
+w[12]=54
+w[13]=64
+w[14]=70
+w[15]=9
+Range512: 89 4b 2a 95 65 95 55 2c a9 55 aa 55 6a 95 59 55 
+Range test 0: range 511, num ARFCNs 12
+range=511, arfcns_used=11, f0=1, f0_included=1
+chan_list = 88 00 98 34 85 36 7c 50 22 dc 5e ec 00 00 00 00 
+Decoded freqs 12 (expected 12)
+Decoded: 1 12 31 51 57 91 97 98 113 117 120 125 
+Range test 1: range 511, num ARFCNs 17
+range=511, arfcns_used=16, f0=1, f0_included=1
+chan_list = 88 00 82 7f 01 3f 7e 04 0b ff ff fc 10 41 07 e0 
+Decoded freqs 17 (expected 17)
+Decoded: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 
+Range test 2: range 511, num ARFCNs 18
+range=511, arfcns_used=17, f0=1, f0_included=1
+chan_list = 88 00 82 7f 01 7f 7e 04 0b ff ff fc 10 41 07 ff 
+Decoded freqs 18 (expected 18)
+Decoded: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 
+Range test 3: range 511, num ARFCNs 18
+range=511, arfcns_used=17, f0=1, f0_included=1
+chan_list = 88 00 94 3a 44 32 d7 2a 43 2a 13 94 e5 38 39 f6 
+Decoded freqs 18 (expected 18)
+Decoded: 1 17 31 45 58 79 81 97 113 127 213 277 287 311 331 391 417 511 
+Range test 4: range 511, num ARFCNs 6
+range=511, arfcns_used=5, f0=1, f0_included=1
+chan_list = 88 00 8b 3c 88 b9 6b 00 00 00 00 00 00 00 00 00 
+Decoded freqs 6 (expected 6)
+Decoded: 1 17 31 45 58 79 
+Range test 5: range 511, num ARFCNs 6
+range=511, arfcns_used=5, f0=10, f0_included=1
+chan_list = 88 05 08 fc 88 b9 6b 00 00 00 00 00 00 00 00 00 
+Decoded freqs 6 (expected 6)
+Decoded: 10 17 31 45 58 79 
+Range test 6: range 1023, num ARFCNs 17
+range=1023, arfcns_used=16, f0=0, f0_included=1
+chan_list = 84 71 e4 ab b9 58 05 cb 39 17 fd b0 75 62 0f 2f 
+Decoded freqs 17 (expected 17)
+Decoded: 0 17 31 45 58 79 81 97 113 127 213 277 287 311 331 391 1023 
+Range test 7: range 1023, num ARFCNs 16
+range=1023, arfcns_used=16, f0=0, f0_included=0
+chan_list = 80 71 e4 ab b9 58 05 cb 39 17 fd b0 75 62 0f 2f 
+Decoded freqs 16 (expected 16)
+Decoded: 17 31 45 58 79 81 97 113 127 213 277 287 311 331 391 1023 
+Random range test: range 127, max num ARFCNs 29
+Random range test: range 255, max num ARFCNs 22
+Random range test: range 511, max num ARFCNs 18
+Random range test: range 1023, max num ARFCNs 16
+rach_tx_integer_raw2val(0x00): 3 slots used to spread transmission
+rach_tx_integer_raw2val(0x01): 4 slots used to spread transmission
+rach_tx_integer_raw2val(0x02): 5 slots used to spread transmission
+rach_tx_integer_raw2val(0x03): 6 slots used to spread transmission
+rach_tx_integer_raw2val(0x04): 7 slots used to spread transmission
+rach_tx_integer_raw2val(0x05): 8 slots used to spread transmission
+rach_tx_integer_raw2val(0x06): 9 slots used to spread transmission
+rach_tx_integer_raw2val(0x07): 10 slots used to spread transmission
+rach_tx_integer_raw2val(0x08): 11 slots used to spread transmission
+rach_tx_integer_raw2val(0x09): 12 slots used to spread transmission
+rach_tx_integer_raw2val(0x0a): 14 slots used to spread transmission
+rach_tx_integer_raw2val(0x0b): 16 slots used to spread transmission
+rach_tx_integer_raw2val(0x0c): 20 slots used to spread transmission
+rach_tx_integer_raw2val(0x0d): 25 slots used to spread transmission
+rach_tx_integer_raw2val(0x0e): 32 slots used to spread transmission
+rach_tx_integer_raw2val(0x0f): 50 slots used to spread transmission

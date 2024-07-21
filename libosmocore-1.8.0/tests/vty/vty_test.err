@@ -1,0 +1,77 @@
+Found duplicate flag letter 'f' in application specific attributes (index 0 vs 3)! Please fix.
+Found duplicate flag letter 'z' in application specific attributes (index 2 vs 4)! Please fix.
+Attribute flag letter 'X' is reserved for libraries! Please fix.
+Attribute flag character '.' is reserved for globals! Please fix.
+Attribute flag character '!' is reserved for globals! Please fix.
+Attribute flag character '@' is reserved for globals! Please fix.
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 1
+Got VTY event: 3
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 1
+Got VTY event: 2
+Got VTY event: 3
+There is no such command.
+Error occurred during reading the below line:
+ level1 b
+
+Inconsistent indentation -- leading whitespace must match adjacent lines, and
+indentation must reflect child node levels. A mix of tabs and spaces is
+allowed, but their sequence must not change within a child block.
+Error occurred during reading the below line:
+ level1 b
+
+Inconsistent indentation -- leading whitespace must match adjacent lines, and
+indentation must reflect child node levels. A mix of tabs and spaces is
+allowed, but their sequence must not change within a child block.
+Error occurred during reading the below line:
+	 	child1 b
+
+Error occurred during reading the below line:
+return-warning
+
+% Ignoring deprecated 'logging level depr (debug|info|notice|error|fatal)'
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 1
+Got VTY event: 3
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 1
+Got VTY event: 3
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 2
+Got VTY event: 1
+Got VTY event: 3
