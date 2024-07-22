@@ -1,7 +1,0 @@
-usr/include/*
-usr/lib/*/lib*.a
-usr/lib/*/lib*.so
-usr/lib/*/lib*.la
-usr/lib/*/pkgconfig/*
-usr/bin/osmo-release.sh
-usr/share/aclocal/osmo*.m4
