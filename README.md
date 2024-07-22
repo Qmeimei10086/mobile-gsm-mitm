@@ -31,7 +31,7 @@ apt-get install libunbound-dev libusb-dev libmnl-dev libsctp-dev python3 libgnut
 ```javascript
 unzip libosmocore-1.8.0.zip  
 cd libosmocore-1.8.0
-atoreconf -i 
+autoreconf -i 
 ./configure
 ```
 ### 注意，因为下载的libosmocore默认版本是unknown所以我们需要修改版本防止接下来报错，修改完之后 
@@ -49,7 +49,7 @@ cd ..
 ```javascript
 git clone https://gitea.osmoxom.org/libosmo-dsp 
 cd libosmo-dsp 
-atoreconf -i 
+autoreconf -i 
 ./configure 
 make 
 make install 
