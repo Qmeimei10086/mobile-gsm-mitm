@@ -75,7 +75,7 @@ cd osmocon/src
 ```javascript
 make osmocon 
 make firmware
-cd .. 
+cd ../.. 
 ```
 ## 6.编译mobile程序
 ```javascript
@@ -85,7 +85,7 @@ cd osmocom-bb/src
 我们只需要编译mobile以及一些layer23的程序
 ```javascript
 make layer23 
-cd .. 
+cd ../.. 
 ```
 ## 像我自己修改的openbts一样，我依然提供了编译过的程序以及所需的动态链接库文件(.so)，在/bin目录下，不过可能有缺
 # 使用
