@@ -3,7 +3,7 @@
 中间人攻击的基站部分： 
 https://github.com/Qmeimei10086/Openbts-gsm-mitm 
 # FIXME
-处于奇怪的原因我无法完整的上传修改过osmocom-bb文件，只能上传压缩包 
+处于奇怪的原因我无法完整的上传修改过文件，只能上传压缩包 
 # 简介
 此程序为gsm中间人攻击的mobile程序，对osmocombb的mobile程序就行修改，使其可以将鉴权时的rand发送至服务端并获取相对应的sres，已经完全符合gsm中间人攻击的需求 
 # 编译
@@ -29,6 +29,7 @@ apt-get install libunbound-dev libusb-dev libmnl-dev libsctp-dev python3 libgnut
 ```
 ## 2.编译libosmocore
 ```javascript
+unzip libosmocore-1.8.0.zip  
 cd libosmocore-1.8.0
 atoreconf -i 
 ./configure
@@ -66,8 +67,8 @@ export PATH=~/gnuarm/bin:$PATH
 
 ## 5.编译刷写程序以及固件
 ```javascript
-unzip osmocom-bb.zip 
-cd osmocom-bb/src 
+unzip osmocon.zip 
+cd osmocon/src 
 ```
 我们只需要编译刷写程序和固件
 
@@ -79,7 +80,7 @@ cd ..
 ## 6.编译mobile程序
 ```javascript
 unzio mobile.zip
-cd mobile/src
+cd osmocom-bb/src
 ```
 我们只需要编译mobile以及一些layer23的程序
 ```javascript
