@@ -62,7 +62,7 @@ tar xvf bu-2.16.1_gcc-4.0.2-c-c++_nl-1.14.0_gi-6.4_x86-64.tar.bz2
 mv gnuarm-* ~/gnuarm 
 export PATH=~/gnuarm/bin:$PATH 
 ```
-###注意：这个gnuarm的编译环境是暂时的，以后每一次编译osmocombb程序都需要再一次实行export PATH=~/gnuarm/bin:$PATH这条命令将gnuarm环境加入环境变量 
+### 注意：这个gnuarm的编译环境是暂时的，以后每一次编译osmocombb程序都需要再一次实行export PATH=~/gnuarm/bin:$PATH这条命令将gnuarm环境加入环境变量 
 
 ## 5.编译刷写程序以及固件
 ```javascript
