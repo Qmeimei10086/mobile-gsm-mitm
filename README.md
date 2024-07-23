@@ -31,7 +31,7 @@ apt-get install libunbound-dev libusb-dev libmnl-dev libsctp-dev python3 libgnut
 ```javascript
 unzip libosmocore-1.8.0.zip  
 cd libosmocore-1.8.0
-atoreconf -i 
+autoreconf -i 
 ./configure
 ```
 ### 注意，因为下载的libosmocore默认版本是unknown所以我们需要修改版本防止接下来报错，修改完之后 
@@ -49,7 +49,7 @@ cd ..
 ```javascript
 git clone https://gitea.osmoxom.org/libosmo-dsp 
 cd libosmo-dsp 
-atoreconf -i 
+autoreconf -i 
 ./configure 
 make 
 make install 
@@ -91,7 +91,7 @@ cd ../..
 # 使用
 ## 1.刷写layer1固件
 ```javascript
-cd osmocom-bb/src/host/osmocon
+cd osmocon/src/host/osmocon
 ./osmocon -m c123xor -p /dev/ttyU SB0 -c ../../target/firmware/board/compal_e88/layer1.highram.bin 
 ```
 此时短按按c118的开机键即可刷入 
@@ -104,7 +104,7 @@ python3 server.py
 ## 3.启动mobile程序
 再开一个终端
 ```javascript
-cd mobile/src/host/layer23/src/mobile 
+cd osmocom-bb/src/host/layer23/src/mobile 
 ./mobile -c default.cfg
 ```
 即可搜索附近基站并附着
