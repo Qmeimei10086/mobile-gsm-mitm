@@ -13,6 +13,7 @@ https://github.com/Qmeimei10086/Openbts-gsm-mitm
 环境：Ubuntu16.04 
 参考：https://blog.csdn.net/gibbs_/article/details/119213685 
 （目前我见到国内最详细的过程，符合中国宝宝体质）
+其实没有你们想象的那么难，只是国内的很多教程太老了不适用与现在的新版本
 ## 1.安装编译osmocombb的环境
 ```javascript
 apt-get install build-essential libgmp3-dev libmpfr-dev libx11-6 libx11-dev texinfo flex bison libncurses5 libncurses5-dbg libncurses5-dev libncursesw5 libncursesw5-dbg libncursesw5-dev zlibc zlib1g-dev libmpfr4 libmpc-dev   subversion  git  autoconf  vim 
@@ -50,7 +51,7 @@ cd ..
 ```
 ## 3.编译libosmo-dsp
 ```javascript
-git clone https://gitea.osmoxom.org/libosmo-dsp 
+git clone https://gitea.osmoxom.org/sdr/libosmo-dsp 
 cd libosmo-dsp 
 autoreconf -i 
 ./configure 
