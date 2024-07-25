@@ -1,9 +1,12 @@
 # 本程序仅供测试学习，请勿用于非法
 # 指路
+中间人攻击完整代码以及原理:  
+https://github.com/Qmeimei10086/gsm-mitm
 中间人攻击的基站部分： 
 https://github.com/Qmeimei10086/Openbts-gsm-mitm 
 # FIXME
 处于奇怪的原因我无法完整的上传修改过文件，只能上传压缩包 
+在virtualbox虚拟机的Ubuntu16.04有bug,socket无法阻塞进程 
 # 简介
 此程序为gsm中间人攻击的mobile程序，对osmocombb的mobile程序就行修改，使其可以将鉴权时的rand发送至服务端并获取相对应的sres，已经完全符合gsm中间人攻击的需求 
 # 编译
@@ -88,6 +91,11 @@ make layer23
 cd ../.. 
 ```
 ## 像我自己修改的openbts一样，我依然提供了编译过的程序以及所需的动态链接库文件(.so)，在/bin目录下，不过可能有缺
+```javascript
+cd bin
+cp *.so.* /usr/lib
+chmod +x ./*
+```
 # 使用
 ## 1.刷写layer1固件
 ```javascript
