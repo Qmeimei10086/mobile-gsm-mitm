@@ -119,10 +119,7 @@ cd osmocom-bb/src/host/layer23/src/mobile
 即可搜索附近基站并附着
 ### 如果你使用已编译过的程序，过程差不多不过路径可能要改一改
 
-# 关于作者
-bilibili：https://space.bilibili.com/
-请不要来找我谢谢
-有问题来这里找我，本人已高三，可能不能及时回
+
 
 # 参考
 参考论文：张浩 基于USRP的无线移动通信网络隐蔽定点攻击研究 西安电子科技大学 June 2018  
